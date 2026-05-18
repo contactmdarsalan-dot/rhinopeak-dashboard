@@ -1,0 +1,71 @@
+<svg width="1800" height="1100" viewBox="0 0 1800 1100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1800" height="1100" fill="#071819"/>
+  <rect x="58" y="58" width="1684" height="984" rx="38" fill="#0C2224" stroke="#20464A" stroke-width="2"/>
+  <rect x="58" y="58" width="290" height="984" rx="38" fill="#0A1D20"/>
+  <rect x="92" y="94" width="56" height="56" rx="14" fill="#0F7D72"/>
+  <path d="M120 108L136 138H104L120 108Z" stroke="#DDF8F2" stroke-width="5" stroke-linejoin="round"/>
+  <text x="166" y="118" fill="#ECFFFB" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="800">RhinoPeak</text>
+  <text x="166" y="146" fill="#7CB4B0" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="600">Business Dashboard</text>
+  <g fill="#93BDBA" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">
+    <text x="112" y="235">Dashboard</text>
+    <text x="112" y="305">Sales</text>
+    <text x="112" y="375">Customers</text>
+    <text x="112" y="445">Inventory</text>
+    <text x="112" y="515">Reports</text>
+    <text x="112" y="585">Team &amp; Roles</text>
+    <text x="112" y="655">Billing</text>
+  </g>
+  <rect x="88" y="198" width="224" height="58" rx="16" fill="#123C3B"/>
+  <circle cx="108" cy="226" r="6" fill="#24C5A8"/>
+  <circle cx="108" cy="296" r="6" fill="#5A7778"/>
+  <circle cx="108" cy="366" r="6" fill="#5A7778"/>
+  <circle cx="108" cy="436" r="6" fill="#5A7778"/>
+  <circle cx="108" cy="506" r="6" fill="#5A7778"/>
+  <circle cx="108" cy="576" r="6" fill="#5A7778"/>
+  <circle cx="108" cy="646" r="6" fill="#5A7778"/>
+  <text x="406" y="128" fill="#ECFFFB" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="850">Daily Business Overview</text>
+  <text x="406" y="168" fill="#82AAA7" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">Sales, stock, customers, roles, and reports in one workspace.</text>
+  <rect x="1392" y="92" width="238" height="48" rx="14" fill="#0D2F31" stroke="#24575A"/>
+  <text x="1420" y="123" fill="#B8E6DF" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">Kathmandu Retail Co.</text>
+  <rect x="406" y="222" width="306" height="160" rx="24" fill="#102B2D" stroke="#1E474B"/>
+  <rect x="746" y="222" width="306" height="160" rx="24" fill="#102B2D" stroke="#1E474B"/>
+  <rect x="1086" y="222" width="306" height="160" rx="24" fill="#102B2D" stroke="#1E474B"/>
+  <rect x="1426" y="222" width="216" height="160" rx="24" fill="#102B2D" stroke="#1E474B"/>
+  <text x="434" y="270" fill="#86B4B0" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">Today sales</text>
+  <text x="434" y="326" fill="#ECFFFB" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="850">Rs. 84,500</text>
+  <text x="434" y="355" fill="#28D6A6" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700">+18% from yesterday</text>
+  <text x="774" y="270" fill="#86B4B0" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">Customers</text>
+  <text x="774" y="326" fill="#ECFFFB" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="850">1,284</text>
+  <text x="774" y="355" fill="#28D6A6" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700">46 new this month</text>
+  <text x="1114" y="270" fill="#86B4B0" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">Low stock</text>
+  <text x="1114" y="326" fill="#ECFFFB" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="850">12</text>
+  <text x="1114" y="355" fill="#FFCB6B" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700">Needs reorder</text>
+  <text x="1454" y="270" fill="#86B4B0" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">Roles</text>
+  <text x="1454" y="326" fill="#ECFFFB" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="850">Live</text>
+  <text x="1454" y="355" fill="#28D6A6" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700">Feature access</text>
+  <rect x="406" y="426" width="830" height="396" rx="28" fill="#102B2D" stroke="#1E474B"/>
+  <text x="442" y="480" fill="#ECFFFB" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">Sales trend</text>
+  <line x1="452" y1="736" x2="1190" y2="736" stroke="#244D50" stroke-width="2"/>
+  <line x1="452" y1="642" x2="1190" y2="642" stroke="#183D40" stroke-width="2"/>
+  <line x1="452" y1="548" x2="1190" y2="548" stroke="#183D40" stroke-width="2"/>
+  <path d="M468 710C532 670 572 632 636 652C702 674 740 535 808 570C876 606 920 496 986 514C1050 531 1094 610 1176 468" stroke="#26CBAE" stroke-width="8" stroke-linecap="round"/>
+  <path d="M468 752C536 716 574 700 636 714C704 730 740 652 808 660C878 668 926 588 990 612C1058 638 1098 680 1176 604" stroke="#6EA4FF" stroke-width="8" stroke-linecap="round" opacity=".72"/>
+  <circle cx="1176" cy="468" r="11" fill="#26CBAE"/>
+  <rect x="1274" y="426" width="368" height="396" rx="28" fill="#102B2D" stroke="#1E474B"/>
+  <text x="1310" y="480" fill="#ECFFFB" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">Work queue</text>
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="1310" y="524" width="296" height="58" rx="14" fill="#0B2022"/>
+    <text x="1332" y="559" fill="#DDF8F2" font-size="16" font-weight="750">Approve pending invoices</text>
+    <rect x="1310" y="602" width="296" height="58" rx="14" fill="#0B2022"/>
+    <text x="1332" y="637" fill="#DDF8F2" font-size="16" font-weight="750">Reorder 12 low stock items</text>
+    <rect x="1310" y="680" width="296" height="58" rx="14" fill="#0B2022"/>
+    <text x="1332" y="715" fill="#DDF8F2" font-size="16" font-weight="750">Review new role request</text>
+    <rect x="1310" y="758" width="296" height="58" rx="14" fill="#0B2022"/>
+    <text x="1332" y="793" fill="#DDF8F2" font-size="16" font-weight="750">Send daily sales report</text>
+  </g>
+  <rect x="406" y="858" width="1236" height="124" rx="24" fill="#102B2D" stroke="#1E474B"/>
+  <text x="442" y="910" fill="#ECFFFB" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">Recent activity</text>
+  <text x="442" y="948" fill="#84B0AD" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="600">Invoice RP-1045 paid by FonePay</text>
+  <text x="820" y="948" fill="#84B0AD" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="600">New customer added</text>
+  <text x="1138" y="948" fill="#84B0AD" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="600">Inventory synced</text>
+</svg>
