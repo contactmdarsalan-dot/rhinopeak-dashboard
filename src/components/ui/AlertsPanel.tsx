@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, Info, X, XCircle } from 'lucide-react';
 import { Panel, PanelHeader } from '@/components/ui/Primitives';
+import { uiFormat, uiText } from '@/lib/i18n';
 import { planLimits } from '@/lib/domain';
 import { useAppStore } from '@/lib/store';
 
@@ -20,6 +21,7 @@ type AlertItem = {
 export function AlertsPanel() {
   const { inventory, sales, plan, settings } = useAppStore();
   const [dismissed, setDismissed] = useState<string[]>([]);
+  const tx = (value: string) => uiText(settings.language, value);
 
   const alerts = useMemo<AlertItem[]>(() => {
     const stockAlerts = settings.lowStockAlerts
@@ -30,8 +32,8 @@ export function AlertsPanel() {
             severity: product.status === 'Out of Stock' ? 'critical' as const : 'warning' as const,
             message:
               product.status === 'Out of Stock'
-                ? `${product.name}: out of stock. Record stock-in or reorder from ${product.supplier}.`
-                : `${product.name}: ${product.stock} units left, threshold ${product.reorderLevel}.`,
+                ? uiFormat(settings.language, '{name}: out of stock. Record stock-in or reorder from {supplier}.', { name: product.name, supplier: product.supplier })
+                : uiFormat(settings.language, '{name}: {stock} units left, threshold {threshold}.', { name: product.name, stock: product.stock, threshold: product.reorderLevel }),
           }))
       : [];
 
@@ -41,26 +43,26 @@ export function AlertsPanel() {
       ? [{
           id: 'plan-usage',
           severity: 'info' as const,
-          message: `Free plan usage: ${usage}/${planLimits.salesEntries} sales entries this month. Upgrade before data entry is blocked.`,
+          message: uiFormat(settings.language, 'Free plan usage: {usage}/{limit} sales entries this month. Upgrade before data entry is blocked.', { usage, limit: planLimits.salesEntries }),
         }]
       : [];
 
     return [...stockAlerts, ...planAlert];
-  }, [inventory, plan, sales, settings.lowStockAlerts]);
+  }, [inventory, plan, sales, settings.language, settings.lowStockAlerts]);
 
   const visible = alerts.filter((alert) => !dismissed.includes(alert.id));
 
   if (!visible.length) {
     return (
       <Panel style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-        All clear. No stock, usage, or notification alerts need attention.
+        {tx('All clear. No stock, usage, or notification alerts need attention.')}
       </Panel>
     );
   }
 
   return (
     <Panel>
-      <PanelHeader title="Alerts & Notifications" subtitle={`${visible.length} items need attention`} />
+      <PanelHeader title={tx('Alerts & Notifications')} subtitle={uiFormat(settings.language, '{count} items need attention', { count: visible.length })} />
       <div style={{ padding: 12 }}>
         {visible.map((alert) => {
           const cfg = severityConfig[alert.severity];

@@ -7,6 +7,7 @@ import { RevenueChart, TopProductsChart, type RevenuePoint, type TopProductPoint
 import { RecentSalesTable } from '@/components/ui/RecentSalesTable';
 import { AlertsPanel } from '@/components/ui/AlertsPanel';
 import { Badge, Panel, PanelHeader, ProgressBar, StatTile } from '@/components/ui/Primitives';
+import { uiFormat, uiText } from '@/lib/i18n';
 import { planLimits } from '@/lib/domain';
 import { useAppStore } from '@/lib/store';
 import { formatCurrency, formatPercent } from '@/lib/utils';
@@ -21,8 +22,10 @@ export function DashboardPage() {
     customers,
     inventory,
     plan,
+    settings,
     setActivePage,
   } = useAppStore();
+  const tx = (value: string) => uiText(settings.language, value);
 
   const activeSales = useMemo(() => sales.filter((sale) => !sale.deletedAt), [sales]);
   const completedSales = useMemo(() => activeSales.filter((sale) => sale.status === 'Completed'), [activeSales]);
@@ -95,33 +98,33 @@ export function DashboardPage() {
           gap: 14,
         }}
       >
-        <KpiCard label="Today's Revenue" value={metrics.todayRevenue} change={0} format="currency" icon={<DollarSign size={15} />} delay={0} />
-        <KpiCard label="Monthly Revenue" value={metrics.monthlyRevenue} change={metrics.growth} format="currency" icon={<TrendingUp size={15} />} delay={80} />
-        <KpiCard label="New Customers" value={metrics.newCustomers} change={0} format="number" icon={<UserPlus size={15} />} delay={160} />
-        <KpiCard label="Total Orders" value={metrics.totalOrders} change={0} format="number" icon={<ShoppingBag size={15} />} delay={240} />
+        <KpiCard label={tx("Today's Revenue")} value={metrics.todayRevenue} change={0} format="currency" icon={<DollarSign size={15} />} delay={0} />
+        <KpiCard label={tx('Monthly Revenue')} value={metrics.monthlyRevenue} change={metrics.growth} format="currency" icon={<TrendingUp size={15} />} delay={80} />
+        <KpiCard label={tx('New Customers')} value={metrics.newCustomers} change={0} format="number" icon={<UserPlus size={15} />} delay={160} />
+        <KpiCard label={tx('Total Orders')} value={metrics.totalOrders} change={0} format="number" icon={<ShoppingBag size={15} />} delay={240} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-        <StatTile label="Year-to-date revenue" value={formatCurrency(metrics.ytdRevenue)} detail={plan === 'pro' ? 'Included in Pro KPI set' : 'Preview from current data'} tone="accent" />
-        <StatTile label="Average order value" value={formatCurrency(metrics.averageOrderValue)} detail="Completed sales only" tone="success" />
-        <StatTile label="Free plan usage" value={`${Math.min(100, usage)}%`} detail={`${activeMonthSales} sales this month`} tone={usage >= 85 ? 'warning' : 'neutral'} />
-        <StatTile label="Stock alerts" value={lowStock.length} detail="Products below threshold" tone={lowStock.length ? 'danger' : 'success'} />
+        <StatTile label={tx('Year-to-date revenue')} value={formatCurrency(metrics.ytdRevenue)} detail={plan === 'pro' ? tx('Included in Pro KPI set') : tx('Preview from current data')} tone="accent" />
+        <StatTile label={tx('Average order value')} value={formatCurrency(metrics.averageOrderValue)} detail={tx('Completed sales only')} tone="success" />
+        <StatTile label={tx('Free plan usage')} value={`${Math.min(100, usage)}%`} detail={uiFormat(settings.language, '{count} sales this month', { count: activeMonthSales })} tone={usage >= 85 ? 'warning' : 'neutral'} />
+        <StatTile label={tx('Stock alerts')} value={lowStock.length} detail={tx('Products below threshold')} tone={lowStock.length ? 'danger' : 'success'} />
       </div>
 
       {plan === 'free' && (
         <Panel style={{ padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, marginBottom: 10, flexWrap: 'wrap' }}>
             <div>
-              <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 14 }}>Free plan usage</p>
+              <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 14 }}>{tx('Free plan usage')}</p>
               <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                {activeMonthSales} of {planLimits.salesEntries} monthly sales entries used. Pro removes usage limits and unlocks reports, team roles, and comparison tools.
+                {uiFormat(settings.language, '{count} of {limit} monthly sales entries used. Pro removes usage limits and unlocks reports, team roles, and comparison tools.', { count: activeMonthSales, limit: planLimits.salesEntries })}
               </p>
             </div>
             <button
               onClick={() => setActivePage('billing')}
               style={{ border: 'none', borderRadius: 8, background: 'var(--accent)', color: '#fff', padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
             >
-              Upgrade to Pro
+              {tx('Upgrade to Pro')}
             </button>
           </div>
           <ProgressBar value={usage} tone={usage >= 85 ? 'warning' : 'accent'} />
@@ -147,25 +150,25 @@ export function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16 }}>
         <AlertsPanel />
         <Panel>
-          <PanelHeader title="Executive Snapshot" subtitle="Current operating status" />
+          <PanelHeader title={tx('Executive Snapshot')} subtitle={tx('Current operating status')} />
           <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Week-over-week growth</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{tx('Week-over-week growth')}</span>
               <Badge tone={metrics.growth >= 0 ? 'success' : 'danger'}>{formatPercent(metrics.growth)}</Badge>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Plan</span>
-              <Badge tone={plan === 'pro' ? 'success' : 'warning'}>{plan === 'pro' ? 'Pro' : 'Free'}</Badge>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{tx('Plan')}</span>
+              <Badge tone={plan === 'pro' ? 'success' : 'warning'}>{plan === 'pro' ? tx('Pro') : tx('Free')}</Badge>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Low stock items</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{tx('Low stock items')}</span>
               <Badge tone={lowStock.length ? 'danger' : 'success'}>{lowStock.length}</Badge>
             </div>
             <button
               onClick={() => setActivePage('analytics')}
               style={{ marginTop: 6, border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--accent)', padding: '8px 12px', cursor: 'pointer', fontWeight: 650 }}
             >
-              Open Analytics
+              {tx('Open Analytics')}
             </button>
           </div>
         </Panel>

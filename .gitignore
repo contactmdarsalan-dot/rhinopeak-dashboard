@@ -16,7 +16,10 @@
 # next.js
 /.next/
 /.next-build/
+/.next-dev/
+/.next-karobar-build/
 /.next-verify/
+/.next-translation-check/
 /out/
 
 # production
@@ -25,6 +28,15 @@
 # misc
 .DS_Store
 *.pem
+.idea/
+.claude/
+.plyrium-forge/
+*.auth
+*.iml
+mobile/AGENTS.md
+mobile/CLAUDE.md
+mobile/GEMINI.md
+mobile/opencode.json
 
 # debug
 *.log

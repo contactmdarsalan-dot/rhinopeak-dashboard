@@ -3,15 +3,28 @@ import type {
   AuditLog,
   BillingRecord,
   Business,
+  CashBankAccount,
   Customer,
+  CreditLedgerEntry,
+  DocumentAttachment,
+  Expense,
   FeatureFlag,
   GeneratedReport,
   InventoryMovement,
   InventoryProduct,
+  JournalEntry,
+  MoneyMovement,
+  Party,
+  PartyLedgerEntry,
   PlatformOrganization,
   PlanType,
   PermissionKey,
+  Purchase,
+  ReminderLog,
+  ReminderTemplate,
   Sale,
+  Supplier,
+  SyncOperation,
   SupportTicket,
   TeamMember,
   WorkspaceRole,
@@ -19,6 +32,7 @@ import type {
 
 export interface BackendSettings {
   businessName: string;
+  panVatNumber: string;
   currency: 'NPR' | 'USD' | 'EUR';
   language: AppLanguage;
   timezone: string;
@@ -28,7 +42,7 @@ export interface BackendSettings {
   taxRate: number;
   invoicePrefix: string;
   receiptFooter: string;
-  defaultPaymentMethod: 'Cash' | 'Card' | 'eSewa' | 'FonePay' | 'Khalti' | 'Bank';
+  defaultPaymentMethod: 'Cash' | 'Card' | 'eSewa' | 'FonePay' | 'Khalti' | 'Bank' | 'Credit';
   compactTables: boolean;
   lowStockAlerts: boolean;
   dailySalesSummary: boolean;
@@ -46,8 +60,23 @@ export interface BackendBootstrap {
   teamMembers: TeamMember[];
   roleDefinitions: WorkspaceRole[];
   sales: Sale[];
+  parties?: Party[];
+  partyLedger?: PartyLedgerEntry[];
+  purchases?: Purchase[];
+  expenses?: Expense[];
+  expenseCategories?: string[];
+  cashBankAccounts?: CashBankAccount[];
+  moneyMovements?: MoneyMovement[];
+  journalEntries?: JournalEntry[];
+  documents?: DocumentAttachment[];
+  reminderTemplates?: ReminderTemplate[];
+  reminderLogs?: ReminderLog[];
+  syncOperations?: SyncOperation[];
   customers: Customer[];
+  suppliers?: Supplier[];
+  creditLedger?: CreditLedgerEntry[];
   inventory: InventoryProduct[];
+  inventoryCategories?: string[];
   inventoryMovements: InventoryMovement[];
   reports: GeneratedReport[];
   auditLogs: AuditLog[];
@@ -56,6 +85,14 @@ export interface BackendBootstrap {
   featureFlags: FeatureFlag[];
   supportTickets: SupportTicket[];
   settings: BackendSettings;
+}
+
+export interface EntityDetail {
+  entity: string;
+  kind: string;
+  id: string;
+  record: Record<string, unknown>;
+  related: Record<string, Record<string, unknown>[]>;
 }
 
 interface AuthResponse {
@@ -257,6 +294,11 @@ export async function getMobileBootstrap(accessToken?: string) {
   return response.bootstrap;
 }
 
+export async function getEntityDetail(entity: string, id: string) {
+  const response = await request<{ detail: EntityDetail }>(`/details/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`);
+  return response.detail;
+}
+
 export async function createSaleInBackend(sale: Sale) {
   return request<{ sale: Sale; bootstrap: BackendBootstrap }>('/sales', {
     method: 'POST',
@@ -289,10 +331,268 @@ export async function patchCustomerInBackend(customerId: string, patch: Partial<
   });
 }
 
+export async function deleteCustomerInBackend(customerId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/customers/${customerId}`, { method: 'DELETE' });
+}
+
+export async function createSupplierInBackend(supplier: Supplier) {
+  return request<{ supplier: Supplier }>('/suppliers', {
+    method: 'POST',
+    body: JSON.stringify(supplier),
+  });
+}
+
+export async function patchSupplierInBackend(supplierId: string, patch: Partial<Supplier>) {
+  return request<{ supplier: Supplier }>(`/suppliers/${supplierId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteSupplierInBackend(supplierId: string) {
+  return request<{ ok: boolean }>(`/suppliers/${supplierId}`, { method: 'DELETE' });
+}
+
+export async function createCreditEntryInBackend(entry: CreditLedgerEntry) {
+  return request<{ entry: CreditLedgerEntry; bootstrap: BackendBootstrap }>('/credit-ledger', {
+    method: 'POST',
+    body: JSON.stringify(entry),
+  });
+}
+
+export async function patchCreditEntryInBackend(entryId: string, patch: Partial<CreditLedgerEntry>) {
+  return request<{ record: CreditLedgerEntry; bootstrap: BackendBootstrap }>(`/credit-ledger/${entryId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteCreditEntryInBackend(entryId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/credit-ledger/${entryId}`, { method: 'DELETE' });
+}
+
+export async function createPartyInBackend(party: Party) {
+  return request<{ party: Party; bootstrap: BackendBootstrap }>('/parties', {
+    method: 'POST',
+    body: JSON.stringify(party),
+  });
+}
+
+export async function patchPartyInBackend(partyId: string, patch: Partial<Party>) {
+  return request<{ party: Party; bootstrap: BackendBootstrap }>(`/parties/${partyId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deletePartyInBackend(partyId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/parties/${partyId}`, { method: 'DELETE' });
+}
+
+export async function createPartyLedgerEntryInBackend(entry: PartyLedgerEntry) {
+  return request<{ entry: PartyLedgerEntry; bootstrap: BackendBootstrap }>('/party-ledger', {
+    method: 'POST',
+    body: JSON.stringify(entry),
+  });
+}
+
+export async function createPurchaseInBackend(purchase: Purchase) {
+  return request<{ purchase: Purchase; bootstrap: BackendBootstrap }>('/purchases', {
+    method: 'POST',
+    body: JSON.stringify(purchase),
+  });
+}
+
+export async function patchPurchaseInBackend(purchaseId: string, patch: Partial<Purchase>) {
+  return request<{ purchase: Purchase; bootstrap: BackendBootstrap }>(`/purchases/${purchaseId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deletePurchaseInBackend(purchaseId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/purchases/${purchaseId}`, { method: 'DELETE' });
+}
+
+export async function createExpenseInBackend(expense: Expense) {
+  return request<{ expense: Expense; bootstrap: BackendBootstrap }>('/expenses', {
+    method: 'POST',
+    body: JSON.stringify(expense),
+  });
+}
+
+export async function patchExpenseInBackend(expenseId: string, patch: Partial<Expense>) {
+  return request<{ expense: Expense; bootstrap: BackendBootstrap }>(`/expenses/${expenseId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteExpenseInBackend(expenseId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/expenses/${expenseId}`, { method: 'DELETE' });
+}
+
+export async function createExpenseCategoryInBackend(name: string) {
+  return request<{ categories: string[] }>('/expenses/categories', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function patchExpenseCategoryInBackend(oldName: string, newName: string) {
+  return request<{ categories: string[]; bootstrap: BackendBootstrap }>(`/expenses/categories/${encodeURIComponent(oldName)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name: newName }),
+  });
+}
+
+export async function deleteExpenseCategoryInBackend(name: string) {
+  return request<{ categories: string[] }>(`/expenses/categories/${encodeURIComponent(name)}`, { method: 'DELETE' });
+}
+
+export async function createCashBankAccountInBackend(account: CashBankAccount) {
+  return request<{ account: CashBankAccount; bootstrap: BackendBootstrap }>('/cash-bank-accounts', {
+    method: 'POST',
+    body: JSON.stringify(account),
+  });
+}
+
+export async function patchCashBankAccountInBackend(accountId: string, patch: Partial<CashBankAccount>) {
+  return request<{ account: CashBankAccount; bootstrap: BackendBootstrap }>(`/cash-bank-accounts/${accountId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteCashBankAccountInBackend(accountId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/cash-bank-accounts/${accountId}`, { method: 'DELETE' });
+}
+
+export async function createMoneyMovementInBackend(movement: MoneyMovement) {
+  return request<{ movement: MoneyMovement; bootstrap: BackendBootstrap }>('/money-movements', {
+    method: 'POST',
+    body: JSON.stringify(movement),
+  });
+}
+
+export async function patchMoneyMovementInBackend(movementId: string, patch: Partial<MoneyMovement>) {
+  return request<{ record: MoneyMovement; bootstrap: BackendBootstrap }>(`/money-movements/${movementId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteMoneyMovementInBackend(movementId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/money-movements/${movementId}`, { method: 'DELETE' });
+}
+
+export async function createDocumentInBackend(document: DocumentAttachment) {
+  return request<{ document: DocumentAttachment; bootstrap: BackendBootstrap }>('/documents', {
+    method: 'POST',
+    body: JSON.stringify(document),
+  });
+}
+
+export async function patchDocumentInBackend(documentId: string, patch: Partial<DocumentAttachment>) {
+  return request<{ record: DocumentAttachment; bootstrap: BackendBootstrap }>(`/documents/${documentId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteDocumentInBackend(documentId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/documents/${documentId}`, { method: 'DELETE' });
+}
+
+export async function createReminderTemplateInBackend(template: ReminderTemplate) {
+  return request<{ template: ReminderTemplate; bootstrap: BackendBootstrap }>('/reminder-templates', {
+    method: 'POST',
+    body: JSON.stringify(template),
+  });
+}
+
+export async function patchReminderTemplateInBackend(templateId: string, patch: Partial<ReminderTemplate>) {
+  return request<{ record: ReminderTemplate; bootstrap: BackendBootstrap }>(`/reminder-templates/${templateId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteReminderTemplateInBackend(templateId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/reminder-templates/${templateId}`, { method: 'DELETE' });
+}
+
+export async function createReminderLogInBackend(log: ReminderLog) {
+  return request<{ log: ReminderLog; bootstrap: BackendBootstrap }>('/reminders', {
+    method: 'POST',
+    body: JSON.stringify(log),
+  });
+}
+
+export async function patchReminderLogInBackend(logId: string, patch: Partial<ReminderLog>) {
+  return request<{ record: ReminderLog; bootstrap: BackendBootstrap }>(`/reminders/${logId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteReminderLogInBackend(logId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/reminders/${logId}`, { method: 'DELETE' });
+}
+
+export async function pushSyncOperationInBackend(operation: SyncOperation) {
+  return request<{ operation: SyncOperation; bootstrap: BackendBootstrap }>('/sync/push', {
+    method: 'POST',
+    body: JSON.stringify(operation),
+  });
+}
+
+export async function patchSyncOperationInBackend(operationId: string, patch: Partial<SyncOperation>) {
+  return request<{ record: SyncOperation; bootstrap: BackendBootstrap }>(`/sync-operations/${operationId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteSyncOperationInBackend(operationId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/sync-operations/${operationId}`, { method: 'DELETE' });
+}
+
 export async function createProductInBackend(product: InventoryProduct) {
   return request<{ product: InventoryProduct }>('/inventory', {
     method: 'POST',
     body: JSON.stringify(product),
+  });
+}
+
+export async function patchProductInBackend(productId: string, patch: Partial<InventoryProduct>) {
+  return request<{ record: InventoryProduct; bootstrap: BackendBootstrap }>(`/inventory/${productId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteProductInBackend(productId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/inventory/${productId}`, { method: 'DELETE' });
+}
+
+export async function createInventoryCategoryInBackend(name: string) {
+  return request<{ categories: string[] }>('/inventory/categories', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function patchInventoryCategoryInBackend(oldName: string, name: string) {
+  return request<{ categories: string[]; bootstrap: BackendBootstrap }>(`/inventory/categories/${encodeURIComponent(oldName)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteInventoryCategoryInBackend(name: string) {
+  return request<{ categories: string[] }>(`/inventory/categories/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
   });
 }
 
@@ -303,11 +603,33 @@ export async function createMovementInBackend(movement: InventoryMovement) {
   });
 }
 
+export async function patchMovementInBackend(movementId: string, patch: Partial<InventoryMovement>) {
+  return request<{ record: InventoryMovement; bootstrap: BackendBootstrap }>(`/inventory-movements/${movementId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteMovementInBackend(movementId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/inventory-movements/${movementId}`, { method: 'DELETE' });
+}
+
 export async function createReportInBackend(report: GeneratedReport) {
   return request<{ report: GeneratedReport }>('/reports', {
     method: 'POST',
     body: JSON.stringify(report),
   });
+}
+
+export async function patchReportInBackend(reportId: string, patch: Partial<GeneratedReport>) {
+  return request<{ record: GeneratedReport; bootstrap: BackendBootstrap }>(`/reports/${reportId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteReportInBackend(reportId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/reports/${reportId}`, { method: 'DELETE' });
 }
 
 export async function patchSettingsInBackend(patch: Partial<BackendSettings>) {

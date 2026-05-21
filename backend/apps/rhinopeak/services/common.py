@@ -37,7 +37,7 @@ def role_by_name(workspace: Workspace, name: str) -> WorkspaceRole | None:
     return WorkspaceRole.objects.filter(workspace=workspace, name__iexact=name).first()
 
 
-def stock_status(stock: int, reorder_level: int) -> str:
+def stock_status(stock: float, reorder_level: float) -> str:
     if stock <= 0:
         return "Out of Stock"
     if stock <= reorder_level:

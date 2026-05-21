@@ -12,6 +12,8 @@ import {
   YAxis,
 } from 'recharts';
 import { useState } from 'react';
+import { uiText } from '@/lib/i18n';
+import { useAppStore } from '@/lib/store';
 import { formatCompactCurrency, formatCurrency } from '@/lib/utils';
 import { Panel } from '@/components/ui/Primitives';
 
@@ -46,6 +48,7 @@ function CustomTooltip({
   payload?: TooltipPayload[];
   label?: string;
 }) {
+  const language = useAppStore((state) => state.settings.language);
   if (!active || !payload?.length) return null;
   return (
     <div
@@ -60,7 +63,7 @@ function CustomTooltip({
       <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 6 }}>{label}</p>
       {payload.map((entry) => (
         <p key={entry.name} style={{ color: entry.color, fontSize: 13, fontWeight: 650 }}>
-          {entry.name === 'current' ? 'This period: ' : 'Last period: '}
+          {entry.name === 'current' ? `${uiText(language, 'This period')}: ` : `${uiText(language, 'Last period')}: `}
           {formatCurrency(entry.value)}
         </p>
       ))}
@@ -82,13 +85,15 @@ export function RevenueChart({
   defaultComparison?: boolean;
 }) {
   const [showPrev, setShowPrev] = useState(defaultComparison);
+  const language = useAppStore((state) => state.settings.language);
+  const tx = (value: string) => uiText(language, value);
 
   return (
     <Panel style={{ padding: '20px 24px', minHeight: 300 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 12 }}>
         <div>
-          <p style={{ color: 'var(--text-primary)', fontWeight: 650, fontSize: 14 }}>{title}</p>
-          <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{subtitle}</p>
+          <p style={{ color: 'var(--text-primary)', fontWeight: 650, fontSize: 14 }}>{tx(title)}</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{tx(subtitle)}</p>
         </div>
         <button
           onClick={() => setShowPrev(!showPrev)}
@@ -102,7 +107,7 @@ export function RevenueChart({
             cursor: 'pointer',
           }}
         >
-          {comparisonLabel}
+          {tx(comparisonLabel)}
         </button>
       </div>
       <ResponsiveContainer width="100%" height={218}>
@@ -140,11 +145,14 @@ export function TopProductsChart({
   title?: string;
   subtitle?: string;
 }) {
+  const language = useAppStore((state) => state.settings.language);
+  const tx = (value: string) => uiText(language, value);
+
   return (
     <Panel style={{ padding: '20px 24px', minHeight: 300 }}>
       <div style={{ marginBottom: 20 }}>
-        <p style={{ color: 'var(--text-primary)', fontWeight: 650, fontSize: 14 }}>{title}</p>
-        <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{subtitle}</p>
+        <p style={{ color: 'var(--text-primary)', fontWeight: 650, fontSize: 14 }}>{tx(title)}</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{tx(subtitle)}</p>
       </div>
       <ResponsiveContainer width="100%" height={218}>
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 10, bottom: 0 }}>
@@ -152,7 +160,7 @@ export function TopProductsChart({
           <XAxis type="number" tick={{ fill: '#777794', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(value) => formatCompactCurrency(Number(value)).replace('NPR ', '')} />
           <YAxis dataKey="name" type="category" tick={{ fill: '#aaaac0', fontSize: 11 }} tickLine={false} axisLine={false} width={122} />
           <Tooltip
-            formatter={(value) => [formatCurrency(Number(value ?? 0)), 'Revenue']}
+            formatter={(value) => [formatCurrency(Number(value ?? 0)), tx('Revenue')]}
             contentStyle={{
               background: 'var(--bg-card)',
               border: '1px solid var(--border)',

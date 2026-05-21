@@ -8,6 +8,7 @@ import {
   type PermissionKey,
   type UserRole,
 } from '@/lib/domain';
+import { uiFormat, uiText } from '@/lib/i18n';
 import { useAppStore } from '@/lib/store';
 
 function roleTone(role: UserRole) {
@@ -36,12 +37,14 @@ function PermissionChecklist({
   onToggle: (permission: PermissionKey) => void;
 }) {
   const groupedPermissions = areaPermissions();
+  const language = useAppStore((state) => state.settings.language);
+  const tx = (value: string) => uiText(language, value);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
       {Object.entries(groupedPermissions).map(([area, permissions]) => (
         <div key={area} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, background: 'var(--bg-primary)' }}>
-          <p style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 800, marginBottom: 10 }}>{area}</p>
+          <p style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 800, marginBottom: 10 }}>{tx(area)}</p>
           <div style={{ display: 'grid', gap: 8 }}>
             {permissions.map((permission) => {
               const checked = selectedPermissions.includes(permission.key);
@@ -55,8 +58,8 @@ function PermissionChecklist({
                     style={{ marginTop: 2, accentColor: 'var(--accent)' }}
                   />
                   <span>
-                    <span style={{ color: checked ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>{permission.label}</span>
-                    <span style={{ color: 'var(--text-muted)', fontSize: 11, lineHeight: 1.45, display: 'block', marginTop: 2 }}>{permission.description}</span>
+                    <span style={{ color: checked ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>{tx(permission.label)}</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 11, lineHeight: 1.45, display: 'block', marginTop: 2 }}>{tx(permission.description)}</span>
                   </span>
                 </label>
               );
@@ -75,6 +78,7 @@ export function TeamPage() {
     auditLogs,
     plan,
     currentUser,
+    settings,
     inviteUser,
     updateUserRole,
     removeUser,
@@ -98,6 +102,7 @@ export function TeamPage() {
   const canManageUsers = hasPermission('users.manage');
   const canManageRoles = hasPermission('roles.manage');
   const selectedRole = roleDefinitions.find((item) => item.id === selectedRoleId) ?? roleDefinitions[0];
+  const tx = (value: string) => uiText(settings.language, value);
 
   const roleUsage = useMemo(() => {
     return roleDefinitions.reduce<Record<string, number>>((usage, item) => {
@@ -154,7 +159,7 @@ export function TeamPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-          SaaS team access with custom tenant roles, feature-level permissions, and admin-controlled assignments.
+          {tx('SaaS team access with custom tenant roles, feature-level permissions, and admin-controlled assignments.')}
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Button variant="secondary" disabled={!canManageRoles} onClick={() => setShowRoleModal(true)}>
@@ -169,8 +174,8 @@ export function TeamPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
         <StatTile label="Seats used" value={teamMembers.length} detail={plan === 'pro' ? 'Pro supports up to 10 seats' : 'Free includes owner only'} />
         <StatTile label="Active users" value={teamMembers.filter((member) => member.status === 'Active').length} tone="success" />
-        <StatTile label="Tenant roles" value={roleDefinitions.length} detail={`${roleDefinitions.filter((item) => !item.systemRole).length} custom roles`} tone="accent" />
-        <StatTile label="Your permissions" value={roleDefinitions.find((item) => item.name === currentUser.role)?.permissions.length ?? 0} detail={currentUser.role} tone="warning" />
+        <StatTile label="Tenant roles" value={roleDefinitions.length} detail={uiFormat(settings.language, '{count} custom roles', { count: roleDefinitions.filter((item) => !item.systemRole).length })} tone="accent" />
+        <StatTile label="Your permissions" value={roleDefinitions.find((item) => item.name === currentUser.role)?.permissions.length ?? 0} detail={tx(currentUser.role)} tone="warning" />
       </div>
 
       {plan !== 'pro' && (
@@ -181,11 +186,11 @@ export function TeamPage() {
         <Panel>
           <PanelHeader title="Team Members" subtitle="Assign every user to a tenant role" />
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table className="responsive-card-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   {['Name', 'Email', 'Role', 'Permissions', 'Status', 'Actions'].map((header) => (
-                    <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{header}</th>
+                    <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                   ))}
                 </tr>
               </thead>
@@ -194,21 +199,21 @@ export function TeamPage() {
                   const memberRole = roleDefinitions.find((item) => item.name === member.role);
                   return (
                     <tr key={member.id} style={{ borderBottom: index < teamMembers.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
-                      <td style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{member.name}</td>
-                      <td style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{member.email}</td>
-                      <td style={{ padding: '12px 14px' }}>
+                      <td data-label={tx('Name')} data-card-primary="true" style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{member.name}</td>
+                      <td data-label={tx('Email')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{member.email}</td>
+                      <td data-label={tx('Role')} style={{ padding: '12px 14px' }}>
                         <select
                           value={member.role}
                           disabled={member.role === 'Owner' || !canManageUsers}
                           onChange={(event) => updateUserRole(member.id, event.target.value)}
                           style={{ ...controlStyle, minHeight: 30, padding: '4px 8px', width: 140 }}
                         >
-                          {roleDefinitions.map((item) => <option key={item.id}>{item.name}</option>)}
+                          {roleDefinitions.map((item) => <option key={item.id} value={item.name}>{tx(item.name)}</option>)}
                         </select>
                       </td>
-                      <td style={{ padding: '12px 14px' }}><Badge tone={roleTone(member.role)}>{memberRole?.permissions.length ?? 0} features</Badge></td>
-                      <td style={{ padding: '12px 14px' }}><Badge tone={member.status === 'Active' ? 'success' : 'warning'}>{member.status}</Badge></td>
-                      <td style={{ padding: '12px 14px' }}>
+                      <td data-label={tx('Permissions')} style={{ padding: '12px 14px' }}><Badge tone={roleTone(member.role)}>{uiFormat(settings.language, '{count} features', { count: memberRole?.permissions.length ?? 0 })}</Badge></td>
+                      <td data-label={tx('Status')} style={{ padding: '12px 14px' }}><Badge tone={member.status === 'Active' ? 'success' : 'warning'}>{tx(member.status)}</Badge></td>
+                      <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
                         <Button variant="ghost" disabled={member.role === 'Owner' || !canManageUsers} onClick={() => removeUser(member.id)} title="Remove user">
                           <Trash2 size={14} />
                         </Button>
@@ -227,11 +232,11 @@ export function TeamPage() {
             {auditLogs.slice(0, 14).map((log) => (
               <div key={log.id} style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 11, background: 'var(--bg-primary)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                  <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{log.action}</p>
-                  <Badge tone="neutral">{log.module}</Badge>
+                  <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{tx(log.action)}</p>
+                  <Badge tone="neutral">{tx(log.module)}</Badge>
                 </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 3 }}>{log.detail}</p>
-                <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 3 }}>{log.createdAt} by {log.user}</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 3 }}>{tx(log.detail)}</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 3 }}>{uiFormat(settings.language, '{createdAt} by {user}', { createdAt: log.createdAt, user: log.user })}</p>
               </div>
             ))}
           </div>
@@ -263,10 +268,12 @@ export function TeamPage() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                    <span style={{ fontSize: 13, fontWeight: 800 }}>{item.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800 }}>{tx(item.name)}</span>
                     <Badge tone={item.systemRole ? 'neutral' : 'accent'}>{item.systemRole ? 'System' : 'Custom'}</Badge>
                   </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 5 }}>{item.permissions.length} permissions, {roleUsage[item.name] ?? 0} users</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 5 }}>
+                    {uiFormat(settings.language, '{permissions} permissions, {users} users', { permissions: item.permissions.length, users: roleUsage[item.name] ?? 0 })}
+                  </p>
                 </button>
               );
             })}
@@ -278,10 +285,10 @@ export function TeamPage() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <ShieldCheck size={16} color="var(--accent)" />
-                    <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{selectedRole.name}</p>
-                    <Badge tone={roleTone(selectedRole.name)}>{selectedRole.permissions.length} features</Badge>
+                    <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{tx(selectedRole.name)}</p>
+                    <Badge tone={roleTone(selectedRole.name)}>{uiFormat(settings.language, '{count} features', { count: selectedRole.permissions.length })}</Badge>
                   </div>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: 1.6, marginTop: 5 }}>{selectedRole.description}</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: 1.6, marginTop: 5 }}>{tx(selectedRole.description)}</p>
                 </div>
                 <Button
                   variant="danger"
@@ -332,16 +339,16 @@ export function TeamPage() {
             <Field label="Email"><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} style={controlStyle} required /></Field>
             <Field label="Role">
               <select value={role} onChange={(event) => setRole(event.target.value)} style={controlStyle}>
-                {editableRoles.map((item) => <option key={item.id}>{item.name}</option>)}
-              </select>
-            </Field>
+                  {editableRoles.map((item) => <option key={item.id} value={item.name}>{tx(item.name)}</option>)}
+                </select>
+              </Field>
             <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, background: 'var(--bg-primary)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <UserCog size={14} color="var(--accent)" />
-                <Badge tone={roleTone(role)}>{role}</Badge>
+                <Badge tone={roleTone(role)}>{tx(role)}</Badge>
               </div>
               <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 6 }}>
-                This invite receives {roleDefinitions.find((item) => item.name === role)?.permissions.length ?? 0} feature permissions.
+                {uiFormat(settings.language, 'This invite receives {count} feature permissions.', { count: roleDefinitions.find((item) => item.name === role)?.permissions.length ?? 0 })}
               </p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
@@ -357,15 +364,15 @@ export function TeamPage() {
           <form onSubmit={submitRole} style={{ display: 'grid', gap: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 0.5fr) minmax(240px, 1fr)', gap: 12 }}>
               <Field label="Role name">
-                <input value={newRoleName} onChange={(event) => setNewRoleName(event.target.value)} style={controlStyle} placeholder="Warehouse Lead" required />
+                <input value={newRoleName} onChange={(event) => setNewRoleName(event.target.value)} style={controlStyle} placeholder={tx('Warehouse Lead')} required />
               </Field>
               <Field label="Description">
-                <input value={newRoleDescription} onChange={(event) => setNewRoleDescription(event.target.value)} style={controlStyle} placeholder="Can manage stock and view sales context." />
+                <input value={newRoleDescription} onChange={(event) => setNewRoleDescription(event.target.value)} style={controlStyle} placeholder={tx('Can manage stock and view sales context.')} />
               </Field>
             </div>
             <PermissionChecklist selectedPermissions={newRolePermissions} onToggle={toggleNewRolePermission} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{newRolePermissions.length} permissions selected</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{uiFormat(settings.language, '{count} permissions selected', { count: newRolePermissions.length })}</p>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <Button variant="secondary" onClick={() => setShowRoleModal(false)}>Cancel</Button>
                 <Button type="submit">Create Role</Button>

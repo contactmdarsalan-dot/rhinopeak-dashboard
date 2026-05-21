@@ -19,13 +19,13 @@ from apps.rhinopeak.models import UserAccount
 from apps.rhinopeak.services.common import customer_segment, require_permission, sale_total, stock_status
 
 
-def apply_inventory_delta(user: UserAccount, product_id: str, delta: int) -> dict[str, Any] | None:
+def apply_inventory_delta(user: UserAccount, product_id: str, delta: float) -> dict[str, Any] | None:
     product = get_record(user.workspace, "inventory", product_id)
     if not product:
         return None
-    stock = max(0, int(product.get("stock", 0)) + int(delta))
+    stock = max(0.0, float(product.get("stock", 0)) + float(delta))
     product["stock"] = stock
-    product["status"] = stock_status(stock, int(product.get("reorderLevel", 0)))
+    product["status"] = stock_status(stock, float(product.get("reorderLevel", 0)))
     return put_record(user.workspace, "inventory", product)
 
 
@@ -95,7 +95,10 @@ def update_customer(user: UserAccount, customer_id: str, patch: dict[str, Any]) 
 def create_product(user: UserAccount, payload: dict[str, Any]) -> dict[str, Any]:
     require_permission(user, "inventory.manage")
     product = dict(payload)
-    product["status"] = stock_status(int(product.get("stock", 0)), int(product.get("reorderLevel", 0)))
+    product["unit"] = str(product.get("unit", "pcs")).strip() or "pcs"
+    product["stock"] = float(product.get("stock", 0))
+    product["reorderLevel"] = float(product.get("reorderLevel", 0))
+    product["status"] = stock_status(product["stock"], product["reorderLevel"])
     product = put_record(user.workspace, "inventory", product)
     create_audit(user.workspace, user.name, "Created product", "Inventory", product.get("name", product["id"]))
     return {"product": product}
@@ -110,7 +113,8 @@ def create_sale(user: UserAccount, payload: dict[str, Any]) -> dict[str, Any]:
     put_record(user.workspace, "sales", sale)
     if sale.get("status") != "Refunded":
         for item in sale.get("items", []):
-            apply_inventory_delta(user, item.get("productId", ""), -int(item.get("quantity", 0)))
+            quantity = float(item.get("quantity", 0))
+            apply_inventory_delta(user, item.get("productId", ""), -quantity)
             put_record(
                 user.workspace,
                 "inventory_movements",
@@ -118,7 +122,7 @@ def create_sale(user: UserAccount, payload: dict[str, Any]) -> dict[str, Any]:
                     "id": make_id("MOV"),
                     "productId": item.get("productId", ""),
                     "productName": item.get("productName", ""),
-                    "delta": -int(item.get("quantity", 0)),
+                    "delta": -quantity,
                     "reason": "Sale",
                     "note": sale.get("id", ""),
                     "user": user.name,
@@ -143,7 +147,7 @@ def patch_sale(user: UserAccount, sale_id: str, patch: dict[str, Any]) -> dict[s
         direction = 1 if old_applied and not new_applied else -1
         reason = "Return" if direction > 0 else "Sale"
         for item in old_sale.get("items", []):
-            delta = direction * int(item.get("quantity", 0))
+            delta = direction * float(item.get("quantity", 0))
             apply_inventory_delta(user, item.get("productId", ""), delta)
             put_record(
                 user.workspace,
@@ -174,7 +178,7 @@ def delete_sale(user: UserAccount, sale_id: str) -> dict[str, bool]:
         raise AppError(404, "Sale not found.")
     if not sale.get("deletedAt") and sale.get("status") != "Refunded":
         for item in sale.get("items", []):
-            apply_inventory_delta(user, item.get("productId", ""), int(item.get("quantity", 0)))
+            apply_inventory_delta(user, item.get("productId", ""), float(item.get("quantity", 0)))
     sale["deletedAt"] = today_string()
     sale["auditTrail"] = [f"Soft-deleted by {user.name}", *sale.get("auditTrail", [])]
     put_record(user.workspace, "sales", sale)
@@ -187,7 +191,7 @@ def delete_sale(user: UserAccount, sale_id: str) -> dict[str, bool]:
 def create_movement(user: UserAccount, payload: dict[str, Any]) -> dict[str, Any]:
     require_permission(user, "inventory.manage")
     movement = put_record(user.workspace, "inventory_movements", payload)
-    apply_inventory_delta(user, movement.get("productId", ""), int(movement.get("delta", 0)))
+    apply_inventory_delta(user, movement.get("productId", ""), float(movement.get("delta", 0)))
     create_audit(user.workspace, user.name, "Recorded stock movement", "Inventory", movement.get("productName", movement["id"]))
     return {"movement": movement, "bootstrap": bootstrap_payload(user)}
 

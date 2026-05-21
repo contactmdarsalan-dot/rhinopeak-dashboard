@@ -1,7 +1,8 @@
 'use client';
 import {
-  LayoutDashboard, ShoppingCart, BarChart2, Users,
+  LayoutDashboard, ShoppingCart, BarChart2, Users, Calculator,
   Package, FileText, Settings, ChevronLeft, Zap, CreditCard, ShieldCheck,
+  PlusCircle, ReceiptText, WalletCards, Archive, BellRing, Building2,
 } from 'lucide-react';
 import { type ActivePage, useAppStore } from '@/lib/store';
 import { translate } from '@/lib/i18n';
@@ -10,10 +11,18 @@ import { usePathname } from 'next/navigation';
 
 const NAV_ITEMS = [
   { id: 'dashboard', href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { id: 'quick-add', href: '/quick-add', labelKey: 'nav.quickAdd', icon: PlusCircle },
   { id: 'sales', href: '/sales', labelKey: 'nav.sales', icon: ShoppingCart },
+  { id: 'purchases', href: '/purchases', labelKey: 'nav.purchases', icon: ReceiptText },
+  { id: 'expenses', href: '/expenses', labelKey: 'nav.expenses', icon: WalletCards },
   { id: 'analytics', href: '/analytics', labelKey: 'nav.analytics', icon: BarChart2 },
+  { id: 'parties', href: '/parties', labelKey: 'nav.parties', icon: Building2 },
   { id: 'customers', href: '/customers', labelKey: 'nav.customers', icon: Users },
   { id: 'inventory', href: '/inventory', labelKey: 'nav.inventory', icon: Package },
+  { id: 'cash-bank', href: '/cash-bank', labelKey: 'nav.cashBank', icon: CreditCard },
+  { id: 'accounting', href: '/accounting', labelKey: 'nav.accounting', icon: Calculator },
+  { id: 'documents', href: '/documents', labelKey: 'nav.documents', icon: Archive },
+  { id: 'reminders', href: '/reminders', labelKey: 'nav.reminders', icon: BellRing },
   { id: 'reports', href: '/reports', labelKey: 'nav.reports', icon: FileText },
   { id: 'team', href: '/team', labelKey: 'nav.team', icon: ShieldCheck },
   { id: 'billing', href: '/billing', labelKey: 'nav.billing', icon: CreditCard },

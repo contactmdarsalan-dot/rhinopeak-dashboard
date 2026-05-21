@@ -1,5 +1,7 @@
 'use client';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { uiText } from '@/lib/i18n';
+import { useAppStore } from '@/lib/store';
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
 
 interface KpiCardProps {
@@ -12,6 +14,7 @@ interface KpiCardProps {
 }
 
 export function KpiCard({ label, value, change, format = 'currency', icon, delay = 0 }: KpiCardProps) {
+  const language = useAppStore((state) => state.settings.language);
   const positive = change >= 0;
   const displayValue = format === 'currency' ? formatCurrency(value) : formatNumber(value);
 
@@ -77,7 +80,7 @@ export function KpiCard({ label, value, change, format = 'currency', icon, delay
           <span style={{ color: positive ? 'var(--success)' : 'var(--danger)', fontSize: 12, fontWeight: 600 }}>
             {formatPercent(change)}
           </span>
-          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>vs last period</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{uiText(language, 'vs last period')}</span>
         </div>
       </div>
     </div>

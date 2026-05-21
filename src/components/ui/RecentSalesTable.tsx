@@ -1,5 +1,6 @@
 'use client';
 import { Badge, Panel, PanelHeader } from '@/components/ui/Primitives';
+import { translatePaymentMethod, translateSaleStatus, uiText } from '@/lib/i18n';
 import { useAppStore } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
 
@@ -12,13 +13,15 @@ function statusTone(status: string) {
 export function RecentSalesTable() {
   const sales = useAppStore((state) => state.sales);
   const setActivePage = useAppStore((state) => state.setActivePage);
+  const language = useAppStore((state) => state.settings.language);
   const recent = sales.filter((sale) => !sale.deletedAt).slice(0, 10);
+  const tx = (value: string) => uiText(language, value);
 
   return (
     <Panel>
       <PanelHeader
-        title="Recent Sales"
-        subtitle="Last 10 active transactions"
+        title={tx('Recent Sales')}
+        subtitle={tx('Last 10 active transactions')}
         action={
           <button
             onClick={() => setActivePage('sales')}
@@ -33,13 +36,13 @@ export function RecentSalesTable() {
               fontWeight: 650,
             }}
           >
-            View All
+            {tx('View All')}
           </button>
         }
       />
 
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="responsive-card-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               {['Order', 'Customer', 'Products', 'Amount', 'Payment', 'Status', 'Date'].map((header) => (
@@ -55,7 +58,7 @@ export function RecentSalesTable() {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {header}
+                  {tx(header)}
                 </th>
               ))}
             </tr>
@@ -71,21 +74,21 @@ export function RecentSalesTable() {
                 onMouseEnter={(event) => (event.currentTarget.style.background = 'var(--bg-card-hover)')}
                 onMouseLeave={(event) => (event.currentTarget.style.background = 'transparent')}
               >
-                <td style={{ padding: '12px 16px' }}>
+                <td data-label={tx('Order')} data-card-primary="true" style={{ padding: '12px 16px' }}>
                   <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>{sale.id}</span>
                 </td>
-                <td style={{ padding: '12px 16px', color: 'var(--text-primary)', fontSize: 13 }}>{sale.customer}</td>
-                <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>{sale.products}</td>
-                <td style={{ padding: '12px 16px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>
+                <td data-label={tx('Customer')} style={{ padding: '12px 16px', color: 'var(--text-primary)', fontSize: 13 }}>{sale.customer}</td>
+                <td data-label={tx('Products')} style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>{sale.products}</td>
+                <td data-label={tx('Amount')} style={{ padding: '12px 16px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>
                   {formatCurrency(sale.amount)}
                 </td>
-                <td style={{ padding: '12px 16px' }}>
-                  <Badge>{sale.payment}</Badge>
+                <td data-label={tx('Payment')} style={{ padding: '12px 16px' }}>
+                  <Badge>{translatePaymentMethod(language, sale.payment)}</Badge>
                 </td>
-                <td style={{ padding: '12px 16px' }}>
-                  <Badge tone={statusTone(sale.status)}>{sale.status}</Badge>
+                <td data-label={tx('Status')} style={{ padding: '12px 16px' }}>
+                  <Badge tone={statusTone(sale.status)}>{translateSaleStatus(language, sale.status)}</Badge>
                 </td>
-                <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: 12 }}>{sale.date}</td>
+                <td data-label={tx('Date')} style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: 12 }}>{sale.date}</td>
               </tr>
             ))}
           </tbody>

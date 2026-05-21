@@ -2,7 +2,7 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { Download, Plus, Trash2 } from 'lucide-react';
 import { Badge, Button, Field, Modal, Panel, PanelHeader, ProGate, controlStyle } from '@/components/ui/Primitives';
-import { languageName, translate } from '@/lib/i18n';
+import { languageName, translate, translatePaymentMethod, uiFormat, uiText } from '@/lib/i18n';
 import { useAppStore } from '@/lib/store';
 import { downloadTextFile } from '@/lib/utils';
 
@@ -47,11 +47,12 @@ function SettingRow({
   desc?: string;
   children: React.ReactNode;
 }) {
+  const language = useAppStore((state) => state.settings.language);
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
       <div style={{ minWidth: 220 }}>
-        <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{label}</p>
-        {desc && <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{desc}</p>}
+        <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{uiText(language, label)}</p>
+        {desc && <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{uiText(language, desc)}</p>}
       </div>
       <div style={{ minWidth: 180 }}>{children}</div>
     </div>
@@ -80,6 +81,7 @@ export function SettingsPage() {
   const [category, setCategory] = useState('');
   const [address, setAddress] = useState('');
   const t = (key: Parameters<typeof translate>[1]) => translate(settings.language, key);
+  const tx = (value: string) => uiText(settings.language, value);
 
   const accountExport = useMemo(() => JSON.stringify({
     settings,
@@ -111,6 +113,9 @@ export function SettingsPage() {
           <SettingRow label={t('settings.businessName')} desc="Primary organization display name">
             <input value={settings.businessName} onChange={(event) => updateSettings({ businessName: event.target.value })} style={controlStyle} />
           </SettingRow>
+          <SettingRow label={tx('PAN / VAT No.')} desc="Printed on Nepal tax invoices and bills">
+            <input value={settings.panVatNumber} onChange={(event) => updateSettings({ panVatNumber: event.target.value })} style={controlStyle} />
+          </SettingRow>
           <SettingRow label={t('settings.currency')} desc="Primary display currency">
             <select value={settings.currency} onChange={(event) => updateSettings({ currency: event.target.value as typeof settings.currency })} style={controlStyle}>
               <option>NPR</option>
@@ -128,7 +133,7 @@ export function SettingsPage() {
           </SettingRow>
           <SettingRow label={t('settings.fiscalYear')} desc="Used for yearly summaries">
             <select value={settings.fiscalYearStart} onChange={(event) => updateSettings({ fiscalYearStart: event.target.value as typeof settings.fiscalYearStart })} style={controlStyle}>
-              {['January', 'April', 'July', 'October'].map((month) => <option key={month}>{month}</option>)}
+              {['January', 'April', 'July', 'October'].map((month) => <option key={month} value={month}>{tx(month)}</option>)}
             </select>
           </SettingRow>
           <SettingRow label={t('settings.taxRate')} desc="Default percentage applied to new invoice workflows">
@@ -139,7 +144,7 @@ export function SettingsPage() {
           </SettingRow>
           <SettingRow label={t('settings.defaultPayment')} desc="Default method for new sales">
             <select value={settings.defaultPaymentMethod} onChange={(event) => updateSettings({ defaultPaymentMethod: event.target.value as typeof settings.defaultPaymentMethod })} style={controlStyle}>
-              {['Cash', 'Card', 'eSewa', 'FonePay', 'Khalti', 'Bank'].map((method) => <option key={method}>{method}</option>)}
+              {['Cash', 'Card', 'eSewa', 'FonePay', 'Khalti', 'Bank', 'Credit'].map((method) => <option key={method} value={method}>{translatePaymentMethod(settings.language, method)}</option>)}
             </select>
           </SettingRow>
           <SettingRow label={t('settings.receiptFooter')} desc="Shown on exported receipts and invoices">
@@ -147,8 +152,8 @@ export function SettingsPage() {
           </SettingRow>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
             <div>
-              <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>Multi-business accounts</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>{businesses.length} businesses connected</p>
+              <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{tx('Multi-business accounts')}</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>{uiFormat(settings.language, '{count} businesses connected', { count: businesses.length })}</p>
             </div>
             <Button variant="secondary" onClick={() => plan === 'pro' ? setShowBusinessModal(true) : setActivePage('billing')}>
               <Plus size={14} /> Add Business
@@ -195,8 +200,8 @@ export function SettingsPage() {
         <PanelHeader title={t('settings.accountData')} subtitle={t('settings.accountDataCopy')} action={<Badge tone="info">Workspace</Badge>} />
         <div style={{ padding: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>Export or delete workspace data</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Includes sales, customers, inventory, reports, settings, and audit history.</p>
+            <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{tx('Export or delete workspace data')}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{tx('Includes sales, customers, inventory, reports, settings, and audit history.')}</p>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <Button variant="secondary" onClick={() => downloadTextFile('rhinopeak-account-export.json', accountExport, 'application/json;charset=utf-8')}>
@@ -213,7 +218,7 @@ export function SettingsPage() {
         <Modal title="Add Business" subtitle="Pro multi-business workspace" onClose={() => setShowBusinessModal(false)}>
           <form onSubmit={submitBusiness} style={{ display: 'grid', gap: 13 }}>
             <Field label="Business name"><input value={businessName} onChange={(event) => setBusinessName(event.target.value)} style={controlStyle} required /></Field>
-            <Field label="Category"><input value={category} onChange={(event) => setCategory(event.target.value)} style={controlStyle} placeholder="Hotel, restaurant, retail, travel..." /></Field>
+            <Field label="Category"><input value={category} onChange={(event) => setCategory(event.target.value)} style={controlStyle} placeholder={tx('Hotel, restaurant, retail, travel...')} /></Field>
             <Field label="Address"><input value={address} onChange={(event) => setAddress(event.target.value)} style={controlStyle} /></Field>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <Button variant="secondary" onClick={() => setShowBusinessModal(false)}>Cancel</Button>

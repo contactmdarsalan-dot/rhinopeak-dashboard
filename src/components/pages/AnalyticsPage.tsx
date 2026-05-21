@@ -4,13 +4,16 @@ import { format, subDays } from 'date-fns';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { RevenueChart, type RevenuePoint } from '@/components/ui/Charts';
 import { Badge, Panel, PanelHeader, ProGate, StatTile, controlStyle } from '@/components/ui/Primitives';
+import type { CustomerSegment } from '@/lib/domain';
+import { translateCustomerSegment, uiText } from '@/lib/i18n';
 import { useAppStore } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
 
 const pieColors = ['#6366f1', '#22d3ee', '#10b981', '#f59e0b', '#ef4444'];
 
 export function AnalyticsPage() {
-  const { sales, customers, inventory, plan, setActivePage } = useAppStore();
+  const { sales, customers, inventory, plan, settings, setActivePage } = useAppStore();
+  const tx = (value: string) => uiText(settings.language, value);
   const [range, setRange] = useState('30');
   const [category, setCategory] = useState('All');
   const [segment, setSegment] = useState('All');
@@ -19,7 +22,7 @@ export function AnalyticsPage() {
   const cutoff = subDays(new Date(), Number(range));
   const scopedSales = completedSales.filter((sale) => new Date(sale.date) >= cutoff);
   const categories = ['All', ...Array.from(new Set(inventory.map((product) => product.category)))];
-  const segments = ['All', ...Array.from(new Set(customers.map((customer) => customer.segment)))];
+  const segments: Array<'All' | CustomerSegment> = ['All', ...Array.from(new Set(customers.map((customer) => customer.segment)))];
 
   const filteredSales = useMemo(() => {
     return scopedSales.filter((sale) => {
@@ -130,15 +133,15 @@ export function AnalyticsPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <Panel style={{ padding: 14, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <select value={range} onChange={(event) => setRange(event.target.value)} style={{ ...controlStyle, width: 150 }}>
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
+          <option value="7">{tx('Last 7 days')}</option>
+          <option value="30">{tx('Last 30 days')}</option>
+          <option value="90">{tx('Last 90 days')}</option>
         </select>
         <select value={category} onChange={(event) => setCategory(event.target.value)} style={{ ...controlStyle, width: 170 }}>
-          {categories.map((item) => <option key={item}>{item}</option>)}
+          {categories.map((item) => <option key={item} value={item}>{item === 'All' ? tx('All') : item}</option>)}
         </select>
         <select value={segment} onChange={(event) => setSegment(event.target.value)} style={{ ...controlStyle, width: 170 }}>
-          {segments.map((item) => <option key={item}>{item}</option>)}
+          {segments.map((item) => <option key={item} value={item}>{translateCustomerSegment(settings.language, item)}</option>)}
         </select>
         {plan === 'free' && <Badge tone="warning">Free: 30-day analytics only</Badge>}
       </Panel>
@@ -156,22 +159,22 @@ export function AnalyticsPage() {
         <Panel>
           <PanelHeader title="Product Performance" subtitle="Revenue, units sold, and profit margin" />
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table className="responsive-card-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   {['Rank', 'Product', 'Revenue', 'Units', 'Margin'].map((header) => (
-                    <th key={header} style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: 'left', textTransform: 'uppercase' }}>{header}</th>
+                    <th key={header} style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: 'left', textTransform: 'uppercase' }}>{tx(header)}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {productRows.map((product, index) => (
                   <tr key={product.name} style={{ borderBottom: index < productRows.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12 }}>#{index + 1}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{product.name}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{formatCurrency(product.revenue)}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: 13 }}>{product.units}</td>
-                    <td style={{ padding: '10px 14px' }}><Badge tone={product.margin > 35 ? 'success' : 'warning'}>{product.margin.toFixed(1)}%</Badge></td>
+                    <td data-label={tx('Rank')} data-card-primary="true" style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12 }}>#{index + 1}</td>
+                    <td data-label={tx('Product')} style={{ padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{product.name}</td>
+                    <td data-label={tx('Revenue')} style={{ padding: '10px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{formatCurrency(product.revenue)}</td>
+                    <td data-label={tx('Units')} style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: 13 }}>{product.units}</td>
+                    <td data-label={tx('Margin')} style={{ padding: '10px 14px' }}><Badge tone={product.margin > 35 ? 'success' : 'warning'}>{product.margin.toFixed(1)}%</Badge></td>
                   </tr>
                 ))}
               </tbody>
@@ -180,8 +183,8 @@ export function AnalyticsPage() {
         </Panel>
 
         <Panel style={{ padding: '18px 20px' }}>
-          <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 14 }}>Revenue by Category</p>
-          <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 14 }}>Pro breakdown from current filters</p>
+          <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 14 }}>{tx('Revenue by Category')}</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 14 }}>{tx('Pro breakdown from current filters')}</p>
           {plan !== 'pro' ? (
             <ProGate message="Category analytics are available on Pro." onUpgrade={() => setActivePage('billing')} />
           ) : (
@@ -190,7 +193,7 @@ export function AnalyticsPage() {
                 <Pie data={categoryBreakdown} cx="50%" cy="50%" innerRadius={52} outerRadius={82} paddingAngle={3} dataKey="value">
                   {categoryBreakdown.map((_, index) => <Cell key={index} fill={pieColors[index % pieColors.length]} />)}
                 </Pie>
-                <Tooltip formatter={(value) => [formatCurrency(Number(value ?? 0)), 'Revenue']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} />
+                <Tooltip formatter={(value) => [formatCurrency(Number(value ?? 0)), tx('Revenue')]} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -199,14 +202,14 @@ export function AnalyticsPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 0.55fr) minmax(0,1fr)', gap: 16 }}>
         <Panel style={{ padding: '18px 20px' }}>
-          <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 14 }}>Customer Split</p>
-          <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 14 }}>Repeat vs new customers</p>
+          <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 14 }}>{tx('Customer Split')}</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 14 }}>{tx('Repeat vs new customers')}</p>
           <ResponsiveContainer width="100%" height={190}>
             <PieChart>
               <Pie data={customerSplit} cx="50%" cy="50%" innerRadius={48} outerRadius={76} paddingAngle={3} dataKey="value">
                 {customerSplit.map((_, index) => <Cell key={index} fill={pieColors[index]} />)}
               </Pie>
-              <Tooltip formatter={(value) => [`${Number(value ?? 0)} customers`]} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} />
+              <Tooltip formatter={(value) => [`${Number(value ?? 0)} ${tx('customers')}`]} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} />
             </PieChart>
           </ResponsiveContainer>
         </Panel>
@@ -230,8 +233,8 @@ export function AnalyticsPage() {
       <Panel style={{ position: 'relative', padding: '18px 20px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 14 }}>
           <div>
-            <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 14 }}>Sales Heatmap</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Revenue by weekday and sale creation hour</p>
+            <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 14 }}>{tx('Sales Heatmap')}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{tx('Revenue by weekday and sale creation hour')}</p>
           </div>
           <Badge tone="warning">PRO</Badge>
         </div>

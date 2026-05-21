@@ -1,5 +1,24 @@
-import type { CSSProperties, ReactNode } from 'react';
+'use client';
+import { Children, isValidElement, cloneElement, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { Lock, X } from 'lucide-react';
+import { uiText } from '@/lib/i18n';
+import { useAppStore } from '@/lib/store';
+
+function translateNode(language: Parameters<typeof uiText>[0], node: ReactNode): ReactNode {
+  return Children.map(node, (child) => {
+    if (typeof child === 'string') {
+      const trimmed = child.trim();
+      return trimmed ? child.replace(trimmed, uiText(language, trimmed)) : child;
+    }
+    if (Array.isArray(child)) return translateNode(language, child);
+    if (isValidElement<{ children?: ReactNode }>(child) && child.props.children) {
+      return cloneElement(child as ReactElement<{ children?: ReactNode }>, {
+        children: translateNode(language, child.props.children),
+      });
+    }
+    return child;
+  });
+}
 
 export function Panel({
   children,
@@ -32,6 +51,7 @@ export function PanelHeader({
   subtitle?: string;
   action?: ReactNode;
 }) {
+  const language = useAppStore((state) => state.settings.language);
   return (
     <div
       style={{
@@ -44,8 +64,8 @@ export function PanelHeader({
       }}
     >
       <div>
-        <p style={{ color: 'var(--text-primary)', fontWeight: 650, fontSize: 14 }}>{title}</p>
-        {subtitle && <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{subtitle}</p>}
+        <p style={{ color: 'var(--text-primary)', fontWeight: 650, fontSize: 14 }}>{uiText(language, title)}</p>
+        {subtitle && <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{uiText(language, subtitle)}</p>}
       </div>
       {action}
     </div>
@@ -69,6 +89,7 @@ export function Button({
   title?: string;
   style?: CSSProperties;
 }) {
+  const language = useAppStore((state) => state.settings.language);
   const styles = {
     primary: {
       background: 'var(--accent)',
@@ -115,7 +136,7 @@ export function Button({
         ...style,
       }}
     >
-      {children}
+      {translateNode(language, children)}
     </button>
   );
 }
@@ -129,13 +150,14 @@ export function Field({
   hint?: string;
   children: ReactNode;
 }) {
+  const language = useAppStore((state) => state.settings.language);
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <span style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textTransform: 'uppercase' }}>
-        {label}
+        {uiText(language, label)}
       </span>
       {children}
-      {hint && <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{hint}</span>}
+      {hint && <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{uiText(language, hint)}</span>}
     </label>
   );
 }
@@ -159,6 +181,7 @@ export function Badge({
   children: ReactNode;
   tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'accent';
 }) {
+  const language = useAppStore((state) => state.settings.language);
   const colorMap = {
     neutral: ['var(--text-secondary)', 'var(--border)'],
     success: ['var(--success)', 'rgba(16,185,129,0.12)'],
@@ -183,7 +206,7 @@ export function Badge({
         whiteSpace: 'nowrap',
       }}
     >
-      {children}
+      {translateNode(language, children)}
     </span>
   );
 }
@@ -199,6 +222,7 @@ export function StatTile({
   detail?: string;
   tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'accent';
 }) {
+  const language = useAppStore((state) => state.settings.language);
   const color = {
     neutral: 'var(--text-primary)',
     success: 'var(--success)',
@@ -210,10 +234,10 @@ export function StatTile({
   return (
     <Panel style={{ padding: '14px 16px' }}>
       <p style={{ color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', fontWeight: 650 }}>
-        {label}
+        {uiText(language, label)}
       </p>
       <p style={{ color, fontWeight: 750, fontSize: 22, marginTop: 4, lineHeight: 1.2 }}>{value}</p>
-      {detail && <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 6 }}>{detail}</p>}
+      {detail && <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 6 }}>{uiText(language, detail)}</p>}
     </Panel>
   );
 }
@@ -231,8 +255,10 @@ export function Modal({
   onClose: () => void;
   width?: number;
 }) {
+  const language = useAppStore((state) => state.settings.language);
   return (
     <div
+      className="modal-overlay"
       onClick={onClose}
       style={{
         position: 'fixed',
@@ -247,6 +273,7 @@ export function Modal({
       }}
     >
       <div
+        className="modal-card"
         onClick={(event) => event.stopPropagation()}
         style={{
           width: '100%',
@@ -260,6 +287,7 @@ export function Modal({
         }}
       >
         <div
+          className="modal-header"
           style={{
             padding: '18px 20px',
             borderBottom: '1px solid var(--border)',
@@ -270,8 +298,8 @@ export function Modal({
           }}
         >
           <div>
-            <p style={{ color: 'var(--text-primary)', fontWeight: 750, fontSize: 16 }}>{title}</p>
-            {subtitle && <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{subtitle}</p>}
+            <p style={{ color: 'var(--text-primary)', fontWeight: 750, fontSize: 16 }}>{uiText(language, title)}</p>
+            {subtitle && <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{uiText(language, subtitle)}</p>}
           </div>
           <button
             onClick={onClose}
@@ -291,13 +319,14 @@ export function Modal({
             <X size={15} />
           </button>
         </div>
-        <div style={{ padding: 20 }}>{children}</div>
+        <div className="modal-body" style={{ padding: 20 }}>{children}</div>
       </div>
     </div>
   );
 }
 
 export function ProGate({ message, onUpgrade }: { message: string; onUpgrade: () => void }) {
+  const language = useAppStore((state) => state.settings.language);
   return (
     <div
       style={{
@@ -313,9 +342,9 @@ export function ProGate({ message, onUpgrade }: { message: string; onUpgrade: ()
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <Lock size={16} color="var(--warning)" />
-        <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{message}</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{uiText(language, message)}</p>
       </div>
-      <Button onClick={onUpgrade}>Upgrade</Button>
+      <Button onClick={onUpgrade}>{uiText(language, 'Upgrade')}</Button>
     </div>
   );
 }

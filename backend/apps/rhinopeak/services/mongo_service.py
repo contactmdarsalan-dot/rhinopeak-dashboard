@@ -93,7 +93,7 @@ def require_email(email: str) -> str:
     return email
 
 
-def stock_status(stock: int, reorder_level: int) -> str:
+def stock_status(stock: float, reorder_level: float) -> str:
     if stock <= 0:
         return "Out of Stock"
     if stock <= reorder_level:
@@ -126,7 +126,8 @@ def normalize_sale_items(user: dict[str, Any], items: Any) -> list[dict[str, Any
                 "productId": product_id,
                 "productName": str(item.get("productName") or (product or {}).get("name", "")).strip(),
                 "sku": str(item.get("sku") or (product or {}).get("sku", "")).strip(),
-                "quantity": int(item.get("quantity", 0)),
+                "quantity": float(item.get("quantity", 0)),
+                "unit": str(item.get("unit") or (product or {}).get("unit", "pcs")).strip() or "pcs",
                 "unitPrice": float(item.get("unitPrice", (product or {}).get("price", 0))),
                 "costPrice": float(item.get("costPrice", (product or {}).get("costPrice", 0))),
                 "discount": float(item.get("discount", 0)),
@@ -184,7 +185,7 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
         for item in record.get("items", []):
             if not isinstance(item, dict):
                 continue
-            quantity = int(item.get("quantity", 0))
+            quantity = float(item.get("quantity", 0))
             unit_price = float(item.get("unitPrice", 0))
             discount = float(item.get("discount", 0))
             tax = float(item.get("tax", 0))
@@ -194,6 +195,7 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
                     "productName": str(item.get("productName", "")),
                     "sku": str(item.get("sku", "")),
                     "quantity": quantity,
+                    "unit": str(item.get("unit", "pcs")) or "pcs",
                     "unitPrice": unit_price,
                     "costPrice": float(item.get("costPrice", 0)),
                     "discount": discount,
@@ -205,11 +207,17 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
         record.setdefault("subtotal", round(sum(item["quantity"] * item["unitPrice"] for item in normalized_items), 2))
         record.setdefault("discountTotal", round(sum(item["discount"] for item in normalized_items), 2))
         record.setdefault("taxTotal", round(sum(item["tax"] for item in normalized_items), 2))
+        record.setdefault("taxableAmount", round(record["subtotal"] - record["discountTotal"], 2))
+        record.setdefault("vatAmount", record["taxTotal"])
         record.setdefault("amount", round(record["subtotal"] - record["discountTotal"] + record["taxTotal"], 2))
         record.setdefault("currency", "NPR")
         record.setdefault("payment", "Cash")
         record.setdefault("status", "Completed")
         record.setdefault("date", today_string())
+        record.setdefault("invoiceType", "Tax Invoice")
+        record.setdefault("buyerPan", "")
+        record.setdefault("creditDueDate", "")
+        record.setdefault("creditClearedAt", "")
         record.setdefault("notes", "")
         record.setdefault("createdBy", "")
         record.setdefault("auditTrail", [])
@@ -233,6 +241,172 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
         record.setdefault("birthday", "")
         record.setdefault("preferredLanguage", "en")
 
+    if kind == "suppliers":
+        record.setdefault("name", "Supplier")
+        record.setdefault("phone", "")
+        record.setdefault("email", "")
+        record.setdefault("address", "")
+        record.setdefault("pan", "")
+        record.setdefault("contactPerson", "")
+        record.setdefault("payableBalance", 0)
+        record.setdefault("notes", "")
+
+    if kind == "credit_ledger":
+        record.setdefault("customerId", "")
+        record.setdefault("customerName", "")
+        record.setdefault("saleId", "")
+        record.setdefault("invoiceNo", "")
+        record.setdefault("type", "Credit Sale")
+        record.setdefault("amount", 0)
+        record.setdefault("date", today_string())
+        record.setdefault("dueDate", "")
+        record.setdefault("paymentMethod", "Cash")
+        record.setdefault("note", "")
+        record.setdefault("createdBy", "")
+
+    if kind == "parties":
+        record.setdefault("name", "Party")
+        record.setdefault("type", "Customer")
+        record.setdefault("phone", "")
+        record.setdefault("email", "")
+        record.setdefault("address", "")
+        record.setdefault("pan", "")
+        record.setdefault("openingBalance", 0)
+        record.setdefault("creditLimit", 0)
+        record.setdefault("dueDays", 0)
+        record.setdefault("notes", "")
+        record.setdefault("balance", float(record.get("openingBalance", 0)))
+
+    if kind == "party_ledger":
+        record.setdefault("partyId", "")
+        record.setdefault("partyName", "")
+        record.setdefault("direction", "Receivable")
+        record.setdefault("type", "Sale Credit")
+        record.setdefault("amount", 0)
+        record.setdefault("date", today_string())
+        record.setdefault("dueDate", "")
+        record.setdefault("referenceId", "")
+        record.setdefault("note", "")
+        record.setdefault("createdBy", "")
+
+    if kind == "purchases":
+        record.setdefault("supplierId", "")
+        record.setdefault("supplierName", "Supplier")
+        record.setdefault("billNo", f"PB-{record.get('id', make_id('PUR'))}")
+        record.setdefault("date", today_string())
+        record.setdefault("dueDate", "")
+        normalized_items = []
+        for item in record.get("items", []):
+            if not isinstance(item, dict):
+                continue
+            quantity = float(item.get("quantity", 0))
+            unit_cost = float(item.get("unitCost", 0))
+            discount = float(item.get("discount", 0))
+            tax = float(item.get("tax", 0))
+            normalized_items.append(
+                {
+                    "productId": str(item.get("productId", "")),
+                    "productName": str(item.get("productName", "")),
+                    "quantity": quantity,
+                    "unit": str(item.get("unit", "pcs")) or "pcs",
+                    "unitCost": unit_cost,
+                    "discount": discount,
+                    "tax": tax,
+                    "lineTotal": round(quantity * unit_cost - discount + tax, 2),
+                }
+            )
+        record["items"] = normalized_items
+        record.setdefault("subtotal", round(sum(item["quantity"] * item["unitCost"] for item in normalized_items), 2))
+        record.setdefault("discountTotal", round(sum(item["discount"] for item in normalized_items), 2))
+        record.setdefault("taxTotal", round(sum(item["tax"] for item in normalized_items), 2))
+        record.setdefault("amount", round(record["subtotal"] - record["discountTotal"] + record["taxTotal"], 2))
+        record.setdefault("payment", "Cash")
+        record.setdefault("status", "Received")
+        record.setdefault("notes", "")
+        record.setdefault("attachmentIds", [])
+        record.setdefault("createdBy", "")
+
+    if kind == "expenses":
+        record.setdefault("category", "Miscellaneous")
+        record.setdefault("vendor", "")
+        record.setdefault("amount", 0)
+        record.setdefault("taxAmount", 0)
+        record.setdefault("paymentAccountId", "")
+        record.setdefault("paymentMethod", "Cash")
+        record.setdefault("date", today_string())
+        record.setdefault("recurring", False)
+        record.setdefault("note", "")
+        record.setdefault("attachmentIds", [])
+        record.setdefault("createdBy", "")
+
+    if kind == "cash_bank_accounts":
+        record.setdefault("name", "Cash")
+        record.setdefault("type", "Cash")
+        record.setdefault("institution", "")
+        record.setdefault("accountNumber", "")
+        record.setdefault("openingBalance", 0)
+        record.setdefault("balance", float(record.get("openingBalance", 0)))
+        record.setdefault("active", True)
+
+    if kind == "money_movements":
+        record.setdefault("accountId", "")
+        record.setdefault("accountName", "")
+        record.setdefault("type", "Receipt")
+        record.setdefault("amount", 0)
+        record.setdefault("date", today_string())
+        record.setdefault("partyId", "")
+        record.setdefault("partyName", "")
+        record.setdefault("referenceId", "")
+        record.setdefault("note", "")
+        record.setdefault("createdBy", "")
+
+    if kind == "journal_entries":
+        record.setdefault("date", today_string())
+        record.setdefault("source", "Adjustment")
+        record.setdefault("sourceId", "")
+        record.setdefault("memo", "")
+        record.setdefault("lines", [])
+        record.setdefault("locked", False)
+        record.setdefault("createdBy", "")
+
+    if kind == "documents":
+        record.setdefault("name", "Document")
+        record.setdefault("recordType", "Other")
+        record.setdefault("recordId", "")
+        record.setdefault("fileName", "")
+        record.setdefault("mimeType", "application/octet-stream")
+        record.setdefault("size", 0)
+        record.setdefault("dataUrl", "")
+        record.setdefault("uploadedBy", "")
+
+    if kind == "reminder_templates":
+        record.setdefault("name", "Credit reminder")
+        record.setdefault("channel", "WhatsApp")
+        record.setdefault("language", "en")
+        record.setdefault("message", "")
+        record.setdefault("daysOffset", 0)
+        record.setdefault("active", True)
+
+    if kind == "reminder_logs":
+        record.setdefault("partyId", "")
+        record.setdefault("partyName", "")
+        record.setdefault("channel", "Manual")
+        record.setdefault("message", "")
+        record.setdefault("amount", 0)
+        record.setdefault("dueDate", "")
+        record.setdefault("status", "Draft")
+        record.setdefault("createdBy", "")
+
+    if kind == "sync_operations":
+        record.setdefault("operationKey", record.get("id", make_id("SYN")))
+        record.setdefault("entity", "")
+        record.setdefault("entityId", "")
+        record.setdefault("action", "create")
+        record.setdefault("payload", {})
+        record.setdefault("status", "Pending")
+        record.setdefault("error", "")
+        record.setdefault("syncedAt", "")
+
     if kind == "inventory":
         record.setdefault("name", "Untitled product")
         record.setdefault("description", "")
@@ -248,7 +422,7 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
         record.setdefault("taxRate", 13)
         record.setdefault("supplier", "")
         record.setdefault("location", "")
-        record.setdefault("status", stock_status(int(record.get("stock", 0)), int(record.get("reorderLevel", 0))))
+        record.setdefault("status", stock_status(float(record.get("stock", 0)), float(record.get("reorderLevel", 0))))
         record.setdefault("active", True)
 
     if kind == "inventory_movements":
@@ -262,6 +436,10 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
         record.setdefault("referenceId", "")
         record.setdefault("note", "")
         record.setdefault("user", "")
+
+    if kind in {"inventory_categories", "expense_categories"}:
+        record.setdefault("name", "General")
+        record.setdefault("createdBy", "")
 
     if kind == "reports":
         record.setdefault("title", "Untitled report")
@@ -314,7 +492,19 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
         record.setdefault("lastUpdatedAt", now)
 
     record.setdefault("createdAt", now)
-    record["updatedAt"] = now if kind in {"sales", "customers", "inventory", "feature_flags"} else record.get("updatedAt", now)
+    record["updatedAt"] = now if kind in {
+        "sales",
+        "customers",
+        "suppliers",
+        "parties",
+        "purchases",
+        "expenses",
+        "expense_categories",
+        "cash_bank_accounts",
+        "inventory",
+        "inventory_categories",
+        "feature_flags",
+    } else record.get("updatedAt", now)
     return record
 
 
@@ -367,6 +557,8 @@ def permissions_for_user(user: dict[str, Any]) -> list[str]:
 
 
 def require_permission(user: dict[str, Any], permission: str) -> None:
+    if user.get("role") == "Owner":
+        return
     if permission not in permissions_for_user(user):
         raise AppError(403, f"Permission required: {permission}")
 
@@ -426,6 +618,7 @@ def settings_payload(settings_doc: dict[str, Any] | None) -> dict[str, Any]:
         return dict(EMPTY_SETTINGS)
     return {
         "businessName": settings_doc.get("businessName", ""),
+        "panVatNumber": settings_doc.get("panVatNumber", ""),
         "currency": settings_doc.get("currency", "NPR"),
         "language": settings_doc.get("language", "en"),
         "timezone": settings_doc.get("timezone", "Asia/Kathmandu"),
@@ -511,11 +704,184 @@ def list_records(workspace_id: str, kind: str) -> list[dict[str, Any]]:
     ]
 
 
+DETAIL_ROUTE_KINDS = {
+    "sales": "sales",
+    "customers": "customers",
+    "suppliers": "suppliers",
+    "credit-ledger": "credit_ledger",
+    "parties": "parties",
+    "party-ledger": "party_ledger",
+    "purchases": "purchases",
+    "expenses": "expenses",
+    "cash-bank-accounts": "cash_bank_accounts",
+    "money-movements": "money_movements",
+    "journal-entries": "journal_entries",
+    "documents": "documents",
+    "reminder-templates": "reminder_templates",
+    "reminders": "reminder_logs",
+    "sync-operations": "sync_operations",
+    "inventory": "inventory",
+    "inventory-movements": "inventory_movements",
+    "reports": "reports",
+    "audit-logs": "audit_logs",
+    "billing-history": "billing_history",
+    "feature-flags": "feature_flags",
+    "support-tickets": "support_tickets",
+}
+
+
+def detail_payload(user: dict[str, Any], entity: str, record_id: str) -> dict[str, Any]:
+    workspace_id = user["workspaceId"]
+    kind = DETAIL_ROUTE_KINDS.get(entity)
+    if not kind:
+        raise AppError(404, "Detail route not found.")
+    record = get_record(workspace_id, kind, record_id)
+    if record is None:
+        raise AppError(404, "Record not found.")
+    related = related_records_for_detail(workspace_id, kind, record)
+    return {
+        "entity": entity,
+        "kind": kind,
+        "id": record_id,
+        "record": record,
+        "related": related,
+    }
+
+
+def related_records_for_detail(workspace_id: str, kind: str, record: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    record_id = str(record.get("id", ""))
+    customer_id = str(record.get("customerId", ""))
+    party_id = str(record.get("partyId", ""))
+    product_id = str(record.get("productId", ""))
+    if kind == "inventory":
+        product_id = record_id
+    supplier_name = str(record.get("supplier", "")).strip().lower()
+    return {
+        key: value
+        for key, value in {
+            "sales": _related_sales(workspace_id, kind, record, record_id, customer_id, product_id),
+            "creditLedger": _filter_records(workspace_id, "credit_ledger", customerId=customer_id, saleId=record_id),
+            "partyLedger": _filter_records(workspace_id, "party_ledger", partyId=party_id),
+            "purchases": _related_purchases(workspace_id, kind, record, record_id, party_id, product_id, supplier_name),
+            "expenses": _filter_records(workspace_id, "expenses", paymentAccountId=record_id),
+            "moneyMovements": _filter_records(workspace_id, "money_movements", accountId=record_id, referenceId=record_id),
+            "journalEntries": _filter_records(workspace_id, "journal_entries", sourceId=record_id),
+            "inventoryMovements": _filter_records(workspace_id, "inventory_movements", productId=product_id or record_id, referenceId=record_id),
+            "documents": _filter_records(workspace_id, "documents", referenceId=record_id),
+            "reminders": _filter_records(workspace_id, "reminder_logs", partyId=party_id, customerId=customer_id),
+            "auditLogs": _audit_records(workspace_id, record_id),
+        }.items()
+        if value
+    }
+
+
+def _filter_records(workspace_id: str, kind: str, **matches: str) -> list[dict[str, Any]]:
+    wanted = {key: value for key, value in matches.items() if value}
+    if not wanted:
+        return []
+    return [
+        item
+        for item in list_records(workspace_id, kind)
+        if any(str(item.get(key, "")) == value for key, value in wanted.items())
+    ][:25]
+
+
+def _related_sales(workspace_id: str, kind: str, record: dict[str, Any], record_id: str, customer_id: str, product_id: str) -> list[dict[str, Any]]:
+    if kind == "sales":
+        return []
+    customer_name = str(record.get("name", "")).strip().lower()
+    sales = list_records(workspace_id, "sales")
+    return [
+        sale
+        for sale in sales
+        if (customer_id and str(sale.get("customerId", "")) == customer_id)
+        or (customer_name and str(sale.get("customer", "")).strip().lower() == customer_name)
+        or (product_id and any(str(item.get("productId", "")) == product_id for item in sale.get("items", [])))
+        or (kind == "customers" and str(sale.get("customerId", "")) == record_id)
+    ][:25]
+
+
+def _related_purchases(workspace_id: str, kind: str, record: dict[str, Any], record_id: str, party_id: str, product_id: str, supplier_name: str) -> list[dict[str, Any]]:
+    if kind == "purchases":
+        return []
+    purchases = list_records(workspace_id, "purchases")
+    return [
+        purchase
+        for purchase in purchases
+        if (party_id and str(purchase.get("partyId", "")) == party_id)
+        or (supplier_name and str(purchase.get("supplier", "")).strip().lower() == supplier_name)
+        or (product_id and any(str(item.get("productId", "")) == product_id for item in purchase.get("items", [])))
+        or (kind == "suppliers" and str(purchase.get("supplierId", "")) == record_id)
+    ][:25]
+
+
+def _audit_records(workspace_id: str, record_id: str) -> list[dict[str, Any]]:
+    return [
+        item
+        for item in list_records(workspace_id, "audit_logs")
+        if record_id and record_id in {str(item.get("recordId", "")), str(item.get("detail", "")), str(item.get("target", ""))}
+    ][:25]
+
+
 def patch_record(workspace_id: str, kind: str, record_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
     existing = get_record(workspace_id, kind, record_id)
     if existing is None:
         return None
     return put_record(workspace_id, kind, {**existing, **patch, "id": record_id})
+
+
+CRUD_ROUTE_KINDS = {
+    "customers": ("customers", "customers.manage", "Customers"),
+    "credit-ledger": ("credit_ledger", "customers.manage", "Credit Ledger"),
+    "inventory": ("inventory", "inventory.manage", "Inventory"),
+    "inventory-movements": ("inventory_movements", "inventory.manage", "Inventory"),
+    "money-movements": ("money_movements", "cashbank.manage", "Cash & Bank"),
+    "documents": ("documents", "documents.manage", "Documents"),
+    "reminder-templates": ("reminder_templates", "reminders.manage", "Reminders"),
+    "reminders": ("reminder_logs", "reminders.manage", "Reminders"),
+    "reports": ("reports", "reports.generate", "Reports"),
+    "sync-operations": ("sync_operations", "sync.manage", "Sync"),
+}
+
+
+def update_generic_record(user: dict[str, Any], entity: str, record_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+    kind, permission, module = crud_kind_for(entity)
+    require_permission(user, permission)
+    clean_patch = dict(patch)
+    clean_patch.pop("id", None)
+    clean_patch["updatedAt"] = iso_now()
+    if kind == "inventory":
+        existing = get_record(user["workspaceId"], kind, record_id)
+        next_stock = float(clean_patch.get("stock", (existing or {}).get("stock", 0)))
+        next_reorder = float(clean_patch.get("reorderLevel", (existing or {}).get("reorderLevel", 0)))
+        clean_patch["status"] = stock_status(next_stock, next_reorder)
+    record = patch_record(user["workspaceId"], kind, record_id, clean_patch)
+    if record is None:
+        raise AppError(404, "Record not found.")
+    create_audit(user["workspaceId"], user["name"], "Updated record", module, record_id)
+    return {"record": record, "bootstrap": bootstrap_payload(user)}
+
+
+def delete_generic_record(user: dict[str, Any], entity: str, record_id: str) -> dict[str, Any]:
+    kind, permission, module = crud_kind_for(entity)
+    require_permission(user, permission)
+    existing = get_record(user["workspaceId"], kind, record_id)
+    if existing is None:
+        raise AppError(404, "Record not found.")
+    collection("records").delete_one({"workspaceId": user["workspaceId"], "kind": kind, "id": record_id})
+    if kind == "inventory":
+        collection("records").delete_many({"workspaceId": user["workspaceId"], "kind": "inventory_movements", "payload.productId": record_id})
+    if kind == "customers":
+        collection("records").delete_many({"workspaceId": user["workspaceId"], "kind": "credit_ledger", "payload.customerId": record_id})
+    create_audit(user["workspaceId"], user["name"], "Deleted record", module, record_id)
+    return {"ok": True, "bootstrap": bootstrap_payload(user)}
+
+
+def crud_kind_for(entity: str) -> tuple[str, str, str]:
+    match = CRUD_ROUTE_KINDS.get(entity)
+    if not match:
+        raise AppError(404, "CRUD route not found.")
+    return match
 
 
 def create_audit(workspace_id: str, user_name: str, action: str, module: str, detail: str) -> None:
@@ -687,8 +1053,23 @@ def bootstrap_payload(user: dict[str, Any]) -> dict[str, Any]:
         "teamMembers": [user_payload(row) for row in team if row],
         "roleDefinitions": [role_payload(row) for row in roles if row],
         "sales": list_records(workspace_id, "sales"),
+        "parties": list_records(workspace_id, "parties"),
+        "partyLedger": list_records(workspace_id, "party_ledger"),
+        "purchases": list_records(workspace_id, "purchases"),
+        "expenses": list_records(workspace_id, "expenses"),
+        "expenseCategories": expense_category_names(workspace_id),
+        "cashBankAccounts": list_records(workspace_id, "cash_bank_accounts"),
+        "moneyMovements": list_records(workspace_id, "money_movements"),
+        "journalEntries": list_records(workspace_id, "journal_entries"),
+        "documents": list_records(workspace_id, "documents"),
+        "reminderTemplates": list_records(workspace_id, "reminder_templates"),
+        "reminderLogs": list_records(workspace_id, "reminder_logs"),
+        "syncOperations": list_records(workspace_id, "sync_operations"),
         "customers": list_records(workspace_id, "customers"),
+        "suppliers": list_records(workspace_id, "suppliers"),
+        "creditLedger": list_records(workspace_id, "credit_ledger"),
         "inventory": list_records(workspace_id, "inventory"),
+        "inventoryCategories": inventory_category_names(workspace_id),
         "inventoryMovements": list_records(workspace_id, "inventory_movements"),
         "reports": list_records(workspace_id, "reports"),
         "auditLogs": list_records(workspace_id, "audit_logs"),
@@ -931,13 +1312,13 @@ def reset_password(data: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "message": "Password updated."}
 
 
-def apply_inventory_delta(user: dict[str, Any], product_id: str, delta: int) -> dict[str, Any] | None:
+def apply_inventory_delta(user: dict[str, Any], product_id: str, delta: float) -> dict[str, Any] | None:
     product = get_record(user["workspaceId"], "inventory", product_id)
     if not product:
         return None
-    stock = max(0, int(product.get("stock", 0)) + int(delta))
+    stock = max(0.0, float(product.get("stock", 0)) + float(delta))
     product["stock"] = stock
-    product["status"] = stock_status(stock, int(product.get("reorderLevel", 0)))
+    product["status"] = stock_status(stock, float(product.get("reorderLevel", 0)))
     return put_record(user["workspaceId"], "inventory", product)
 
 
@@ -954,6 +1335,76 @@ def recalculate_customers(user: dict[str, Any]) -> list[dict[str, Any]]:
         customer.update(totalSpent=round(total_spent, 2), orders=orders, lastOrder=last_order, segment=customer_segment(total_spent, orders, last_order))
         put_record(user["workspaceId"], "customers", customer)
     return list_records(user["workspaceId"], "customers")
+
+
+def sync_credit_balances(user: dict[str, Any]) -> list[dict[str, Any]]:
+    ledger = list_records(user["workspaceId"], "credit_ledger")
+    balances: dict[str, float] = {}
+    for entry in ledger:
+        customer_id = str(entry.get("customerId", ""))
+        if not customer_id:
+            continue
+        amount = float(entry.get("amount", 0))
+        if entry.get("type") == "Payment Received":
+            balances[customer_id] = balances.get(customer_id, 0) - amount
+        else:
+            balances[customer_id] = balances.get(customer_id, 0) + amount
+    for customer in list_records(user["workspaceId"], "customers"):
+        balance = max(0.0, balances.get(str(customer.get("id", "")), 0.0))
+        if float(customer.get("balance", 0)) != balance:
+            customer["balance"] = round(balance, 2)
+            put_record(user["workspaceId"], "customers", customer)
+    return list_records(user["workspaceId"], "customers")
+
+
+def sync_party_balances(user: dict[str, Any]) -> list[dict[str, Any]]:
+    ledger = list_records(user["workspaceId"], "party_ledger")
+    balances: dict[str, float] = {}
+    for entry in ledger:
+        party_id = str(entry.get("partyId", ""))
+        if not party_id:
+            continue
+        amount = float(entry.get("amount", 0))
+        if entry.get("type") in {"Payment Received", "Payment Paid"}:
+            balances[party_id] = balances.get(party_id, 0) - amount
+        else:
+            balances[party_id] = balances.get(party_id, 0) + amount
+    for party in list_records(user["workspaceId"], "parties"):
+        opening = float(party.get("openingBalance", 0))
+        balance = max(0.0, opening + balances.get(str(party.get("id", "")), 0.0))
+        if float(party.get("balance", 0)) != balance:
+            party["balance"] = round(balance, 2)
+            put_record(user["workspaceId"], "parties", party)
+    return list_records(user["workspaceId"], "parties")
+
+
+def apply_cash_bank_movement(user: dict[str, Any], movement: dict[str, Any]) -> None:
+    account = get_record(user["workspaceId"], "cash_bank_accounts", str(movement.get("accountId", "")))
+    if not account:
+        return
+    amount = float(movement.get("amount", 0))
+    movement_type = str(movement.get("type", ""))
+    delta = amount if movement_type in {"Receipt", "Deposit"} else -amount if movement_type in {"Payment", "Withdrawal"} else 0
+    account["balance"] = max(0.0, float(account.get("balance", 0)) + delta)
+    put_record(user["workspaceId"], "cash_bank_accounts", account)
+
+
+def create_journal_entry(user: dict[str, Any], source: str, source_id: str, memo: str, lines: list[dict[str, Any]], date: str | None = None) -> dict[str, Any]:
+    return put_record(
+        user["workspaceId"],
+        "journal_entries",
+        {
+            "id": make_id("JRN"),
+            "date": date or today_string(),
+            "source": source,
+            "sourceId": source_id,
+            "memo": memo,
+            "lines": lines,
+            "locked": False,
+            "createdBy": user["name"],
+            "createdAt": iso_now(),
+        },
+    )
 
 
 def ensure_customer_for_sale(user: dict[str, Any], sale: dict[str, Any]) -> None:
@@ -1016,6 +1467,430 @@ def update_customer(user: dict[str, Any], customer_id: str, patch: dict[str, Any
     return {"customer": customer}
 
 
+def create_supplier(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "inventory.manage")
+    supplier = {
+        "id": str(payload.get("id") or make_id("SUP")),
+        "name": str(payload.get("name", "")).strip() or "Supplier",
+        "phone": str(payload.get("phone", "")).strip(),
+        "email": str(payload.get("email", "")).strip(),
+        "address": str(payload.get("address", "")).strip(),
+        "pan": str(payload.get("pan", "")).strip(),
+        "contactPerson": str(payload.get("contactPerson", "")).strip(),
+        "payableBalance": float(payload.get("payableBalance", 0)),
+        "notes": str(payload.get("notes", "")).strip(),
+        "createdAt": str(payload.get("createdAt") or iso_now()),
+    }
+    supplier = put_record(user["workspaceId"], "suppliers", supplier)
+    create_audit(user["workspaceId"], user["name"], "Created supplier", "Inventory", supplier.get("name", supplier["id"]))
+    return {"supplier": supplier}
+
+
+def update_supplier(user: dict[str, Any], supplier_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "inventory.manage")
+    if "payableBalance" in patch:
+        patch["payableBalance"] = float(patch.get("payableBalance", 0))
+    supplier = patch_record(user["workspaceId"], "suppliers", supplier_id, patch)
+    if supplier is None:
+        raise AppError(404, "Supplier not found.")
+    create_audit(user["workspaceId"], user["name"], "Updated supplier", "Inventory", supplier.get("name", supplier_id))
+    return {"supplier": supplier}
+
+
+def delete_supplier(user: dict[str, Any], supplier_id: str) -> dict[str, bool]:
+    require_permission(user, "inventory.manage")
+    collection("records").delete_one(
+        {"workspaceId": user["workspaceId"], "kind": "suppliers", "id": supplier_id},
+    )
+    create_audit(user["workspaceId"], user["name"], "Deleted supplier", "Inventory", supplier_id)
+    return {"ok": True}
+
+
+def create_credit_entry(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "customers.manage")
+    entry = {
+        "id": str(payload.get("id") or make_id("CRD")),
+        "customerId": str(payload.get("customerId", "")).strip(),
+        "customerName": str(payload.get("customerName", "")).strip(),
+        "saleId": str(payload.get("saleId", "")).strip(),
+        "invoiceNo": str(payload.get("invoiceNo", "")).strip(),
+        "type": str(payload.get("type", "Credit Sale")).strip() or "Credit Sale",
+        "amount": float(payload.get("amount", 0)),
+        "date": str(payload.get("date", today_string())),
+        "dueDate": str(payload.get("dueDate", "")),
+        "paymentMethod": str(payload.get("paymentMethod", "Cash")),
+        "note": str(payload.get("note", "")).strip(),
+        "createdBy": str(payload.get("createdBy", user["name"])),
+        "createdAt": str(payload.get("createdAt") or iso_now()),
+    }
+    if not entry["customerName"] and entry["customerId"]:
+        customer = get_record(user["workspaceId"], "customers", entry["customerId"])
+        entry["customerName"] = str((customer or {}).get("name", ""))
+    entry = put_record(user["workspaceId"], "credit_ledger", entry)
+    sync_credit_balances(user)
+    if entry["type"] == "Payment Received":
+        remaining = [
+            ledger for ledger in list_records(user["workspaceId"], "credit_ledger")
+            if ledger.get("customerId") == entry["customerId"]
+        ]
+        balance = sum(float(item.get("amount", 0)) * (-1 if item.get("type") == "Payment Received" else 1) for item in remaining)
+        if balance <= 0:
+            for sale in list_records(user["workspaceId"], "sales"):
+                if sale.get("customerId") == entry["customerId"] and sale.get("payment") == "Credit" and not sale.get("creditClearedAt"):
+                    put_record(user["workspaceId"], "sales", {**sale, "creditClearedAt": iso_now()})
+    create_audit(user["workspaceId"], user["name"], "Recorded credit entry", "Customers", f"{entry['customerName']} {entry['type']} {entry['amount']}.")
+    return {"entry": entry, "bootstrap": bootstrap_payload(user)}
+
+
+def create_party(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "parties.manage")
+    party = dict(payload)
+    party["id"] = str(party.get("id") or make_id("PTY"))
+    party["name"] = str(party.get("name", "")).strip() or "Party"
+    party["type"] = str(party.get("type", "Customer")).strip() or "Customer"
+    party["phone"] = str(party.get("phone", "")).strip()
+    party["email"] = str(party.get("email", "")).strip()
+    party["address"] = str(party.get("address", "")).strip()
+    party["pan"] = str(party.get("pan", "")).strip()
+    party["openingBalance"] = float(party.get("openingBalance", 0))
+    party["creditLimit"] = float(party.get("creditLimit", 0))
+    party["dueDays"] = int(float(party.get("dueDays", 0)))
+    party["notes"] = str(party.get("notes", "")).strip()
+    party["balance"] = float(party.get("balance", party["openingBalance"]))
+    party["createdAt"] = str(party.get("createdAt") or iso_now())
+    party = put_record(user["workspaceId"], "parties", party)
+    sync_party_balances(user)
+    create_audit(user["workspaceId"], user["name"], "Created party", "Parties", party["name"])
+    return {"party": party, "bootstrap": bootstrap_payload(user)}
+
+
+def update_party(user: dict[str, Any], party_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "parties.manage")
+    for key in ["openingBalance", "creditLimit", "balance"]:
+        if key in patch:
+            patch[key] = float(patch.get(key, 0))
+    if "dueDays" in patch:
+        patch["dueDays"] = int(float(patch.get("dueDays", 0)))
+    party = patch_record(user["workspaceId"], "parties", party_id, patch)
+    if party is None:
+        raise AppError(404, "Party not found.")
+    sync_party_balances(user)
+    create_audit(user["workspaceId"], user["name"], "Updated party", "Parties", party.get("name", party_id))
+    return {"party": party, "bootstrap": bootstrap_payload(user)}
+
+
+def delete_party(user: dict[str, Any], party_id: str) -> dict[str, Any]:
+    require_permission(user, "parties.manage")
+    collection("records").delete_many({"workspaceId": user["workspaceId"], "kind": "party_ledger", "payload.partyId": party_id})
+    collection("records").delete_one({"workspaceId": user["workspaceId"], "kind": "parties", "id": party_id})
+    create_audit(user["workspaceId"], user["name"], "Deleted party", "Parties", party_id)
+    return {"ok": True, "bootstrap": bootstrap_payload(user)}
+
+
+def create_party_ledger_entry(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "parties.manage")
+    entry = dict(payload)
+    entry["id"] = str(entry.get("id") or make_id("PLG"))
+    entry["partyId"] = str(entry.get("partyId", "")).strip()
+    entry["partyName"] = str(entry.get("partyName", "")).strip()
+    entry["direction"] = str(entry.get("direction", "Receivable")).strip() or "Receivable"
+    entry["type"] = str(entry.get("type", "Sale Credit")).strip() or "Sale Credit"
+    entry["amount"] = float(entry.get("amount", 0))
+    entry["date"] = str(entry.get("date", today_string()))
+    entry["dueDate"] = str(entry.get("dueDate", ""))
+    entry["referenceId"] = str(entry.get("referenceId", ""))
+    entry["note"] = str(entry.get("note", "")).strip()
+    entry["createdBy"] = str(entry.get("createdBy", user["name"]))
+    entry["createdAt"] = str(entry.get("createdAt") or iso_now())
+    if not entry["partyName"] and entry["partyId"]:
+        party = get_record(user["workspaceId"], "parties", entry["partyId"])
+        entry["partyName"] = str((party or {}).get("name", ""))
+    entry = put_record(user["workspaceId"], "party_ledger", entry)
+    sync_party_balances(user)
+    create_audit(user["workspaceId"], user["name"], "Recorded party ledger", "Parties", f"{entry['partyName']} {entry['type']} {entry['amount']}.")
+    return {"entry": entry, "bootstrap": bootstrap_payload(user)}
+
+
+def create_purchase(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "purchases.manage")
+    purchase = dict(payload)
+    purchase["id"] = str(purchase.get("id") or make_id("PUR"))
+    purchase["createdBy"] = str(purchase.get("createdBy", user["name"]))
+    purchase["createdAt"] = str(purchase.get("createdAt") or iso_now())
+    purchase = put_record(user["workspaceId"], "purchases", purchase)
+    if purchase.get("status") == "Received":
+        for item in purchase.get("items", []):
+            product = apply_inventory_delta(user, str(item.get("productId", "")), float(item.get("quantity", 0)))
+            if product:
+                put_record(
+                    user["workspaceId"],
+                    "inventory_movements",
+                    {
+                        "id": make_id("MOV"),
+                        "businessId": active_business_id_for(user),
+                        "productId": product.get("id", ""),
+                        "productName": product.get("name", item.get("productName", "")),
+                        "delta": float(item.get("quantity", 0)),
+                        "stockBefore": max(0.0, float(product.get("stock", 0)) - float(item.get("quantity", 0))),
+                        "stockAfter": float(product.get("stock", 0)),
+                        "reason": "Purchase",
+                        "referenceId": purchase["id"],
+                        "note": purchase.get("billNo", ""),
+                        "user": user["name"],
+                        "createdAt": iso_now(),
+                    },
+                )
+    if purchase.get("payment") == "Credit" and purchase.get("supplierId"):
+        supplier = get_record(user["workspaceId"], "suppliers", str(purchase.get("supplierId")))
+        if supplier:
+            supplier["payableBalance"] = round(float(supplier.get("payableBalance", 0)) + float(purchase.get("amount", 0)), 2)
+            put_record(user["workspaceId"], "suppliers", supplier)
+    create_journal_entry(
+        user,
+        "Purchase",
+        purchase["id"],
+        f"{purchase.get('billNo', purchase['id'])} - {purchase.get('supplierName', '')}",
+        [
+            {"accountId": "acct-purchases", "accountName": "Purchases / Inventory", "debit": max(0.0, float(purchase.get("amount", 0)) - float(purchase.get("taxTotal", 0))), "credit": 0},
+            {"accountId": "acct-vat", "accountName": "VAT Input", "debit": float(purchase.get("taxTotal", 0)), "credit": 0},
+            {"accountId": "acct-ap" if purchase.get("payment") == "Credit" else "acct-cash", "accountName": "Accounts Payable" if purchase.get("payment") == "Credit" else "Cash / Bank", "debit": 0, "credit": float(purchase.get("amount", 0))},
+        ],
+        purchase.get("date"),
+    )
+    create_audit(user["workspaceId"], user["name"], "Created purchase", "Purchases", purchase.get("billNo", purchase["id"]))
+    return {"purchase": purchase, "bootstrap": bootstrap_payload(user)}
+
+
+def update_purchase(user: dict[str, Any], purchase_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "purchases.manage")
+    purchase = patch_record(user["workspaceId"], "purchases", purchase_id, patch)
+    if purchase is None:
+        raise AppError(404, "Purchase not found.")
+    create_audit(user["workspaceId"], user["name"], "Updated purchase", "Purchases", purchase.get("billNo", purchase_id))
+    return {"purchase": purchase, "bootstrap": bootstrap_payload(user)}
+
+
+def delete_purchase(user: dict[str, Any], purchase_id: str) -> dict[str, Any]:
+    require_permission(user, "purchases.manage")
+    collection("records").delete_one({"workspaceId": user["workspaceId"], "kind": "purchases", "id": purchase_id})
+    create_audit(user["workspaceId"], user["name"], "Deleted purchase", "Purchases", purchase_id)
+    return {"ok": True, "bootstrap": bootstrap_payload(user)}
+
+
+def create_expense(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "expenses.manage")
+    expense = dict(payload)
+    expense["id"] = str(expense.get("id") or make_id("EXP"))
+    expense["createdBy"] = str(expense.get("createdBy", user["name"]))
+    expense["createdAt"] = str(expense.get("createdAt") or iso_now())
+    expense = put_record(user["workspaceId"], "expenses", expense)
+    if expense.get("paymentAccountId"):
+        movement = put_record(
+            user["workspaceId"],
+            "money_movements",
+            {
+                "id": make_id("MOVM"),
+                "accountId": expense.get("paymentAccountId", ""),
+                "accountName": "",
+                "type": "Payment",
+                "amount": float(expense.get("amount", 0)),
+                "date": expense.get("date", today_string()),
+                "referenceId": expense["id"],
+                "note": f"{expense.get('category', '')} {expense.get('vendor', '')}".strip(),
+                "createdBy": user["name"],
+                "createdAt": iso_now(),
+            },
+        )
+        apply_cash_bank_movement(user, movement)
+    create_journal_entry(
+        user,
+        "Expense",
+        expense["id"],
+        f"{expense.get('category', '')} - {expense.get('vendor', '')}".strip(),
+        [
+            {"accountId": "acct-expenses", "accountName": "Operating Expenses", "debit": max(0.0, float(expense.get("amount", 0)) - float(expense.get("taxAmount", 0))), "credit": 0},
+            {"accountId": "acct-vat", "accountName": "VAT Input", "debit": float(expense.get("taxAmount", 0)), "credit": 0},
+            {"accountId": "acct-cash", "accountName": "Cash / Bank", "debit": 0, "credit": float(expense.get("amount", 0))},
+        ],
+        expense.get("date"),
+    )
+    create_audit(user["workspaceId"], user["name"], "Created expense", "Expenses", f"{expense.get('category', '')}: {expense.get('amount', 0)}")
+    return {"expense": expense, "bootstrap": bootstrap_payload(user)}
+
+
+def update_expense(user: dict[str, Any], expense_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "expenses.manage")
+    expense = patch_record(user["workspaceId"], "expenses", expense_id, patch)
+    if expense is None:
+        raise AppError(404, "Expense not found.")
+    create_audit(user["workspaceId"], user["name"], "Updated expense", "Expenses", expense_id)
+    return {"expense": expense, "bootstrap": bootstrap_payload(user)}
+
+
+def delete_expense(user: dict[str, Any], expense_id: str) -> dict[str, Any]:
+    require_permission(user, "expenses.manage")
+    collection("records").delete_one({"workspaceId": user["workspaceId"], "kind": "expenses", "id": expense_id})
+    create_audit(user["workspaceId"], user["name"], "Deleted expense", "Expenses", expense_id)
+    return {"ok": True, "bootstrap": bootstrap_payload(user)}
+
+
+def expense_category_names(workspace_id: str) -> list[str]:
+    names = [str(item.get("name", "")).strip() for item in list_records(workspace_id, "expense_categories")]
+    return sorted({name for name in names if name}, key=str.lower)
+
+
+def create_expense_category(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "expenses.manage")
+    name = require_text(payload, "name", "Expense category name")
+    existing = {item.lower() for item in expense_category_names(user["workspaceId"])}
+    expense_names = {str(item.get("category", "")).strip().lower() for item in list_records(user["workspaceId"], "expenses")}
+    if name.lower() in existing or name.lower() in expense_names:
+        return {"categories": expense_category_names(user["workspaceId"])}
+    put_record(
+        user["workspaceId"],
+        "expense_categories",
+        {
+            "id": make_id("EXC"),
+            "name": name,
+            "createdBy": user["name"],
+        },
+    )
+    create_audit(user["workspaceId"], user["name"], "Created expense category", "Expenses", name)
+    return {"categories": expense_category_names(user["workspaceId"])}
+
+
+def update_expense_category(user: dict[str, Any], old_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "expenses.manage")
+    clean_old_name = old_name.strip()
+    clean_new_name = require_text(payload, "name", "Expense category name")
+    if clean_old_name.lower() == clean_new_name.lower():
+        return {"categories": expense_category_names(user["workspaceId"]), "bootstrap": bootstrap_payload(user)}
+    categories = list_records(user["workspaceId"], "expense_categories")
+    duplicate = next((item for item in categories if str(item.get("name", "")).strip().lower() == clean_new_name.lower()), None)
+    if duplicate:
+        raise AppError(409, "That expense category already exists.")
+    category_record = next((item for item in categories if str(item.get("name", "")).strip().lower() == clean_old_name.lower()), None)
+    if category_record:
+        put_record(user["workspaceId"], "expense_categories", {**category_record, "name": clean_new_name})
+    else:
+        put_record(user["workspaceId"], "expense_categories", {"id": make_id("EXC"), "name": clean_new_name, "createdBy": user["name"]})
+    for expense in list_records(user["workspaceId"], "expenses"):
+        if str(expense.get("category", "")).strip().lower() == clean_old_name.lower():
+            put_record(user["workspaceId"], "expenses", {**expense, "category": clean_new_name})
+    create_audit(user["workspaceId"], user["name"], "Renamed expense category", "Expenses", f"{clean_old_name} changed to {clean_new_name}.")
+    return {"categories": expense_category_names(user["workspaceId"]), "bootstrap": bootstrap_payload(user)}
+
+
+def delete_expense_category(user: dict[str, Any], name: str) -> dict[str, Any]:
+    require_permission(user, "expenses.manage")
+    clean_name = name.strip()
+    used = any(str(expense.get("category", "")).strip().lower() == clean_name.lower() for expense in list_records(user["workspaceId"], "expenses"))
+    if used:
+        raise AppError(409, "Move expenses to another category before deleting this category.")
+    collection("records").delete_many(
+        {
+            "workspaceId": user["workspaceId"],
+            "kind": "expense_categories",
+            "payload.name": {"$regex": f"^{re.escape(clean_name)}$", "$options": "i"},
+        }
+    )
+    create_audit(user["workspaceId"], user["name"], "Deleted expense category", "Expenses", clean_name)
+    return {"categories": expense_category_names(user["workspaceId"])}
+
+
+def create_cash_bank_account(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "cashbank.manage")
+    account = dict(payload)
+    account["id"] = str(account.get("id") or make_id("ACB"))
+    account["createdAt"] = str(account.get("createdAt") or iso_now())
+    account = put_record(user["workspaceId"], "cash_bank_accounts", account)
+    create_audit(user["workspaceId"], user["name"], "Created cash/bank account", "Cash & Bank", account.get("name", account["id"]))
+    return {"account": account, "bootstrap": bootstrap_payload(user)}
+
+
+def update_cash_bank_account(user: dict[str, Any], account_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "cashbank.manage")
+    account = patch_record(user["workspaceId"], "cash_bank_accounts", account_id, patch)
+    if account is None:
+        raise AppError(404, "Cash or bank account not found.")
+    create_audit(user["workspaceId"], user["name"], "Updated cash/bank account", "Cash & Bank", account.get("name", account_id))
+    return {"account": account, "bootstrap": bootstrap_payload(user)}
+
+
+def delete_cash_bank_account(user: dict[str, Any], account_id: str) -> dict[str, Any]:
+    require_permission(user, "cashbank.manage")
+    has_movements = any(item.get("accountId") == account_id for item in list_records(user["workspaceId"], "money_movements"))
+    if has_movements:
+        raise AppError(409, "This account has ledger entries. Mark it inactive instead of deleting it.")
+    collection("records").delete_one({"workspaceId": user["workspaceId"], "kind": "cash_bank_accounts", "id": account_id})
+    create_audit(user["workspaceId"], user["name"], "Deleted cash/bank account", "Cash & Bank", account_id)
+    return {"ok": True, "bootstrap": bootstrap_payload(user)}
+
+
+def create_money_movement(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "cashbank.manage")
+    movement = dict(payload)
+    movement["id"] = str(movement.get("id") or make_id("MOVM"))
+    movement["createdBy"] = str(movement.get("createdBy", user["name"]))
+    movement["createdAt"] = str(movement.get("createdAt") or iso_now())
+    movement = put_record(user["workspaceId"], "money_movements", movement)
+    apply_cash_bank_movement(user, movement)
+    create_audit(user["workspaceId"], user["name"], "Recorded money movement", "Cash & Bank", f"{movement.get('type', '')}: {movement.get('amount', 0)}")
+    return {"movement": movement, "bootstrap": bootstrap_payload(user)}
+
+
+def create_document(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "documents.manage")
+    document = dict(payload)
+    document["id"] = str(document.get("id") or make_id("DOC"))
+    document["uploadedBy"] = str(document.get("uploadedBy", user["name"]))
+    document["createdAt"] = str(document.get("createdAt") or iso_now())
+    document = put_record(user["workspaceId"], "documents", document)
+    create_audit(user["workspaceId"], user["name"], "Uploaded document", "Documents", document.get("name", document["id"]))
+    return {"document": document, "bootstrap": bootstrap_payload(user)}
+
+
+def delete_document(user: dict[str, Any], document_id: str) -> dict[str, Any]:
+    require_permission(user, "documents.manage")
+    collection("records").delete_one({"workspaceId": user["workspaceId"], "kind": "documents", "id": document_id})
+    create_audit(user["workspaceId"], user["name"], "Deleted document", "Documents", document_id)
+    return {"ok": True, "bootstrap": bootstrap_payload(user)}
+
+
+def create_reminder_template(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "reminders.manage")
+    template = dict(payload)
+    template["id"] = str(template.get("id") or make_id("RMT"))
+    template = put_record(user["workspaceId"], "reminder_templates", template)
+    create_audit(user["workspaceId"], user["name"], "Created reminder template", "Reminders", template.get("name", template["id"]))
+    return {"template": template, "bootstrap": bootstrap_payload(user)}
+
+
+def create_reminder_log(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "reminders.manage")
+    log = dict(payload)
+    log["id"] = str(log.get("id") or make_id("RML"))
+    log["createdBy"] = str(log.get("createdBy", user["name"]))
+    log["createdAt"] = str(log.get("createdAt") or iso_now())
+    log = put_record(user["workspaceId"], "reminder_logs", log)
+    create_audit(user["workspaceId"], user["name"], "Created reminder", "Reminders", log.get("partyName", log["id"]))
+    return {"log": log, "bootstrap": bootstrap_payload(user)}
+
+
+def push_sync_operation(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "sync.manage")
+    operation = dict(payload)
+    operation["id"] = str(operation.get("id") or make_id("SYN"))
+    operation["operationKey"] = str(operation.get("operationKey") or operation["id"])
+    existing = collection("records").find_one({"workspaceId": user["workspaceId"], "kind": "sync_operations", "payload.operationKey": operation["operationKey"]})
+    if existing:
+        return {"operation": strip_mongo_id(existing).get("payload", {}), "bootstrap": bootstrap_payload(user)}
+    operation["status"] = "Synced"
+    operation["syncedAt"] = iso_now()
+    operation = put_record(user["workspaceId"], "sync_operations", operation)
+    return {"operation": operation, "bootstrap": bootstrap_payload(user)}
+
+
 def create_product(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     require_permission(user, "inventory.manage")
     product = {
@@ -1027,8 +1902,8 @@ def create_product(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, A
         "brand": str(payload.get("brand", "")).strip(),
         "category": str(payload.get("category", "")).strip() or "General",
         "unit": str(payload.get("unit", "pcs")).strip() or "pcs",
-        "stock": int(payload.get("stock", 0)),
-        "reorderLevel": int(payload.get("reorderLevel", 0)),
+        "stock": float(payload.get("stock", 0)),
+        "reorderLevel": float(payload.get("reorderLevel", 0)),
         "price": float(payload.get("price", 0)),
         "costPrice": float(payload.get("costPrice", 0)),
         "taxRate": float(payload.get("taxRate", 13)),
@@ -1040,6 +1915,70 @@ def create_product(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, A
     product = put_record(user["workspaceId"], "inventory", product)
     create_audit(user["workspaceId"], user["name"], "Created product", "Inventory", product.get("name", product["id"]))
     return {"product": product}
+
+
+def inventory_category_names(workspace_id: str) -> list[str]:
+    names = [str(item.get("name", "")).strip() for item in list_records(workspace_id, "inventory_categories")]
+    return sorted({name for name in names if name}, key=str.lower)
+
+
+def create_inventory_category(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "inventory.manage")
+    name = require_text(payload, "name", "Category name")
+    existing_names = {item.lower() for item in inventory_category_names(user["workspaceId"])}
+    product_names = {str(item.get("category", "")).strip().lower() for item in list_records(user["workspaceId"], "inventory")}
+    if name.lower() in existing_names or name.lower() in product_names:
+        return {"categories": inventory_category_names(user["workspaceId"])}
+    put_record(
+        user["workspaceId"],
+        "inventory_categories",
+        {
+            "id": make_id("CAT"),
+            "name": name,
+            "createdBy": user["name"],
+        },
+    )
+    create_audit(user["workspaceId"], user["name"], "Created category", "Inventory", name)
+    return {"categories": inventory_category_names(user["workspaceId"])}
+
+
+def update_inventory_category(user: dict[str, Any], old_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "inventory.manage")
+    clean_old_name = old_name.strip()
+    clean_new_name = require_text(payload, "name", "Category name")
+    if clean_old_name.lower() == clean_new_name.lower():
+        return {"categories": inventory_category_names(user["workspaceId"]), "bootstrap": bootstrap_payload(user)}
+    categories = list_records(user["workspaceId"], "inventory_categories")
+    duplicate = next((item for item in categories if str(item.get("name", "")).strip().lower() == clean_new_name.lower()), None)
+    if duplicate:
+        raise AppError(409, "That category already exists.")
+    category_record = next((item for item in categories if str(item.get("name", "")).strip().lower() == clean_old_name.lower()), None)
+    if category_record:
+        put_record(user["workspaceId"], "inventory_categories", {**category_record, "name": clean_new_name})
+    else:
+        put_record(user["workspaceId"], "inventory_categories", {"id": make_id("CAT"), "name": clean_new_name, "createdBy": user["name"]})
+    for product in list_records(user["workspaceId"], "inventory"):
+        if str(product.get("category", "")).strip().lower() == clean_old_name.lower():
+            put_record(user["workspaceId"], "inventory", {**product, "category": clean_new_name})
+    create_audit(user["workspaceId"], user["name"], "Renamed category", "Inventory", f"{clean_old_name} changed to {clean_new_name}.")
+    return {"categories": inventory_category_names(user["workspaceId"]), "bootstrap": bootstrap_payload(user)}
+
+
+def delete_inventory_category(user: dict[str, Any], name: str) -> dict[str, Any]:
+    require_permission(user, "inventory.manage")
+    clean_name = name.strip()
+    used = any(str(product.get("category", "")).strip().lower() == clean_name.lower() for product in list_records(user["workspaceId"], "inventory"))
+    if used:
+        raise AppError(409, "Move products to another category before deleting this category.")
+    collection("records").delete_many(
+        {
+            "workspaceId": user["workspaceId"],
+            "kind": "inventory_categories",
+            "payload.name": {"$regex": f"^{re.escape(clean_name)}$", "$options": "i"},
+        }
+    )
+    create_audit(user["workspaceId"], user["name"], "Deleted category", "Inventory", clean_name)
+    return {"categories": inventory_category_names(user["workspaceId"])}
 
 
 def create_sale(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
@@ -1063,9 +2002,30 @@ def create_sale(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]
     sale.setdefault("products", ", ".join(str(item.get("productName", "")) for item in sale["items"]).strip(", "))
     ensure_customer_for_sale(user, sale)
     sale = put_record(user["workspaceId"], "sales", sale)
+    if sale.get("payment") == "Credit" and sale.get("status") != "Refunded":
+        put_record(
+            user["workspaceId"],
+            "credit_ledger",
+            {
+                "id": make_id("CRD"),
+                "customerId": sale.get("customerId", ""),
+                "customerName": sale.get("customer", ""),
+                "saleId": sale.get("id", ""),
+                "invoiceNo": sale.get("invoiceNo", ""),
+                "type": "Credit Sale",
+                "amount": float(sale.get("amount", 0)),
+                "date": sale.get("date", today_string()),
+                "dueDate": sale.get("creditDueDate", ""),
+                "paymentMethod": "Credit",
+                "note": sale.get("products", ""),
+                "createdBy": user["name"],
+                "createdAt": iso_now(),
+            },
+        )
+        sync_credit_balances(user)
     if sale.get("status") != "Refunded":
         for item in sale.get("items", []):
-            quantity = int(item.get("quantity", 0))
+            quantity = float(item.get("quantity", 0))
             apply_inventory_delta(user, item.get("productId", ""), -quantity)
             put_record(
                 user["workspaceId"],
@@ -1085,6 +2045,33 @@ def create_sale(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]
                     "createdAt": iso_now(),
                 },
             )
+    create_journal_entry(
+        user,
+        "Sale",
+        sale["id"],
+        f"{sale.get('invoiceNo', sale['id'])} - {sale.get('customer', '')}",
+        [
+            {
+                "accountId": "acct-cash" if sale.get("payment") != "Credit" else "acct-ar",
+                "accountName": "Cash / Bank" if sale.get("payment") != "Credit" else "Accounts Receivable",
+                "debit": float(sale.get("amount", 0)),
+                "credit": 0,
+            },
+            {
+                "accountId": "acct-sales",
+                "accountName": "Sales Revenue",
+                "debit": 0,
+                "credit": max(0.0, float(sale.get("amount", 0)) - float(sale.get("vatAmount", sale.get("taxTotal", 0)))),
+            },
+            {
+                "accountId": "acct-vat",
+                "accountName": "VAT Payable",
+                "debit": 0,
+                "credit": float(sale.get("vatAmount", sale.get("taxTotal", 0))),
+            },
+        ],
+        sale.get("date"),
+    )
     recalculate_customers(user)
     create_audit(user["workspaceId"], user["name"], "Created sale", "Sales", f"{sale.get('id')} recorded.")
     return {"sale": sale, "bootstrap": bootstrap_payload(user)}
@@ -1103,7 +2090,7 @@ def patch_sale(user: dict[str, Any], sale_id: str, patch: dict[str, Any]) -> dic
         direction = 1 if old_applied and not new_applied else -1
         reason = "Return" if direction > 0 else "Sale"
         for item in old_sale.get("items", []):
-            delta = direction * int(item.get("quantity", 0))
+            delta = direction * float(item.get("quantity", 0))
             apply_inventory_delta(user, item.get("productId", ""), delta)
             put_record(
                 user["workspaceId"],
@@ -1137,7 +2124,7 @@ def delete_sale(user: dict[str, Any], sale_id: str) -> dict[str, bool]:
         raise AppError(404, "Sale not found.")
     if not sale.get("deletedAt") and sale.get("status") != "Refunded":
         for item in sale.get("items", []):
-            apply_inventory_delta(user, item.get("productId", ""), int(item.get("quantity", 0)))
+            apply_inventory_delta(user, item.get("productId", ""), float(item.get("quantity", 0)))
     sale["deletedAt"] = today_string()
     sale["auditTrail"] = [f"Soft-deleted by {user['name']}", *sale.get("auditTrail", [])]
     put_record(user["workspaceId"], "sales", sale)
@@ -1159,12 +2146,12 @@ def create_movement(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, 
     movement.setdefault("note", "")
     product = get_record(user["workspaceId"], "inventory", str(movement.get("productId", "")))
     movement.setdefault("productName", product.get("name", "") if product else "")
-    stock_before = int((product or {}).get("stock", 0))
+    stock_before = float((product or {}).get("stock", 0))
     movement.setdefault("stockBefore", stock_before)
-    movement.setdefault("stockAfter", max(0, stock_before + int(movement.get("delta", 0))))
+    movement.setdefault("stockAfter", max(0.0, stock_before + float(movement.get("delta", 0))))
     movement.setdefault("referenceId", "")
     movement = put_record(user["workspaceId"], "inventory_movements", movement)
-    apply_inventory_delta(user, movement.get("productId", ""), int(movement.get("delta", 0)))
+    apply_inventory_delta(user, movement.get("productId", ""), float(movement.get("delta", 0)))
     create_audit(user["workspaceId"], user["name"], "Recorded stock movement", "Inventory", movement.get("productName", movement["id"]))
     return {"movement": movement, "bootstrap": bootstrap_payload(user)}
 

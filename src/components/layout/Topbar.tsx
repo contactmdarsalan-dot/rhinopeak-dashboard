@@ -3,17 +3,25 @@ import { useMemo, useState } from 'react';
 import { Bell, Building2, Languages, LogOut, Moon, Search, Sun, User } from 'lucide-react';
 import { Badge } from '@/components/ui/Primitives';
 import { planLimits } from '@/lib/domain';
-import { languageName, translate } from '@/lib/i18n';
+import { languageName, translate, uiFormat, uiText } from '@/lib/i18n';
 import { useAppStore } from '@/lib/store';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const pageTitleKey: Record<string, Parameters<typeof translate>[1]> = {
   '/dashboard': 'nav.dashboard',
+  '/quick-add': 'nav.quickAdd',
   '/sales': 'nav.sales',
+  '/purchases': 'nav.purchases',
+  '/expenses': 'nav.expenses',
   '/analytics': 'nav.analytics',
+  '/parties': 'nav.parties',
   '/customers': 'nav.customers',
   '/inventory': 'nav.inventory',
+  '/cash-bank': 'nav.cashBank',
+  '/accounting': 'nav.accounting',
+  '/documents': 'nav.documents',
+  '/reminders': 'nav.reminders',
   '/reports': 'nav.reports',
   '/team': 'nav.team',
   '/billing': 'nav.billing',
@@ -52,6 +60,7 @@ export function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
   const t = (key: Parameters<typeof translate>[1]) => translate(settings.language, key);
+  const tx = (value: string) => uiText(settings.language, value);
 
   const notifications = useMemo(() => {
     const month = new Date().toISOString().slice(0, 7);
@@ -61,22 +70,30 @@ export function Topbar() {
       .map((product) => ({
         id: product.id,
         severity: product.status === 'Out of Stock' ? 'critical' : 'warning',
-        message: `${product.name}: ${product.status.toLowerCase()} (${product.stock} left)`,
+        message: uiFormat(settings.language, '{name}: {stock} units left, threshold {threshold}.', {
+          name: product.name,
+          stock: product.stock,
+          threshold: product.reorderLevel,
+        }),
       }));
     const planUsage = plan === 'free' && usage >= planLimits.salesEntries * 0.8
       ? [{
           id: 'usage',
           severity: 'info',
-          message: `${usage}/${planLimits.salesEntries} free sales entries used this month.`,
+          message: uiFormat(settings.language, '{count} of {limit} monthly sales entries used. Pro removes usage limits and unlocks reports, team roles, and comparison tools.', {
+            count: usage,
+            limit: planLimits.salesEntries,
+          }),
         }]
       : [];
     return [...stock, ...planUsage];
-  }, [inventory, plan, sales]);
+  }, [inventory, plan, sales, settings.language]);
 
   const activeBusiness = businesses.find((business) => business.id === activeBusinessId) ?? businesses[0];
 
   return (
     <header
+      className="app-topbar"
       style={{
         minHeight: 64,
         background: 'var(--bg-secondary)',
@@ -91,7 +108,7 @@ export function Topbar() {
         flexWrap: 'wrap',
       }}
     >
-      <div style={{ flex: '1 1 180px', minWidth: 160 }}>
+      <div className="topbar-title" style={{ flex: '1 1 180px', minWidth: 160 }}>
         <motion.h1 
           key={pathname}
           initial={{ opacity: 0, x: -10 }}
@@ -106,6 +123,7 @@ export function Topbar() {
       </div>
 
       <label
+        className="topbar-business"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -146,6 +164,7 @@ export function Topbar() {
       </label>
 
       <label
+        className="topbar-search"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -184,14 +203,17 @@ export function Topbar() {
         />
       </label>
 
-      <Badge tone={plan === 'pro' ? 'success' : 'warning'}>{plan === 'pro' ? 'Pro' : 'Free'}</Badge>
-      <span title={backendMessage}>
+      <span className="topbar-plan-badge">
+        <Badge tone={plan === 'pro' ? 'success' : 'warning'}>{plan === 'pro' ? tx('Pro') : tx('Free')}</Badge>
+      </span>
+      <span className="topbar-db-badge" title={backendMessage}>
         <Badge tone={backendStatus === 'online' ? 'success' : backendStatus === 'offline' ? 'danger' : 'info'}>
           {backendStatus === 'online' ? t('topbar.dbOnline') : backendStatus === 'offline' ? t('topbar.dbOffline') : t('topbar.dbCheck')}
         </Badge>
       </span>
 
       <motion.button
+        className="topbar-icon-button topbar-language"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => updateSettings({ language: settings.language === 'ne' ? 'en' : 'ne' })}
@@ -217,6 +239,7 @@ export function Topbar() {
       </motion.button>
 
       <motion.button
+        className="topbar-icon-button"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={toggleTheme}
@@ -232,13 +255,14 @@ export function Topbar() {
           cursor: 'pointer',
           color: 'var(--text-secondary)',
         }}
-        title="Toggle theme"
+        title={tx('Toggle theme')}
       >
         {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
       </motion.button>
 
-      <div style={{ position: 'relative' }}>
+      <div className="topbar-menu-anchor" style={{ position: 'relative' }}>
         <motion.button
+          className="topbar-icon-button"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowNotifs(!showNotifs)}
@@ -276,6 +300,7 @@ export function Topbar() {
         <AnimatePresence>
           {showNotifs && (
             <motion.div
+              className="topbar-popover topbar-notification-popover"
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -319,8 +344,9 @@ export function Topbar() {
         </AnimatePresence>
       </div>
 
-      <div style={{ position: 'relative' }}>
+      <div className="topbar-menu-anchor" style={{ position: 'relative' }}>
         <motion.button
+          className="topbar-icon-button"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowProfile(!showProfile)}
@@ -335,13 +361,14 @@ export function Topbar() {
             justifyContent: 'center',
             cursor: 'pointer',
           }}
-          title="Profile"
+          title={tx('Profile')}
         >
           <User size={16} color="#fff" />
         </motion.button>
         <AnimatePresence>
           {showProfile && (
             <motion.div
+              className="topbar-popover topbar-profile-popover"
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -361,7 +388,7 @@ export function Topbar() {
             >
               <div style={{ padding: 14, borderBottom: '1px solid var(--border)' }}>
                 <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{currentUser.name}</p>
-                <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>{currentUser.role} - {currentUser.email}</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>{tx(currentUser.role)} - {currentUser.email}</p>
               </div>
               <button
                 onClick={() => {

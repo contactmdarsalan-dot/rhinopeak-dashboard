@@ -82,6 +82,7 @@ ENTITY_SCHEMAS: dict[str, EntitySchema] = {
         "required": [
             "workspaceId",
             "businessName",
+            "panVatNumber",
             "currency",
             "language",
             "timezone",
@@ -194,6 +195,71 @@ ENTITY_SCHEMAS: dict[str, EntitySchema] = {
         ],
         "optional": [],
     },
+    "supplier": {
+        "collection": "records",
+        "required": ["id", "name", "phone", "email", "address", "pan", "contactPerson", "payableBalance", "notes", "createdAt", "updatedAt"],
+        "optional": [],
+    },
+    "creditLedgerEntry": {
+        "collection": "records",
+        "required": ["id", "customerId", "customerName", "type", "amount", "date", "note", "createdBy", "createdAt"],
+        "optional": ["saleId", "invoiceNo", "dueDate", "paymentMethod"],
+    },
+    "party": {
+        "collection": "records",
+        "required": ["id", "name", "type", "phone", "email", "address", "pan", "openingBalance", "creditLimit", "dueDays", "notes", "balance", "createdAt", "updatedAt"],
+        "optional": [],
+    },
+    "partyLedgerEntry": {
+        "collection": "records",
+        "required": ["id", "partyId", "partyName", "direction", "type", "amount", "date", "note", "createdBy", "createdAt"],
+        "optional": ["dueDate", "referenceId"],
+    },
+    "purchase": {
+        "collection": "records",
+        "required": ["id", "supplierId", "supplierName", "billNo", "date", "dueDate", "items", "subtotal", "discountTotal", "taxTotal", "amount", "payment", "status", "notes", "attachmentIds", "createdBy", "createdAt", "updatedAt"],
+        "optional": [],
+    },
+    "expense": {
+        "collection": "records",
+        "required": ["id", "category", "vendor", "amount", "taxAmount", "paymentAccountId", "paymentMethod", "date", "recurring", "note", "attachmentIds", "createdBy", "createdAt", "updatedAt"],
+        "optional": [],
+    },
+    "cashBankAccount": {
+        "collection": "records",
+        "required": ["id", "name", "type", "institution", "accountNumber", "openingBalance", "balance", "active", "createdAt", "updatedAt"],
+        "optional": [],
+    },
+    "moneyMovement": {
+        "collection": "records",
+        "required": ["id", "accountId", "accountName", "type", "amount", "date", "note", "createdBy", "createdAt"],
+        "optional": ["partyId", "partyName", "referenceId"],
+    },
+    "journalEntry": {
+        "collection": "records",
+        "required": ["id", "date", "source", "sourceId", "memo", "lines", "locked", "createdBy", "createdAt"],
+        "optional": [],
+    },
+    "documentAttachment": {
+        "collection": "records",
+        "required": ["id", "name", "recordType", "recordId", "fileName", "mimeType", "size", "uploadedBy", "createdAt"],
+        "optional": ["dataUrl"],
+    },
+    "reminderTemplate": {
+        "collection": "records",
+        "required": ["id", "name", "channel", "language", "message", "daysOffset", "active"],
+        "optional": [],
+    },
+    "reminderLog": {
+        "collection": "records",
+        "required": ["id", "partyId", "partyName", "channel", "message", "amount", "dueDate", "status", "createdBy", "createdAt"],
+        "optional": [],
+    },
+    "syncOperation": {
+        "collection": "records",
+        "required": ["id", "operationKey", "entity", "entityId", "action", "payload", "status", "createdAt"],
+        "optional": ["error", "syncedAt"],
+    },
     "inventoryProduct": {
         "collection": "records",
         "required": [
@@ -222,6 +288,16 @@ ENTITY_SCHEMAS: dict[str, EntitySchema] = {
     "inventoryMovement": {
         "collection": "records",
         "required": ["id", "businessId", "productId", "productName", "delta", "stockBefore", "stockAfter", "reason", "referenceId", "note", "user", "createdAt"],
+        "optional": [],
+    },
+    "inventoryCategory": {
+        "collection": "records",
+        "required": ["id", "name", "createdBy", "createdAt", "updatedAt"],
+        "optional": [],
+    },
+    "expenseCategory": {
+        "collection": "records",
+        "required": ["id", "name", "createdBy", "createdAt", "updatedAt"],
         "optional": [],
     },
     "generatedReport": {
@@ -253,8 +329,23 @@ ENTITY_SCHEMAS: dict[str, EntitySchema] = {
 
 RECORD_SCHEMA_BY_KIND = {
     "sales": "sale",
+    "parties": "party",
+    "party_ledger": "partyLedgerEntry",
+    "purchases": "purchase",
+    "expenses": "expense",
+    "expense_categories": "expenseCategory",
+    "cash_bank_accounts": "cashBankAccount",
+    "money_movements": "moneyMovement",
+    "journal_entries": "journalEntry",
+    "documents": "documentAttachment",
+    "reminder_templates": "reminderTemplate",
+    "reminder_logs": "reminderLog",
+    "sync_operations": "syncOperation",
     "customers": "customer",
+    "suppliers": "supplier",
+    "credit_ledger": "creditLedgerEntry",
     "inventory": "inventoryProduct",
+    "inventory_categories": "inventoryCategory",
     "inventory_movements": "inventoryMovement",
     "reports": "generatedReport",
     "audit_logs": "auditLog",
