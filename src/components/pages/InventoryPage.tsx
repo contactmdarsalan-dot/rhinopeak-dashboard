@@ -1,6 +1,7 @@
 'use client';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Download, Edit3, History, Plus, Search, Tags, Trash2, Truck } from 'lucide-react';
+import Link from 'next/link';
+import { Download, Edit3, Eye, History, Plus, Search, Tags, Trash2, Truck } from 'lucide-react';
 import { Badge, Button, Field, Modal, Panel, PanelHeader, StatTile, controlStyle } from '@/components/ui/Primitives';
 import { getEntityDetail, type EntityDetail } from '@/lib/api';
 import { type InventoryProduct, type MovementReason, type StockStatus } from '@/lib/domain';
@@ -20,6 +21,22 @@ const unitOptions = [
   { value: 'dozen', label: 'Dozen', short: 'dz', example: 'eggs, bakery packs' },
 ];
 const protectedCategories = ['General', 'Dairy', 'Grocery', 'Beverage', 'Household'];
+
+const detailLinkStyle = {
+  minHeight: 34,
+  padding: '7px 10px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'var(--bg-card)',
+  color: 'var(--text-secondary)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  fontSize: 12,
+  fontWeight: 750,
+  textDecoration: 'none',
+} as const;
 
 function statusTone(status: StockStatus) {
   if (status === 'In Stock') return 'success';
@@ -61,7 +78,7 @@ export function InventoryPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<InventoryProduct | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<EntityDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailFailedId, setDetailFailedId] = useState<string | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [showMovementModal, setShowMovementModal] = useState(false);
@@ -124,26 +141,29 @@ export function InventoryPage() {
   const productMovements = useMemo(() => (
     selected ? inventoryMovements.filter((movement) => movement.productId === selected.id).slice(0, 8) : []
   ), [inventoryMovements, selected]);
+  const detailLoading = Boolean(selected && selectedDetail?.record?.id !== selected.id && detailFailedId !== selected.id);
 
   useEffect(() => {
     let cancelled = false;
-    setSelectedDetail(null);
     if (!selected) return;
-    setDetailLoading(true);
     getEntityDetail('inventory', selected.id)
       .then((detail) => {
         if (!cancelled) setSelectedDetail(detail);
       })
       .catch(() => {
-        if (!cancelled) setSelectedDetail(null);
-      })
-      .finally(() => {
-        if (!cancelled) setDetailLoading(false);
+        if (!cancelled) setDetailFailedId(selected.id);
       });
     return () => {
       cancelled = true;
     };
   }, [selected]);
+
+  const selectProduct = (product: InventoryProduct) => {
+    const next = selected?.id === product.id ? null : product;
+    setSelectedDetail(null);
+    setDetailFailedId(null);
+    setSelected(next);
+  };
 
   const exportRows = filtered.map((product) => ({
     id: product.id,
@@ -363,7 +383,7 @@ export function InventoryPage() {
             <table className="responsive-card-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['Product', 'SKU', 'Category', 'Unit', 'Stock', 'Reorder', 'Price', 'Margin', 'Supplier', 'Status'].map((header) => (
+                  {['Product', 'SKU', 'Category', 'Unit', 'Stock', 'Reorder', 'Price', 'Margin', 'Supplier', 'Status', 'Actions'].map((header) => (
                     <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                   ))}
                 </tr>
@@ -376,7 +396,7 @@ export function InventoryPage() {
                   return (
                     <tr
                       key={product.id}
-                      onClick={() => setSelected(selected?.id === product.id ? null : product)}
+                      onClick={() => selectProduct(product)}
                       style={{
                         borderBottom: index < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none',
                         cursor: 'pointer',
@@ -402,6 +422,11 @@ export function InventoryPage() {
                       <td data-label={tx('Margin')} style={{ padding: '12px 14px', color: margin > 35 ? 'var(--success)' : 'var(--warning)', fontWeight: 700, fontSize: 13 }}>{margin.toFixed(1)}%</td>
                       <td data-label={tx('Supplier')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{product.supplier}</td>
                       <td data-label={tx('Status')} style={{ padding: '12px 14px' }}><Badge tone={statusTone(status)}>{translateStockStatus(settings.language, status)}</Badge></td>
+                      <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
+                        <Link href={`/details/inventory/${product.id}`} onClick={(event) => event.stopPropagation()} style={detailLinkStyle}>
+                          <Eye size={14} /> {tx('View')}
+                        </Link>
+                      </td>
                     </tr>
                   );
                 })}
@@ -415,6 +440,9 @@ export function InventoryPage() {
             <PanelHeader title={selected.name} subtitle={tx('Stock movement history')} />
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <Link href={`/details/inventory/${selected.id}`} style={detailLinkStyle}>
+                  <Eye size={14} /> {tx('Open details')}
+                </Link>
                 <Button variant="secondary" disabled={!canManageInventory} onClick={() => openProductModal(selected)}>
                   <Edit3 size={14} /> {tx('Edit')}
                 </Button>

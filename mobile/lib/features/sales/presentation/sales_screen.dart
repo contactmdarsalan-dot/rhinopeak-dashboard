@@ -5,6 +5,7 @@ import '../../../app/state/app_controller.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/rhino_models.dart';
 import '../../../shared/widgets/api_detail_screen.dart';
+import '../../../shared/widgets/mobile_record_editor.dart';
 import '../../../shared/widgets/rp_widgets.dart';
 
 class SalesScreen extends ConsumerWidget {
@@ -145,13 +146,13 @@ class _SalesSummaryBanner extends StatelessWidget {
   }
 }
 
-class _SaleCard extends StatelessWidget {
+class _SaleCard extends ConsumerWidget {
   const _SaleCard({required this.sale});
 
   final Sale sale;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return RpCard(
@@ -220,6 +221,45 @@ class _SaleCard extends StatelessWidget {
                   color: colorScheme.primary,
                   letterSpacing: 0,
                 ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'Actions',
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    showMobileRecordEditor(
+                      context,
+                      ref,
+                      entity: 'sales',
+                      title: sale.customer,
+                      initial: _saleRecord(sale),
+                    );
+                  }
+                  if (value == 'delete') {
+                    _confirmDeleteSale(context, ref, sale);
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 18),
+                        SizedBox(width: 10),
+                        Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, size: 18),
+                        SizedBox(width: 10),
+                        Text('Delete'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -337,4 +377,42 @@ class _EmptyState extends StatelessWidget {
       ),
     );
   }
+}
+
+Map<String, dynamic> _saleRecord(Sale sale) {
+  return {
+    'id': sale.id,
+    'customer': sale.customer,
+    'products': sale.products,
+    'amount': sale.amount,
+    'payment': sale.payment,
+    'status': sale.status,
+    'date': sale.date,
+  };
+}
+
+Future<void> _confirmDeleteSale(
+  BuildContext context,
+  WidgetRef ref,
+  Sale sale,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Delete sale?'),
+      content: Text('Delete sale for "${sale.customer}"? Stock will be adjusted by the backend.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  await ref.read(appControllerProvider.notifier).deleteRecord('sales', sale.id);
 }

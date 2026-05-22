@@ -2,3 +2,8 @@ data/*.sqlite3
 data/*.sqlite3-*
 __pycache__/
 *.pyc
+.env
+.env.*
+*.env
+runtime/
+apps/runtime/

@@ -72,6 +72,7 @@ import {
   type AppLanguage,
   type Account,
   type AuditLog,
+  type BillScan,
   type BillingRecord,
   type Business,
   type CashBankAccount,
@@ -123,6 +124,7 @@ export type BackendStatus = 'idle' | 'online' | 'offline';
 export type ActivePage =
   | 'dashboard'
   | 'quick-add'
+  | 'scan-bill'
   | 'sales'
   | 'purchases'
   | 'expenses'
@@ -321,6 +323,7 @@ export interface AppSettings {
 export const pagePermissionMap: Record<ActivePage, PermissionKey> = {
   dashboard: 'dashboard.view',
   'quick-add': 'sales.create',
+  'scan-bill': 'expenses.view',
   sales: 'sales.view',
   purchases: 'purchases.view',
   expenses: 'expenses.view',
@@ -377,6 +380,7 @@ interface AppState {
   accounts: Account[];
   invoiceTemplates: InvoiceTemplate[];
   documents: DocumentAttachment[];
+  billScans: BillScan[];
   reminderTemplates: ReminderTemplate[];
   reminderLogs: ReminderLog[];
   syncOperations: SyncOperation[];
@@ -795,6 +799,7 @@ export const useAppStore = create<AppState>()(
         },
       ],
       documents: [],
+      billScans: [],
       reminderTemplates: [],
       reminderLogs: [],
       syncOperations: [],
@@ -843,6 +848,7 @@ export const useAppStore = create<AppState>()(
           moneyMovements: payload.moneyMovements ?? state.moneyMovements,
           journalEntries: payload.journalEntries ?? state.journalEntries,
           documents: payload.documents ?? state.documents,
+          billScans: payload.billScans ?? state.billScans,
           reminderTemplates: payload.reminderTemplates ?? state.reminderTemplates,
           reminderLogs: payload.reminderLogs ?? state.reminderLogs,
           syncOperations: payload.syncOperations ?? state.syncOperations,
@@ -891,6 +897,7 @@ export const useAppStore = create<AppState>()(
           moneyMovements: bootstrap.moneyMovements ?? [],
           journalEntries: bootstrap.journalEntries ?? [],
           documents: bootstrap.documents ?? [],
+          billScans: bootstrap.billScans ?? [],
           reminderTemplates: bootstrap.reminderTemplates ?? [],
           reminderLogs: bootstrap.reminderLogs ?? [],
           syncOperations: bootstrap.syncOperations ?? [],
@@ -956,6 +963,7 @@ export const useAppStore = create<AppState>()(
           moneyMovements: [],
           journalEntries: [],
           documents: [],
+          billScans: [],
           reminderTemplates: [],
           reminderLogs: [],
           syncOperations: [],
@@ -3058,6 +3066,7 @@ export const useAppStore = create<AppState>()(
         accounts: state.accounts,
         invoiceTemplates: state.invoiceTemplates,
         documents: state.documents,
+        billScans: state.billScans,
         reminderTemplates: state.reminderTemplates,
         reminderLogs: state.reminderLogs,
         syncOperations: state.syncOperations,

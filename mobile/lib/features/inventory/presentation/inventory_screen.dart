@@ -6,6 +6,7 @@ import '../../../app/state/app_controller.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/rhino_models.dart';
 import '../../../shared/widgets/api_detail_screen.dart';
+import '../../../shared/widgets/mobile_record_editor.dart';
 import '../../../shared/widgets/rp_widgets.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
@@ -73,7 +74,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               color: colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.2 : 0.45),
+                color: colorScheme.outlineVariant
+                    .withValues(alpha: isDark ? 0.2 : 0.45),
                 width: 1,
               ),
             ),
@@ -88,7 +90,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                         onPressed: () => setState(() => _search = ''),
                         icon: Icon(Icons.close_rounded,
                             size: 18,
-                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                            color: colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.6)),
                       )
                     : null,
                 border: InputBorder.none,
@@ -141,12 +144,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: colorScheme.primary.withValues(
-                                  alpha: isDark ? 0.12 : 0.08),
+                              color: colorScheme.primary
+                                  .withValues(alpha: isDark ? 0.12 : 0.08),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                color: colorScheme.primary.withValues(
-                                    alpha: isDark ? 0.22 : 0.15),
+                                color: colorScheme.primary
+                                    .withValues(alpha: isDark ? 0.22 : 0.15),
                                 width: 1,
                               ),
                             ),
@@ -171,7 +174,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                 const SizedBox(height: 3),
                                 Text(
                                   '${product.category}'
-                                  '${product.supplier.isNotEmpty ? ' · ${product.supplier}' : ''}',
+                                  '${product.supplier.isNotEmpty ? ' - ${product.supplier}' : ''}',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: colorScheme.onSurfaceVariant
@@ -218,11 +221,72 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                 value: quantity(
                                     product.reorderLevel, product.unit),
                                 icon: Icons.warning_amber_rounded,
-                                highlight: product.stock <= product.reorderLevel,
+                                highlight:
+                                    product.stock <= product.reorderLevel,
                               ),
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(height: 12),
+                      Divider(
+                        height: 1,
+                        color: colorScheme.outlineVariant
+                            .withValues(alpha: isDark ? 0.18 : 0.45),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ApiDetailScreen(
+                                      title: product.name,
+                                      entity: 'inventory',
+                                      id: product.id,
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.visibility_outlined,
+                                  size: 18),
+                              label: Text(tr(ref, 'view')),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => showMobileRecordEditor(
+                                context,
+                                ref,
+                                entity: 'inventory',
+                                title: product.name,
+                                initial: _productRecord(product),
+                              ),
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              label: Text(tr(ref, 'edit')),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          SizedBox.square(
+                            dimension: 48,
+                            child: IconButton.outlined(
+                              tooltip: tr(ref, 'delete'),
+                              onPressed: () =>
+                                  _confirmDeleteProduct(context, ref, product),
+                              icon: const Icon(Icons.delete_outline_rounded),
+                              style: IconButton.styleFrom(
+                                foregroundColor: colorScheme.error,
+                                side: BorderSide(
+                                  color:
+                                      colorScheme.error.withValues(alpha: 0.42),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -240,7 +304,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _BottomSheetWrapper(child: const _ProductSheet()),
+      builder: (_) => const _BottomSheetWrapper(child: _ProductSheet()),
     );
   }
 
@@ -250,7 +314,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _BottomSheetWrapper(child: const _CategorySheet()),
+      builder: (_) => const _BottomSheetWrapper(child: _CategorySheet()),
     );
   }
 }
@@ -271,7 +335,8 @@ class _BottomSheetWrapper extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
           top: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
+            color: colorScheme.outlineVariant
+                .withValues(alpha: isDark ? 0.15 : 0.3),
             width: 1,
           ),
         ),
@@ -303,7 +368,8 @@ class _ActionButton extends StatelessWidget {
         label: Text(label, overflow: TextOverflow.ellipsis),
         style: FilledButton.styleFrom(
           minimumSize: const Size(0, 50),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       );
     }
@@ -413,7 +479,8 @@ class _VerticalDivider extends StatelessWidget {
       width: 1,
       height: 32,
       margin: const EdgeInsets.symmetric(horizontal: 8),
-      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+      color:
+          Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
     );
   }
 }
@@ -425,9 +492,8 @@ class _StockBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLow = product.stock <= product.reorderLevel;
-    final color = isLow
-        ? const Color(0xFFEF4444)
-        : Theme.of(context).colorScheme.primary;
+    final color =
+        isLow ? const Color(0xFFEF4444) : Theme.of(context).colorScheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -477,9 +543,8 @@ class _MiniMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final valueColor = highlight
-        ? const Color(0xFFEF4444)
-        : colorScheme.onSurface;
+    final valueColor =
+        highlight ? const Color(0xFFEF4444) : colorScheme.onSurface;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -526,7 +591,8 @@ class _EmptyState extends StatelessWidget {
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.35),
+          color: colorScheme.outlineVariant
+              .withValues(alpha: isDark ? 0.15 : 0.35),
           width: 1,
         ),
       ),
@@ -535,11 +601,12 @@ class _EmptyState extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.07),
+              color:
+                  colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.07),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 32,
-                color: colorScheme.primary.withValues(alpha: 0.6)),
+            child: Icon(icon,
+                size: 32, color: colorScheme.primary.withValues(alpha: 0.6)),
           ),
           const SizedBox(height: 16),
           Text(
@@ -775,8 +842,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
             ),
           ),
           _SheetHeader(
-              title: tr(ref, 'category'),
-              subtitle: tr(ref, 'categoryHelp')),
+              title: tr(ref, 'category'), subtitle: tr(ref, 'categoryHelp')),
           Row(
             children: [
               Expanded(
@@ -841,7 +907,10 @@ class _SheetHeader extends StatelessWidget {
           Text(
             subtitle,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurfaceVariant
+                  .withValues(alpha: 0.8),
               fontSize: 13,
             ),
           ),
@@ -906,3 +975,50 @@ List<String> _categoryOptions(BootstrapData? bootstrap) {
 }
 
 num _num(String value) => num.tryParse(value.trim()) ?? 0;
+
+Map<String, dynamic> _productRecord(Product product) {
+  return {
+    'id': product.id,
+    'name': product.name,
+    'category': product.category,
+    'unit': product.unit,
+    'stock': product.stock,
+    'reorderLevel': product.reorderLevel,
+    'price': product.price,
+    'costPrice': product.costPrice,
+    'supplier': product.supplier,
+    'status': product.status,
+  };
+}
+
+Future<void> _confirmDeleteProduct(
+  BuildContext context,
+  WidgetRef ref,
+  Product product,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(tr(ref, 'deleteRecordTitle')),
+      content: Text('${tr(ref, 'deleteRecordBody')}\n\n${product.name}'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(tr(ref, 'cancel')),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.onError,
+          ),
+          child: Text(tr(ref, 'delete')),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  await ref
+      .read(appControllerProvider.notifier)
+      .deleteRecord('inventory', product.id);
+}

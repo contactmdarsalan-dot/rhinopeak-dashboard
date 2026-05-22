@@ -252,10 +252,8 @@ class _Divider extends StatelessWidget {
       child: Divider(
         height: 1,
         thickness: 1,
-        color: Theme.of(context)
-            .colorScheme
-            .outlineVariant
-            .withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.1 : 0.3),
+        color: Theme.of(context).colorScheme.outlineVariant.withValues(
+            alpha: Theme.of(context).brightness == Brightness.dark ? 0.1 : 0.3),
       ),
     );
   }
@@ -331,7 +329,7 @@ class _StatusRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final activeColor = const Color(0xFF10B981);
+    const activeColor = Color(0xFF10B981);
     final inactiveColor = colorScheme.onSurfaceVariant;
     final color = isActive ? activeColor : inactiveColor;
 

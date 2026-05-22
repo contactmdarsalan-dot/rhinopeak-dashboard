@@ -23,15 +23,20 @@ function translateNode(language: Parameters<typeof uiText>[0], node: ReactNode):
 export function Panel({
   children,
   style,
+  className,
 }: {
   children: ReactNode;
   style?: CSSProperties;
+  className?: string;
 }) {
   return (
     <section
+      className={className}
       style={{
         background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: 'var(--border)',
         borderRadius: 12,
         overflow: 'hidden',
         ...style,
@@ -165,7 +170,9 @@ export function Field({
 export const controlStyle: CSSProperties = {
   width: '100%',
   background: 'var(--bg-primary)',
-  border: '1px solid var(--border)',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'var(--border)',
   borderRadius: 8,
   color: 'var(--text-primary)',
   minHeight: 38,

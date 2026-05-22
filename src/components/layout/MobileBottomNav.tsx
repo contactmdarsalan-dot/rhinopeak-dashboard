@@ -15,6 +15,7 @@ import {
   Package,
   PlusCircle,
   ReceiptText,
+  ScanLine,
   Settings,
   ShieldCheck,
   ShoppingCart,
@@ -28,11 +29,12 @@ import { type ActivePage, useAppStore } from '@/lib/store';
 const primaryItems = [
   { id: 'dashboard', href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { id: 'parties', href: '/parties', labelKey: 'nav.parties', icon: Building2 },
-  { id: 'quick-add', href: '/quick-add', labelKey: 'nav.quickAdd', icon: PlusCircle },
+  { id: 'scan-bill', href: '/scan-bill', labelKey: 'nav.scanBill', icon: ScanLine },
   { id: 'inventory', href: '/inventory', labelKey: 'nav.inventory', icon: Package },
 ] as const;
 
 const secondaryItems = [
+  { id: 'quick-add', href: '/quick-add', labelKey: 'nav.quickAdd', icon: PlusCircle },
   { id: 'sales', href: '/sales', labelKey: 'nav.sales', icon: ShoppingCart },
   { id: 'purchases', href: '/purchases', labelKey: 'nav.purchases', icon: ReceiptText },
   { id: 'expenses', href: '/expenses', labelKey: 'nav.expenses', icon: WalletCards },
@@ -104,11 +106,11 @@ export function MobileBottomNav() {
       <nav className="mobile-bottom-nav" aria-label="Mobile workspace navigation">
         {visiblePrimary.map(({ id, href, labelKey, icon: Icon }) => {
           const active = pathname === href;
-          const quickAdd = id === 'quick-add';
+          const centerAction = id === 'scan-bill';
           return (
-            <Link key={id} href={href} className={`mobile-bottom-item ${quickAdd ? 'mobile-quick-add' : ''} ${active ? 'active' : ''}`}>
+            <Link key={id} href={href} className={`mobile-bottom-item ${centerAction ? 'mobile-scan-action' : ''} ${active ? 'active' : ''}`}>
               <span className="mobile-bottom-icon">
-                <Icon size={quickAdd ? 28 : 20} />
+                <Icon size={centerAction ? 28 : 20} />
               </span>
               <span>{t(labelKey)}</span>
             </Link>
@@ -119,6 +121,7 @@ export function MobileBottomNav() {
             type="button"
             className={`mobile-bottom-item ${open || secondaryActive ? 'active' : ''}`}
             onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
           >
             <span className="mobile-bottom-icon">
               <MoreHorizontal size={20} />

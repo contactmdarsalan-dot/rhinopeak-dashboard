@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/state/app_controller.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/api_detail_screen.dart';
+import '../../../shared/widgets/mobile_record_editor.dart';
 import '../../../shared/widgets/rp_widgets.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -33,33 +34,59 @@ class MoreScreen extends ConsumerWidget {
     }
 
     final dailyOps = [
-      createAction(Icons.people_alt_outlined, 'customers', 'customerModuleHelp', module: 'customers'),
-      createAction(Icons.local_shipping_outlined, 'suppliers', 'supplierModuleHelp', module: 'suppliers'),
-      createAction(Icons.groups_2_outlined, 'parties', 'partiesModuleHelp', module: 'parties'),
-      createAction(Icons.shopping_bag_outlined, 'purchases', 'purchasesModuleHelp', module: 'purchases'),
-      createAction(Icons.folder_copy_outlined, 'documents', 'documentsModuleHelp', module: 'documents'),
+      createAction(Icons.people_alt_outlined, 'customers', 'customerModuleHelp',
+          module: 'customers'),
+      createAction(
+          Icons.local_shipping_outlined, 'suppliers', 'supplierModuleHelp',
+          module: 'suppliers'),
+      createAction(Icons.groups_2_outlined, 'parties', 'partiesModuleHelp',
+          module: 'parties'),
+      createAction(
+          Icons.shopping_bag_outlined, 'purchases', 'purchasesModuleHelp',
+          module: 'purchases'),
+      createAction(
+          Icons.folder_copy_outlined, 'documents', 'documentsModuleHelp',
+          module: 'documents'),
     ];
 
     final financials = [
-      createAction(Icons.account_balance_wallet_outlined, 'creditCustomers', 'creditModuleHelp', module: 'credit'),
-      createAction(Icons.wallet_outlined, 'expenses', 'expensesModuleHelp', module: 'expenses'),
-      createAction(Icons.account_balance_outlined, 'cashBank', 'cashBankModuleHelp', module: 'cashBank'),
-      createAction(Icons.book_outlined, 'accounting', 'accountingModuleHelp', module: 'accounting'),
-      createAction(Icons.receipt_outlined, 'bills', 'billsModuleHelp', module: 'bills'),
+      createAction(Icons.account_balance_wallet_outlined, 'creditCustomers',
+          'creditModuleHelp',
+          module: 'credit'),
+      createAction(Icons.wallet_outlined, 'expenses', 'expensesModuleHelp',
+          module: 'expenses'),
+      createAction(
+          Icons.account_balance_outlined, 'cashBank', 'cashBankModuleHelp',
+          module: 'cashBank'),
+      createAction(Icons.book_outlined, 'accounting', 'accountingModuleHelp',
+          module: 'accounting'),
+      createAction(Icons.receipt_outlined, 'bills', 'billsModuleHelp',
+          module: 'bills'),
     ];
 
     final analytics = [
-      createAction(Icons.notifications_active_outlined, 'reminders', 'remindersModuleHelp', module: 'reminders'),
-      createAction(Icons.bar_chart_outlined, 'reports', 'reportsModuleHelp', module: 'reports'),
-      createAction(Icons.workspace_premium_outlined, 'billing', 'billingModuleHelp', module: 'billing'),
+      createAction(Icons.notifications_active_outlined, 'reminders',
+          'remindersModuleHelp',
+          module: 'reminders'),
+      createAction(Icons.bar_chart_outlined, 'reports', 'reportsModuleHelp',
+          module: 'reports'),
+      createAction(
+          Icons.workspace_premium_outlined, 'billing', 'billingModuleHelp',
+          module: 'billing'),
     ];
 
     final systemAdmin = [
-      createAction(Icons.admin_panel_settings_outlined, 'teamRoles', 'teamModuleHelp', module: 'team'),
-      createAction(Icons.fact_check_outlined, 'audit', 'auditModuleHelp', module: 'audit'),
-      createAction(Icons.sync_outlined, 'syncLog', 'syncModuleHelp', module: 'sync'),
-      createAction(Icons.support_agent_outlined, 'support', 'supportModuleHelp', module: 'support'),
-      createAction(Icons.settings_outlined, 'settings', 'settingsModuleHelp', customOnTap: onOpenSettings),
+      createAction(
+          Icons.admin_panel_settings_outlined, 'teamRoles', 'teamModuleHelp',
+          module: 'team'),
+      createAction(Icons.fact_check_outlined, 'audit', 'auditModuleHelp',
+          module: 'audit'),
+      createAction(Icons.sync_outlined, 'syncLog', 'syncModuleHelp',
+          module: 'sync'),
+      createAction(Icons.support_agent_outlined, 'support', 'supportModuleHelp',
+          module: 'support'),
+      createAction(Icons.settings_outlined, 'settings', 'settingsModuleHelp',
+          customOnTap: onOpenSettings),
     ];
 
     return RpPage(
@@ -146,7 +173,7 @@ class _MoreAction {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, super.key});
+  const _SectionHeader({required this.title});
 
   final String title;
 
@@ -169,7 +196,7 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.children, super.key});
+  const _SectionCard({required this.children});
 
   final List<Widget> children;
 
@@ -184,7 +211,8 @@ class _SectionCard extends StatelessWidget {
         color: theme.cardTheme.color ?? colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.4),
+          color:
+              colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.4),
           width: 1,
         ),
         boxShadow: isDark
@@ -222,7 +250,6 @@ class _MoreActionRow extends StatefulWidget {
   const _MoreActionRow({
     required this.action,
     required this.isLast,
-    super.key,
   });
 
   final _MoreAction action;
@@ -232,7 +259,8 @@ class _MoreActionRow extends StatefulWidget {
   State<_MoreActionRow> createState() => _MoreActionRowState();
 }
 
-class _MoreActionRowState extends State<_MoreActionRow> with SingleTickerProviderStateMixin {
+class _MoreActionRowState extends State<_MoreActionRow>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -267,24 +295,30 @@ class _MoreActionRowState extends State<_MoreActionRow> with SingleTickerProvide
         color: Colors.transparent,
         child: InkWell(
           onTap: widget.action.onTap,
-          onTapDown: (_) => widget.action.onTap != null ? _controller.reverse() : null,
-          onTapUp: (_) => widget.action.onTap != null ? _controller.forward() : null,
-          onTapCancel: () => widget.action.onTap != null ? _controller.forward() : null,
+          onTapDown: (_) =>
+              widget.action.onTap != null ? _controller.reverse() : null,
+          onTapUp: (_) =>
+              widget.action.onTap != null ? _controller.forward() : null,
+          onTapCancel: () =>
+              widget.action.onTap != null ? _controller.forward() : null,
           splashColor: colorScheme.primary.withValues(alpha: 0.06),
           highlightColor: colorScheme.primary.withValues(alpha: 0.03),
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.08),
+                        color: colorScheme.primary
+                            .withValues(alpha: isDark ? 0.12 : 0.08),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: colorScheme.primary.withValues(alpha: isDark ? 0.25 : 0.18),
+                          color: colorScheme.primary
+                              .withValues(alpha: isDark ? 0.25 : 0.18),
                           width: 1.5,
                         ),
                       ),
@@ -311,7 +345,8 @@ class _MoreActionRowState extends State<_MoreActionRow> with SingleTickerProvide
                             widget.action.subtitle,
                             style: TextStyle(
                               fontSize: 12,
-                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                              color: colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.8),
                             ),
                           ),
                         ],
@@ -319,7 +354,8 @@ class _MoreActionRowState extends State<_MoreActionRow> with SingleTickerProvide
                     ),
                     Icon(
                       Icons.chevron_right_rounded,
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      color:
+                          colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                       size: 20,
                     ),
                   ],
@@ -331,7 +367,8 @@ class _MoreActionRowState extends State<_MoreActionRow> with SingleTickerProvide
                   child: Divider(
                     height: 1,
                     thickness: 1,
-                    color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.1 : 0.3),
+                    color: colorScheme.outlineVariant
+                        .withValues(alpha: isDark ? 0.1 : 0.3),
                   ),
                 ),
             ],
@@ -356,14 +393,45 @@ class _ModuleDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bootstrap = ref.watch(appControllerProvider).bootstrap;
+    final createEntity = _createEntityForModule(module);
+    final canCreate =
+        createEntity != null && canCreateMobileRecord(createEntity);
+    void openCreate() {
+      if (!canCreate) return;
+      showMobileRecordEditor(
+        context,
+        ref,
+        entity: createEntity,
+        title: title,
+      );
+    }
+
     return RpPage(
       title: title,
+      action: !canCreate
+          ? null
+          : IconButton.filled(
+              onPressed: openCreate,
+              icon: const Icon(Icons.add_rounded),
+              tooltip: '${tr(ref, 'add')} $title',
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(subtitle,
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          if (canCreate) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: openCreate,
+                icon: const Icon(Icons.add_circle_outline_rounded),
+                label: Text('${tr(ref, 'addNew')} $title'),
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           if (bootstrap == null)
             const Center(child: CircularProgressIndicator())
@@ -391,6 +459,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(_number(customer, 'balance')),
               entity: 'customers',
               id: _text(customer, 'id'),
+              record: customer,
             ),
         ];
       case 'suppliers':
@@ -410,6 +479,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(_number(supplier, 'balance')),
               entity: 'suppliers',
               id: _text(supplier, 'id'),
+              record: supplier,
             ),
         ];
       case 'parties':
@@ -425,6 +495,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(_number(party, 'balance')),
               entity: 'parties',
               id: _text(party, 'id'),
+              record: party,
             ),
         ];
       case 'credit':
@@ -441,6 +512,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(_number(row, 'amount')),
               entity: 'credit-ledger',
               id: _text(row, 'id'),
+              record: row,
             ),
         ];
       case 'purchases':
@@ -462,6 +534,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(_number(row, 'amount')),
               entity: 'purchases',
               id: _text(row, 'id'),
+              record: row,
             ),
         ];
       case 'expenses':
@@ -481,6 +554,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(_number(row, 'amount')),
               entity: 'expenses',
               id: _text(row, 'id'),
+              record: row,
             ),
         ];
       case 'cashBank':
@@ -501,6 +575,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(_number(account, 'balance')),
               entity: 'cash-bank-accounts',
               id: _text(account, 'id'),
+              record: account,
             ),
           for (final movement in bootstrap.moneyMovements.take(8))
             _DataCard(
@@ -510,6 +585,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(_number(movement, 'amount')),
               entity: 'money-movements',
               id: _text(movement, 'id'),
+              record: movement,
             ),
         ];
       case 'accounting':
@@ -527,6 +603,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(_number(entry, 'totalDebit')),
               entity: 'journal-entries',
               id: _text(entry, 'id'),
+              record: entry,
             ),
         ];
       case 'bills':
@@ -541,6 +618,15 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(sale.amount),
               entity: 'sales',
               id: sale.id,
+              record: {
+                'id': sale.id,
+                'customer': sale.customer,
+                'products': sale.products,
+                'amount': sale.amount,
+                'payment': sale.payment,
+                'status': sale.status,
+                'date': sale.date,
+              },
             ),
         ];
       case 'documents':
@@ -557,6 +643,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: _text(doc, 'status', fallback: 'Ready'),
               entity: 'documents',
               id: _text(doc, 'id'),
+              record: doc,
             ),
         ];
       case 'reminders':
@@ -573,6 +660,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: _text(template, 'active', fallback: 'Active'),
               entity: 'reminder-templates',
               id: _text(template, 'id'),
+              record: template,
             ),
           for (final log in bootstrap.reminderLogs.take(8))
             _DataCard(
@@ -582,6 +670,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: _text(log, 'status', fallback: 'Sent'),
               entity: 'reminders',
               id: _text(log, 'id'),
+              record: log,
             ),
         ];
       case 'reports':
@@ -606,6 +695,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: _text(report, 'status', fallback: 'Ready'),
               entity: 'reports',
               id: _text(report, 'id'),
+              record: report,
             ),
         ];
       case 'billing':
@@ -626,6 +716,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: money(_number(bill, 'amount')),
               entity: 'billing-history',
               id: _text(bill, 'id'),
+              record: bill,
             ),
         ];
       case 'team':
@@ -644,6 +735,9 @@ class _ModuleDetailScreen extends ConsumerWidget {
               title: _text(role, 'name', fallback: tr(ref, 'teamRoles')),
               subtitle: '${_listLength(role, 'permissions')} permissions',
               trailing: _text(role, 'systemRole', fallback: ''),
+              entity: 'roles',
+              id: _text(role, 'id'),
+              record: role,
             ),
         ];
       case 'audit':
@@ -658,6 +752,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: shortDate(_text(log, 'createdAt')),
               entity: 'audit-logs',
               id: _text(log, 'id'),
+              record: log,
             ),
         ];
       case 'sync':
@@ -673,6 +768,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: shortDate(_text(operation, 'syncedAt')),
               entity: 'sync-operations',
               id: _text(operation, 'id'),
+              record: operation,
             ),
           for (final movement in bootstrap.inventoryMovements.take(10))
             _DataCard(
@@ -681,6 +777,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: _number(movement, 'delta').toString(),
               entity: 'inventory-movements',
               id: _text(movement, 'id'),
+              record: movement,
             ),
         ];
       case 'support':
@@ -696,6 +793,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: _text(ticket, 'status', fallback: 'Open'),
               entity: 'support-tickets',
               id: _text(ticket, 'id'),
+              record: ticket,
             ),
           for (final flag in bootstrap.featureFlags)
             _DataCard(
@@ -704,6 +802,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
               trailing: _text(flag, 'enabled', fallback: ''),
               entity: 'feature-flags',
               id: _text(flag, 'id'),
+              record: flag,
             ),
         ];
       default:
@@ -712,13 +811,14 @@ class _ModuleDetailScreen extends ConsumerWidget {
   }
 }
 
-class _DataCard extends StatelessWidget {
+class _DataCard extends ConsumerWidget {
   const _DataCard({
     required this.title,
     required this.subtitle,
     required this.trailing,
     this.entity,
     this.id,
+    this.record,
   });
 
   final String title;
@@ -726,10 +826,13 @@ class _DataCard extends StatelessWidget {
   final String trailing;
   final String? entity;
   final String? id;
+  final Map<String, dynamic>? record;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final canOpen = entity != null && id != null && id!.isNotEmpty;
+    final canEdit = canOpen && canEditMobileRecord(entity!);
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: RpCard(
@@ -746,29 +849,107 @@ class _DataCard extends StatelessWidget {
                 );
               }
             : null,
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: const TextStyle(fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 3),
+                      Text(subtitle,
+                          style:
+                              TextStyle(color: colorScheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    trailing,
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+                if (canOpen && !canEdit) ...[
+                  const SizedBox(width: 6),
+                  Icon(Icons.chevron_right_rounded,
+                      color: colorScheme.onSurfaceVariant),
+                ],
+              ],
+            ),
+            if (canOpen || canEdit) ...[
+              const SizedBox(height: 14),
+              Divider(
+                height: 1,
+                color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+              ),
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  Text(title,
-                      style: const TextStyle(fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 3),
-                  Text(subtitle,
-                      style: TextStyle(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant)),
+                  if (canOpen)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _openDetail(context),
+                        icon: const Icon(Icons.visibility_outlined, size: 18),
+                        label: Text(tr(ref, 'view')),
+                      ),
+                    ),
+                  if (canOpen && canEdit) const SizedBox(width: 8),
+                  if (canEdit)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => showMobileRecordEditor(
+                          context,
+                          ref,
+                          entity: entity!,
+                          title: title,
+                          initial: record,
+                        ),
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        label: Text(tr(ref, 'edit')),
+                      ),
+                    ),
+                  if (canEdit) ...[
+                    const SizedBox(width: 8),
+                    SizedBox.square(
+                      dimension: 48,
+                      child: IconButton.outlined(
+                        tooltip: tr(ref, 'delete'),
+                        onPressed: () =>
+                            _confirmDelete(context, ref, entity!, id!, title),
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        style: IconButton.styleFrom(
+                          foregroundColor: colorScheme.error,
+                          side: BorderSide(
+                            color: colorScheme.error.withValues(alpha: 0.42),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
-            ),
-            const SizedBox(width: 10),
-            Text(trailing, style: const TextStyle(fontWeight: FontWeight.w900)),
-            if (canOpen) ...[
-              const SizedBox(width: 6),
-              const Icon(Icons.chevron_right),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  void _openDetail(BuildContext context) {
+    if (entity == null || id == null || id!.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ApiDetailScreen(
+          title: title,
+          entity: entity!,
+          id: id!,
         ),
       ),
     );
@@ -825,6 +1006,69 @@ class _SummaryCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _createEntityForModule(String module) {
+  switch (module) {
+    case 'customers':
+      return 'customers';
+    case 'suppliers':
+      return 'suppliers';
+    case 'parties':
+      return 'parties';
+    case 'credit':
+      return 'credit-ledger';
+    case 'purchases':
+      return 'purchases';
+    case 'expenses':
+      return 'expenses';
+    case 'cashBank':
+      return 'cash-bank-accounts';
+    case 'documents':
+      return 'documents';
+    case 'reminders':
+      return 'reminder-templates';
+    case 'reports':
+      return 'reports';
+    case 'team':
+      return 'roles';
+    case 'sync':
+      return 'inventory-movements';
+    default:
+      return null;
+  }
+}
+
+Future<void> _confirmDelete(
+  BuildContext context,
+  WidgetRef ref,
+  String entity,
+  String id,
+  String title,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(tr(ref, 'deleteRecordTitle')),
+      content: Text('${tr(ref, 'deleteRecordBody')}\n\n$title'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(tr(ref, 'cancel')),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.onError,
+          ),
+          child: Text(tr(ref, 'delete')),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  await ref.read(appControllerProvider.notifier).deleteRecord(entity, id);
 }
 
 String _text(Map<String, dynamic> data, String key, {String fallback = ''}) {

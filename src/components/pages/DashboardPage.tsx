@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { DollarSign, ShoppingBag, TrendingUp, UserPlus } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, UserPlus, BrainCircuit } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { RevenueChart, TopProductsChart, type RevenuePoint, type TopProductPoint } from '@/components/ui/Charts';
@@ -110,6 +110,61 @@ export function DashboardPage() {
         <StatTile label={tx('Free plan usage')} value={`${Math.min(100, usage)}%`} detail={uiFormat(settings.language, '{count} sales this month', { count: activeMonthSales })} tone={usage >= 85 ? 'warning' : 'neutral'} />
         <StatTile label={tx('Stock alerts')} value={lowStock.length} detail={tx('Products below threshold')} tone={lowStock.length ? 'danger' : 'success'} />
       </div>
+
+      {/* Quick Action: AI Bill Scanner Shortcut */}
+      <Panel style={{
+        padding: 16,
+        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(34, 211, 238, 0.08) 100%)',
+        border: '1px solid rgba(15, 118, 110, 0.25)',
+        boxShadow: '0 8px 32px 0 rgba(15, 118, 110, 0.08)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: 14,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              background: 'linear-gradient(135deg, #0f766e, #2dd4bf)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(45, 212, 191, 0.3)',
+            }}>
+              <BrainCircuit size={20} color="#fff" />
+            </div>
+            <div>
+              <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 15, margin: 0 }}>
+                {tx('AI Smart Bill Scanner')}
+              </p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '2px 0 0 0' }}>
+                {tx('Instantly extract and post expense receipts, supplier bills, or sales invoices with custom character-level GPT.')}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActivePage('scan-bill')}
+            style={{
+              border: 'none',
+              borderRadius: 8,
+              background: 'linear-gradient(90deg, #0f766e, #14b8a6)',
+              color: '#fff',
+              padding: '10px 18px',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(15, 118, 110, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <BrainCircuit size={15} /> {tx('Scan Bill')}
+          </button>
+        </div>
+      </Panel>
 
       {plan === 'free' && (
         <Panel style={{ padding: 16 }}>

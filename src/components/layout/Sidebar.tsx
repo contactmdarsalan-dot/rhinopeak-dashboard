@@ -3,6 +3,7 @@ import {
   LayoutDashboard, ShoppingCart, BarChart2, Users, Calculator,
   Package, FileText, Settings, ChevronLeft, Zap, CreditCard, ShieldCheck,
   PlusCircle, ReceiptText, WalletCards, Archive, BellRing, Building2,
+  BrainCircuit,
 } from 'lucide-react';
 import { type ActivePage, useAppStore } from '@/lib/store';
 import { translate } from '@/lib/i18n';
@@ -12,6 +13,7 @@ import { usePathname } from 'next/navigation';
 const NAV_ITEMS = [
   { id: 'dashboard', href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { id: 'quick-add', href: '/quick-add', labelKey: 'nav.quickAdd', icon: PlusCircle },
+  { id: 'scan-bill', href: '/scan-bill', labelKey: 'nav.scanBill', icon: BrainCircuit },
   { id: 'sales', href: '/sales', labelKey: 'nav.sales', icon: ShoppingCart },
   { id: 'purchases', href: '/purchases', labelKey: 'nav.purchases', icon: ReceiptText },
   { id: 'expenses', href: '/expenses', labelKey: 'nav.expenses', icon: WalletCards },
@@ -111,9 +113,11 @@ export function Sidebar() {
                 marginBottom: 2,
                 background: active ? 'var(--accent-glow)' : 'transparent',
                 color: active ? 'var(--accent)' : 'var(--text-secondary)',
-                transition: 'all 0.15s ease',
+                transition: 'all 0.2s ease',
                 justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                 textDecoration: 'none',
+                position: 'relative',
+                boxShadow: active ? '0 0 10px rgba(15,118,110,0.1)' : 'none',
               }}
               onMouseEnter={(e) => {
                 if (!active) {

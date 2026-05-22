@@ -1,6 +1,7 @@
 'use client';
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
-import { Download, FileDown, Plus, Printer, Search, Trash2, Upload } from 'lucide-react';
+import Link from 'next/link';
+import { Download, Eye, FileDown, Plus, Printer, Search, Trash2, Upload } from 'lucide-react';
 import { Badge, Button, Field, Modal, Panel, PanelHeader, StatTile, controlStyle } from '@/components/ui/Primitives';
 import { getEntityDetail, type EntityDetail } from '@/lib/api';
 import { type Business, type Customer, type Sale, type SaleStatus } from '@/lib/domain';
@@ -13,6 +14,22 @@ function statusTone(status: SaleStatus) {
   if (status === 'Pending') return 'warning';
   return 'danger';
 }
+
+const detailLinkStyle = {
+  minHeight: 34,
+  padding: '7px 10px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'var(--bg-card)',
+  color: 'var(--text-secondary)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  fontSize: 12,
+  fontWeight: 750,
+  textDecoration: 'none',
+} as const;
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] ?? char));
@@ -142,7 +159,7 @@ export function SalesPage() {
   const [payment, setPayment] = useState('All');
   const [selected, setSelected] = useState<Sale | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<EntityDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailFailedId, setDetailFailedId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [customerId, setCustomerId] = useState(customers[0]?.id ?? '');
   const [customerName, setCustomerName] = useState(customers[0]?.name ?? '');
@@ -203,26 +220,29 @@ export function SalesPage() {
       Math.abs(sale.amount - lineSubtotal) <= 1
     ));
   }, [activeSales, customerName, lineSubtotal, plan, saleDate]);
+  const detailLoading = Boolean(selected && selectedDetail?.record?.id !== selected.id && detailFailedId !== selected.id);
 
   useEffect(() => {
     let cancelled = false;
-    setSelectedDetail(null);
     if (!selected) return;
-    setDetailLoading(true);
     getEntityDetail('sales', selected.id)
       .then((detail) => {
         if (!cancelled) setSelectedDetail(detail);
       })
       .catch(() => {
-        if (!cancelled) setSelectedDetail(null);
-      })
-      .finally(() => {
-        if (!cancelled) setDetailLoading(false);
+        if (!cancelled) setDetailFailedId(selected.id);
       });
     return () => {
       cancelled = true;
     };
   }, [selected]);
+
+  const selectSale = (sale: Sale) => {
+    const next = selected?.id === sale.id ? null : sale;
+    setSelectedDetail(null);
+    setDetailFailedId(null);
+    setSelected(next);
+  };
 
   const submitSale = (event?: FormEvent) => {
     event?.preventDefault();
@@ -384,7 +404,7 @@ export function SalesPage() {
                 {filtered.map((sale, index) => (
                   <tr
                     key={sale.id}
-                    onClick={() => setSelected(selected?.id === sale.id ? null : sale)}
+                    onClick={() => selectSale(sale)}
                     style={{
                       borderBottom: index < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none',
                       cursor: 'pointer',
@@ -399,9 +419,14 @@ export function SalesPage() {
                     <td data-label={tx('Status')} style={{ padding: '10px 14px' }}><Badge tone={statusTone(sale.status)}>{translateSaleStatus(settings.language, sale.status)}</Badge></td>
                     <td data-label={tx('Date')} style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12 }}>{sale.date}</td>
                     <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '10px 14px' }}>
-                      <Button variant="ghost" disabled={!canDeleteSales} onClick={() => softDeleteSale(sale.id)} title={canDeleteSales ? tx('Soft delete sale') : tx('Delete sales permission required')}>
-                        <Trash2 size={14} />
-                      </Button>
+                      <span onClick={(event) => event.stopPropagation()} style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+                        <Link href={`/details/sales/${sale.id}`} style={detailLinkStyle}>
+                          <Eye size={14} /> {tx('View')}
+                        </Link>
+                        <Button variant="ghost" disabled={!canDeleteSales} onClick={() => softDeleteSale(sale.id)} title={canDeleteSales ? tx('Soft delete sale') : tx('Delete sales permission required')}>
+                          <Trash2 size={14} />
+                        </Button>
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -437,6 +462,9 @@ export function SalesPage() {
                 </div>
               ))}
               <div style={{ display: 'grid', gap: 8 }}>
+                <Link href={`/details/sales/${selected.id}`} style={detailLinkStyle}>
+                  <Eye size={14} /> {tx('Open details')}
+                </Link>
                 <Button variant="secondary" onClick={() => printSelectedBill(selected)}>
                   <Printer size={14} /> {tx('Print bill')}
                 </Button>

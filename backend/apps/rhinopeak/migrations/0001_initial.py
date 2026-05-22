@@ -175,10 +175,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='sessiontoken',
-            index=models.Index(fields=['user'], name='rp_sessions_user_id_1f7ded_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='sessiontoken',
             index=models.Index(fields=['expires_at'], name='rp_sessions_expires_d8c312_idx'),
         ),
         migrations.AddIndex(
@@ -224,10 +220,6 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name='useraccount',
             index=models.Index(fields=['workspace', 'role'], name='rp_users_workspa_33ff6b_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='useraccount',
-            index=models.Index(fields=['email_normalized'], name='rp_users_email_n_220ac4_idx'),
         ),
         migrations.AddIndex(
             model_name='useraccount',

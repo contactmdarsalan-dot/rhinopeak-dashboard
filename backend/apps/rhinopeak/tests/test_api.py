@@ -207,6 +207,126 @@ class AuthAndCoreApiTests(RhinoPeakApiTestCase):
 
 
 class TenantWorkflowApiTests(RhinoPeakApiTestCase):
+    def test_mobile_namespace_exposes_crud_and_sync_aliases(self) -> None:
+        token = self.auth_token()
+        customer_id = f"mobile-cust-{self.suffix}"
+
+        created = self.assert_status(
+            self.api(
+                "POST",
+                "/mobile/customers",
+                {
+                    "id": customer_id,
+                    "name": "Mobile CRUD Customer",
+                    "phone": "9800000999",
+                    "balance": 100,
+                },
+                token=token,
+            ),
+            200,
+        )
+        self.assertEqual(created["customer"]["id"], customer_id)
+
+        updated = self.assert_status(
+            self.api("PATCH", f"/mobile/customers/{customer_id}", {"balance": 250}, token=token),
+            200,
+        )
+        self.assertEqual(updated["customer"]["balance"], 250)
+
+        detail = self.assert_status(
+            self.api("GET", f"/mobile/details/customers/{customer_id}", token=token),
+            200,
+        )["detail"]
+        self.assertEqual(detail["record"]["name"], "Mobile CRUD Customer")
+
+        sync = self.assert_status(
+            self.api(
+                "POST",
+                "/mobile/sync/push",
+                {
+                    "id": f"mobile-sync-{self.suffix}",
+                    "operationKey": f"mobile-sync-{self.suffix}",
+                    "entity": "customers",
+                    "entityId": customer_id,
+                    "action": "update",
+                    "payload": {"balance": 250},
+                },
+                token=token,
+            ),
+            200,
+        )
+        self.assertEqual(sync["operation"]["status"], "Synced")
+        self.assertGreaterEqual(
+            len(self.assert_status(self.api("GET", "/mobile/sync/pull", token=token), 200)["bootstrap"]["syncOperations"]),
+            1,
+        )
+
+        deleted = self.assert_status(self.api("DELETE", f"/mobile/customers/{customer_id}", token=token), 200)
+        self.assertTrue(deleted["ok"])
+
+    def test_smart_bill_scanner_upload_parse_and_approve_flow(self) -> None:
+        token = self.auth_token()
+        raw_text = "\n".join(
+            [
+                "Himalaya Hotel",
+                f"Bill No: HH-{self.suffix}",
+                "Date: 2026-05-20",
+                "Rice x2 500",
+                "Tea 100",
+                "VAT 78",
+                "Total 678",
+                "Cash",
+            ]
+        )
+
+        uploaded = self.assert_status(
+            self.api(
+                "POST",
+                "/mobile/bill-scans/upload",
+                {
+                    "sourceType": "manual",
+                    "fileName": "sample-bill.txt",
+                    "mimeType": "text/plain",
+                    "rawText": raw_text,
+                },
+                token=token,
+            ),
+            200,
+        )
+        scan_id = uploaded["billScan"]["id"]
+        self.assertEqual(uploaded["billScan"]["status"], "Uploaded")
+        self.assertGreaterEqual(len(uploaded["bootstrap"]["billScans"]), 1)
+
+        parsed = self.assert_status(
+            self.api("POST", f"/mobile/bill-scans/{scan_id}/parse", {"rawText": raw_text}, token=token),
+            200,
+        )
+        self.assertEqual(parsed["parsed"]["vendorName"], "Himalaya Hotel")
+        self.assertEqual(parsed["parsed"]["billNumber"], f"HH-{self.suffix}")
+        self.assertEqual(parsed["parsed"]["totalAmount"], 678)
+        self.assertGreaterEqual(len(parsed["parsed"]["items"]), 2)
+
+        approved = self.assert_status(
+            self.api(
+                "POST",
+                f"/mobile/bill-scans/{scan_id}/approve",
+                {
+                    "targetRecordType": "Expense",
+                    "approved": parsed["parsed"],
+                },
+                token=token,
+            ),
+            200,
+        )
+        self.assertEqual(approved["billScan"]["status"], "Approved")
+        self.assertEqual(approved["target"]["amount"], 678)
+        self.assertEqual(approved["document"]["mimeType"], "text/html")
+        self.assertEqual(approved["bootstrap"]["expenses"][0]["vendor"], "Himalaya Hotel")
+        self.assertEqual(approved["bootstrap"]["billScans"][0]["targetRecordType"], "Expense")
+
+        detail = self.assert_status(self.api("GET", f"/details/bill-scans/{scan_id}", token=token), 200)["detail"]
+        self.assertEqual(detail["record"]["id"], scan_id)
+
     def test_detail_endpoint_returns_record_and_related_rows(self) -> None:
         token = self.auth_token()
         suffix = self.suffix

@@ -23,7 +23,6 @@ class UserAccount(models.Model):
         db_table = "rp_users"
         indexes = [
             models.Index(fields=["workspace", "role"]),
-            models.Index(fields=["email_normalized"]),
             models.Index(fields=["status"]),
         ]
 
@@ -62,4 +61,3 @@ class PasswordResetToken(models.Model):
             models.Index(fields=["user", "token_hash", "used_at"]),
             models.Index(fields=["expires_at"]),
         ]
-

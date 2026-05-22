@@ -1,6 +1,7 @@
 'use client';
 import { FormEvent, useMemo, useState } from 'react';
-import { CreditCard, Download, Edit3, Plus, Search, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { CreditCard, Download, Edit3, Eye, Plus, Search, Trash2 } from 'lucide-react';
 import { Badge, Button, Field, Modal, Panel, PanelHeader, StatTile, controlStyle } from '@/components/ui/Primitives';
 import { type Customer, type CustomerSegment } from '@/lib/domain';
 import { translateCustomerSegment, translatePaymentMethod, uiFormat, uiText } from '@/lib/i18n';
@@ -8,6 +9,22 @@ import { paymentMethods, useAppStore } from '@/lib/store';
 import { downloadCsv, formatCurrency } from '@/lib/utils';
 
 const segments: Array<'All' | CustomerSegment> = ['All', 'VIP', 'Regular', 'Occasional', 'At-Risk'];
+
+const detailLinkStyle = {
+  minHeight: 34,
+  padding: '7px 10px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'var(--bg-card)',
+  color: 'var(--text-secondary)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  fontSize: 12,
+  fontWeight: 750,
+  textDecoration: 'none',
+} as const;
 
 function segmentTone(segment: CustomerSegment) {
   if (segment === 'VIP') return 'warning';
@@ -224,7 +241,7 @@ export function CustomersPage() {
             <table className="responsive-card-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['Customer', 'Contact', 'LTV', 'Orders', 'Last Order', 'Tags', 'Segment'].map((header) => (
+                  {['Customer', 'Contact', 'LTV', 'Orders', 'Last Order', 'Tags', 'Segment', 'Actions'].map((header) => (
                     <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                   ))}
                 </tr>
@@ -269,6 +286,11 @@ export function CustomersPage() {
                     <td data-label={tx('Segment')} style={{ padding: '11px 14px' }}>
                       <Badge tone={segmentTone(customer.segment)}>{translateCustomerSegment(settings.language, customer.segment)}</Badge>
                     </td>
+                    <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '11px 14px' }}>
+                      <Link href={`/details/customers/${customer.id}`} onClick={(event) => event.stopPropagation()} style={detailLinkStyle}>
+                        <Eye size={14} /> {tx('View')}
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -281,6 +303,9 @@ export function CustomersPage() {
             <PanelHeader title={selected.name} subtitle={tx('Purchase history and CRM detail')} />
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+                <Link href={`/details/customers/${selected.id}`} style={detailLinkStyle}>
+                  <Eye size={14} /> {tx('Open details')}
+                </Link>
                 <Button variant="secondary" disabled={!canManageCustomers} onClick={() => openCustomerModal(selected)}>
                   <Edit3 size={14} /> {tx('Edit')}
                 </Button>

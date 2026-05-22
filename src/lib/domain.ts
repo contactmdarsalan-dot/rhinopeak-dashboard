@@ -398,6 +398,53 @@ export interface DocumentAttachment {
   createdAt: string;
 }
 
+export interface BillScanItem {
+  name: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  discount: number;
+  tax: number;
+  lineTotal: number;
+}
+
+export interface ParsedBillScan {
+  vendorName: string;
+  billNumber: string;
+  billDate: string;
+  paymentMethod: PaymentMethod;
+  currency: 'NPR' | 'USD' | 'EUR' | string;
+  subtotal: number;
+  discountAmount: number;
+  vatAmount: number;
+  totalAmount: number;
+  items: BillScanItem[];
+  confidence?: number;
+  category?: string;
+  notes?: string;
+  rawText?: string;
+}
+
+export interface BillScan {
+  id: string;
+  sourceType: 'camera' | 'upload' | 'manual' | string;
+  status: 'Uploaded' | 'Parsed' | 'Needs Review' | 'Approved' | 'Rejected' | string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  imageDataUrl?: string;
+  rawText: string;
+  parsed?: Partial<ParsedBillScan>;
+  approved?: Partial<ParsedBillScan>;
+  confidence: number;
+  targetRecordType?: 'Sale' | 'Purchase' | 'Expense' | string;
+  targetRecordId?: string;
+  pdfDocumentId?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface ReminderTemplate {
   id: string;
   name: string;

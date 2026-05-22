@@ -2,7 +2,53 @@
 
 import django.db.models.deletion
 import django_mongodb_backend.fields
+from django.conf import settings
 from django.db import migrations, models
+from pymongo import MongoClient
+from pymongo.errors import OperationFailure
+
+
+def _index_exists(db, collection_name, keys, unique=None):
+    expected_keys = list(keys)
+    for index in db[collection_name].list_indexes():
+        if list(index.get('key', {}).items()) != expected_keys:
+            continue
+        if unique is not None and bool(index.get('unique', False)) != bool(unique):
+            continue
+        return True
+    return False
+
+
+def _create_index_if_missing(db, collection_name, keys, name, **options):
+    if _index_exists(db, collection_name, keys, unique=options.get('unique')):
+        return
+    try:
+        db[collection_name].create_index(keys, name=name, **options)
+    except OperationFailure as exc:
+        if exc.code == 85 and _index_exists(db, collection_name, keys, unique=options.get('unique')):
+            return
+        raise
+
+
+def ensure_initial_indexes(apps, schema_editor):
+    client = MongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=settings.MONGO_SERVER_SELECTION_TIMEOUT_MS)
+    db = client[settings.MONGO_DB_NAME]
+    try:
+        _create_index_if_missing(db, 'rp_sessions', [('expires_at', 1)], 'rp_sessions_expires_d8c312_idx')
+        _create_index_if_missing(db, 'rp_sessions', [('revoked_at', 1)], 'rp_sessions_revoked_18c594_idx')
+        _create_index_if_missing(db, 'rp_password_reset_tokens', [('user_id', 1), ('token_hash', 1), ('used_at', 1)], 'rp_password_user_id_37ff65_idx')
+        _create_index_if_missing(db, 'rp_password_reset_tokens', [('expires_at', 1)], 'rp_password_expires_b59030_idx')
+        _create_index_if_missing(db, 'rp_businesses', [('workspace_id', 1), ('created_at', 1)], 'rp_business_workspa_242e7b_idx')
+        _create_index_if_missing(db, 'rp_workspace_records', [('workspace_id', 1), ('kind', 1)], 'rp_workspac_workspa_d18db5_idx')
+        _create_index_if_missing(db, 'rp_workspace_records', [('workspace_id', 1), ('kind', 1), ('updated_at', 1)], 'rp_workspac_workspa_9874eb_idx')
+        _create_index_if_missing(db, 'rp_workspace_records', [('deleted_at', 1)], 'rp_workspac_deleted_4b91cf_idx')
+        _create_index_if_missing(db, 'rp_workspace_records', [('workspace_id', 1), ('kind', 1), ('id', 1)], 'uniq_workspace_record_kind_id', unique=True)
+        _create_index_if_missing(db, 'rp_workspace_roles', [('workspace_id', 1), ('system_role', 1)], 'rp_workspac_workspa_4c53c3_idx')
+        _create_index_if_missing(db, 'rp_workspace_roles', [('workspace_id', 1), ('name', 1)], 'uniq_workspace_role_name', unique=True)
+        _create_index_if_missing(db, 'rp_users', [('workspace_id', 1), ('role', 1)], 'rp_users_workspa_33ff6b_idx')
+        _create_index_if_missing(db, 'rp_users', [('status', 1)], 'rp_users_status_50e7fc_idx')
+    finally:
+        client.close()
 
 
 class Migration(migrations.Migration):
@@ -12,6 +58,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(ensure_initial_indexes, migrations.RunPython.noop),
         migrations.CreateModel(
             name='PlatformAdmin',
             fields=[
@@ -43,18 +90,10 @@ class Migration(migrations.Migration):
                 'db_table': 'rp_platform_sessions',
             },
         ),
-        migrations.RemoveIndex(
-            model_name='sessiontoken',
-            name='rp_sessions_user_id_1f7ded_idx',
-        ),
         migrations.AlterField(
             model_name='workspacerecord',
             name='row_id',
             field=django_mongodb_backend.fields.ObjectIdAutoField(primary_key=True, serialize=False),
-        ),
-        migrations.AddIndex(
-            model_name='platformadmin',
-            index=models.Index(fields=['email_normalized'], name='rp_platform_email_n_bf4949_idx'),
         ),
         migrations.AddIndex(
             model_name='platformadmin',
@@ -68,10 +107,6 @@ class Migration(migrations.Migration):
             model_name='platformsession',
             name='admin',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sessions', to='rhinopeak.platformadmin'),
-        ),
-        migrations.AddIndex(
-            model_name='platformsession',
-            index=models.Index(fields=['admin'], name='rp_platform_admin_i_c674dd_idx'),
         ),
         migrations.AddIndex(
             model_name='platformsession',

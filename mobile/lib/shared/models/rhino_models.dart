@@ -156,6 +156,7 @@ class BootstrapData {
     required this.moneyMovements,
     required this.journalEntries,
     required this.documents,
+    required this.billScans,
     required this.reminderTemplates,
     required this.reminderLogs,
     required this.syncOperations,
@@ -191,6 +192,7 @@ class BootstrapData {
   final List<Map<String, dynamic>> moneyMovements;
   final List<Map<String, dynamic>> journalEntries;
   final List<Map<String, dynamic>> documents;
+  final List<Map<String, dynamic>> billScans;
   final List<Map<String, dynamic>> reminderTemplates;
   final List<Map<String, dynamic>> reminderLogs;
   final List<Map<String, dynamic>> syncOperations;
@@ -240,6 +242,7 @@ class BootstrapData {
       moneyMovements: _list(json['moneyMovements']),
       journalEntries: _list(json['journalEntries']),
       documents: _list(json['documents']),
+      billScans: _list(json['billScans']),
       reminderTemplates: _list(json['reminderTemplates']),
       reminderLogs: _list(json['reminderLogs']),
       syncOperations: _list(json['syncOperations']),

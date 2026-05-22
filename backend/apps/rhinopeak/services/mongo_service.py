@@ -7,7 +7,7 @@ from typing import Any
 
 from django.conf import settings
 from django.utils import timezone
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import DuplicateKeyError, OperationFailure
 
 from apps.rhinopeak.data.mongo import collection, mongo_counts, ping_mongo, strip_mongo_id
 from apps.rhinopeak.domain.constants import EMPTY_SETTINGS, SYSTEM_ROLES
@@ -74,6 +74,32 @@ SUPPORT_STATUSES = {"Open", "Watching", "Resolved"}
 FEATURE_AREAS = {"Billing", "Reports", "Analytics", "Security", "Platform"}
 FEATURE_RISKS = {"Low", "Medium", "High"}
 DEFAULT_PLATFORM_FLAG_IDS = {item["id"] for item in PLATFORM_FEATURE_FLAG_DEFAULTS}
+
+
+def index_exists(collection_name: str, keys: list[tuple[str, int]], **options: Any) -> bool:
+    expected_keys = list(keys)
+    expected_unique = options.get("unique")
+    expected_ttl = options.get("expireAfterSeconds")
+    for index in collection(collection_name).list_indexes():
+        if list(index.get("key", {}).items()) != expected_keys:
+            continue
+        if expected_unique is not None and bool(index.get("unique", False)) != bool(expected_unique):
+            continue
+        if expected_ttl is not None and index.get("expireAfterSeconds") != expected_ttl:
+            continue
+        return True
+    return False
+
+
+def create_index_if_missing(collection_name: str, keys: list[tuple[str, int]], **options: Any) -> None:
+    if index_exists(collection_name, keys, **options):
+        return
+    try:
+        collection(collection_name).create_index(keys, **options)
+    except OperationFailure as exc:
+        if exc.code == 85 and index_exists(collection_name, keys, **options):
+            return
+        raise
 
 
 def normalize_email(email: str) -> str:
@@ -379,6 +405,22 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
         record.setdefault("dataUrl", "")
         record.setdefault("uploadedBy", "")
 
+    if kind == "bill_scans":
+        record.setdefault("sourceType", "camera")
+        record.setdefault("status", "Uploaded")
+        record.setdefault("fileName", "bill-photo")
+        record.setdefault("mimeType", "image/jpeg")
+        record.setdefault("size", 0)
+        record.setdefault("imageDataUrl", "")
+        record.setdefault("rawText", "")
+        record.setdefault("parsed", {})
+        record.setdefault("approved", {})
+        record.setdefault("confidence", 0)
+        record.setdefault("targetRecordType", "")
+        record.setdefault("targetRecordId", "")
+        record.setdefault("pdfDocumentId", "")
+        record.setdefault("createdBy", "")
+
     if kind == "reminder_templates":
         record.setdefault("name", "Credit reminder")
         record.setdefault("channel", "WhatsApp")
@@ -501,6 +543,7 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
         "expenses",
         "expense_categories",
         "cash_bank_accounts",
+        "bill_scans",
         "inventory",
         "inventory_categories",
         "feature_flags",
@@ -704,6 +747,63 @@ def list_records(workspace_id: str, kind: str) -> list[dict[str, Any]]:
     ]
 
 
+def list_records_recent(workspace_id: str, kind: str, days: int = 90) -> list[dict[str, Any]]:
+    """
+    Fetch only records created within the last `days` days for a given kind.
+    Used by bootstrap_payload for high-volume collections (sales, purchases, expenses,
+    inventory_movements) to prevent loading thousands of records on every page load.
+    Older records are still accessible via the detail API and filtered queries.
+    """
+    from datetime import datetime, timedelta, timezone as tz
+    cutoff = (datetime.now(tz=tz.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+    return [
+        dict(row.get("payload", {}))
+        for row in collection("records").find({
+            "workspaceId": workspace_id,
+            "kind": kind,
+            "createdAt": {"$gte": cutoff},
+        }).sort("createdAt", -1).limit(500)
+    ]
+
+
+def ensure_indexes() -> None:
+    """
+    Create MongoDB compound indexes for the records collection.
+    Call this once on server startup via AppConfig.ready().
+    These indexes dramatically speed up bootstrap_payload and list_records queries.
+    """
+    try:
+        # Primary lookup index: workspace + kind + createdAt (used by list_records and list_records_recent)
+        create_index_if_missing(
+            "records",
+            [("workspaceId", 1), ("kind", 1), ("createdAt", -1)],
+            name="idx_workspace_kind_created",
+            background=True,
+        )
+        # Primary get_record index: workspace + kind + id
+        create_index_if_missing(
+            "records",
+            [("workspaceId", 1), ("kind", 1), ("id", 1)],
+            name="idx_workspace_kind_id",
+            unique=True,
+            background=True,
+        )
+        # Sessions TTL index (if exists)
+        try:
+            create_index_if_missing(
+                "sessions",
+                [("expiresAt", 1)],
+                name="idx_sessions_expires",
+                expireAfterSeconds=0,
+                background=True,
+            )
+        except Exception:
+            pass
+        print("[MongoDB] Indexes ensured.")
+    except Exception as exc:
+        print(f"[MongoDB] Could not create indexes: {exc}")
+
+
 DETAIL_ROUTE_KINDS = {
     "sales": "sales",
     "customers": "customers",
@@ -717,6 +817,7 @@ DETAIL_ROUTE_KINDS = {
     "money-movements": "money_movements",
     "journal-entries": "journal_entries",
     "documents": "documents",
+    "bill-scans": "bill_scans",
     "reminder-templates": "reminder_templates",
     "reminders": "reminder_logs",
     "sync-operations": "sync_operations",
@@ -837,6 +938,7 @@ CRUD_ROUTE_KINDS = {
     "inventory-movements": ("inventory_movements", "inventory.manage", "Inventory"),
     "money-movements": ("money_movements", "cashbank.manage", "Cash & Bank"),
     "documents": ("documents", "documents.manage", "Documents"),
+    "bill-scans": ("bill_scans", "documents.manage", "Smart Bill Scanner"),
     "reminder-templates": ("reminder_templates", "reminders.manage", "Reminders"),
     "reminders": ("reminder_logs", "reminders.manage", "Reminders"),
     "reports": ("reports", "reports.generate", "Reports"),
@@ -1038,6 +1140,18 @@ def require_platform_role(actor: dict[str, Any], allowed_roles: set[str], messag
 
 
 def bootstrap_payload(user: dict[str, Any]) -> dict[str, Any]:
+    """
+    Returns all workspace data needed to hydrate the frontend store.
+
+    Performance note:
+    - Master data (customers, suppliers, inventory, etc.) is fetched in full.
+    - High-volume transactional collections (sales, purchases, expenses,
+      inventory_movements, money_movements, journal_entries) are fetched
+      using a 90-day rolling window (list_records_recent) to keep response
+      sizes manageable as the database grows.
+    - Older records remain accessible via individual GET endpoints and
+      filtered queries.
+    """
     workspace = workspace_for(user)
     workspace_id = workspace["id"]
     businesses = [business_payload(strip_mongo_id(row) or {}) for row in collection("businesses").find({"workspaceId": workspace_id}).sort("createdAt", 1)]
@@ -1052,16 +1166,20 @@ def bootstrap_payload(user: dict[str, Any]) -> dict[str, Any]:
         "businesses": businesses,
         "teamMembers": [user_payload(row) for row in team if row],
         "roleDefinitions": [role_payload(row) for row in roles if row],
-        "sales": list_records(workspace_id, "sales"),
+        # High-volume: last 90 days only (max 500 records each)
+        "sales": list_records_recent(workspace_id, "sales", days=90),
+        "purchases": list_records_recent(workspace_id, "purchases", days=90),
+        "expenses": list_records_recent(workspace_id, "expenses", days=90),
+        "moneyMovements": list_records_recent(workspace_id, "money_movements", days=90),
+        "journalEntries": list_records_recent(workspace_id, "journal_entries", days=90),
+        "inventoryMovements": list_records_recent(workspace_id, "inventory_movements", days=90),
+        # Master data: fetch all (small collections, rarely exceed thousands)
         "parties": list_records(workspace_id, "parties"),
         "partyLedger": list_records(workspace_id, "party_ledger"),
-        "purchases": list_records(workspace_id, "purchases"),
-        "expenses": list_records(workspace_id, "expenses"),
         "expenseCategories": expense_category_names(workspace_id),
         "cashBankAccounts": list_records(workspace_id, "cash_bank_accounts"),
-        "moneyMovements": list_records(workspace_id, "money_movements"),
-        "journalEntries": list_records(workspace_id, "journal_entries"),
         "documents": list_records(workspace_id, "documents"),
+        "billScans": list_records(workspace_id, "bill_scans"),
         "reminderTemplates": list_records(workspace_id, "reminder_templates"),
         "reminderLogs": list_records(workspace_id, "reminder_logs"),
         "syncOperations": list_records(workspace_id, "sync_operations"),
@@ -1070,7 +1188,6 @@ def bootstrap_payload(user: dict[str, Any]) -> dict[str, Any]:
         "creditLedger": list_records(workspace_id, "credit_ledger"),
         "inventory": list_records(workspace_id, "inventory"),
         "inventoryCategories": inventory_category_names(workspace_id),
-        "inventoryMovements": list_records(workspace_id, "inventory_movements"),
         "reports": list_records(workspace_id, "reports"),
         "auditLogs": list_records(workspace_id, "audit_logs"),
         "billingHistory": list_records(workspace_id, "billing_history"),

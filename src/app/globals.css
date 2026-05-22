@@ -107,6 +107,29 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 }
 
+@layer components {
+  @media (max-width: 980px) {
+    .scanner-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .bill-item-row {
+      grid-template-columns: 1fr 1fr !important;
+      align-items: stretch !important;
+    }
+
+    .bill-item-row > label:first-child {
+      grid-column: 1 / -1;
+    }
+
+    .bill-item-row > button {
+      min-height: 44px !important;
+    }
+  }
+}
+
 @layer utilities {
   .bg-card { background-color: var(--bg-card); }
   .bg-card-hover { background-color: var(--bg-card-hover); }
@@ -788,6 +811,10 @@
       border-spacing: 0 10px !important;
     }
 
+    .responsive-table-scroll {
+      overflow-x: visible !important;
+    }
+
     .responsive-card-table thead {
       display: none !important;
     }
@@ -853,12 +880,146 @@
       display: none;
     }
 
-    .responsive-card-table td[data-card-actions="true"] button {
+    .responsive-card-table td[colspan] {
+      display: block !important;
+      grid-template-columns: minmax(0, 1fr) !important;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .responsive-card-table td[colspan]::before {
+      display: none;
+    }
+
+    .responsive-card-table td[data-card-actions="true"] button,
+    .responsive-card-table td[data-card-actions="true"] a {
       width: 100%;
       min-height: 42px !important;
       border-color: var(--border) !important;
       background: var(--bg-primary) !important;
     }
+
+    .scan-page {
+      gap: 12px !important;
+    }
+
+    .app-main .scan-stats-grid {
+      order: 2;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+    }
+
+    .scan-stats-grid section {
+      min-width: 0;
+      min-height: 84px;
+      padding: 10px !important;
+      border-radius: 14px !important;
+    }
+
+    .scan-stats-grid section p:first-child {
+      font-size: 9px !important;
+      line-height: 1.25 !important;
+      overflow-wrap: anywhere;
+    }
+
+    .scan-stats-grid section p:nth-child(2) {
+      font-size: 16px !important;
+      line-height: 1.15 !important;
+      overflow-wrap: anywhere;
+    }
+
+    .scan-stats-grid section p:nth-child(3) {
+      font-size: 10px !important;
+      line-height: 1.35 !important;
+    }
+
+    .scanner-grid {
+      order: 1;
+      gap: 12px !important;
+    }
+
+    .scan-history-panel {
+      order: 3;
+    }
+
+    .scan-page .premium-glass-panel {
+      border-radius: 16px !important;
+      background: var(--bg-card) !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      box-shadow: none !important;
+    }
+
+    .scan-page input,
+    .scan-page select,
+    .scan-page textarea {
+      font-size: 16px !important;
+    }
+
+    .scan-page summary,
+    .scan-page button,
+    .scan-page a {
+      touch-action: manipulation;
+    }
+
+    .scan-history-actions {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+      gap: 8px !important;
+      align-items: stretch !important;
+    }
+
+    .scan-history-actions button,
+    .scan-history-actions a {
+      min-height: 44px !important;
+      height: auto !important;
+      border-radius: 12px !important;
+      padding: 0 10px !important;
+    }
+
+    .scan-history-actions button[title],
+    .scan-history-actions button:last-child {
+      width: 44px !important;
+      padding: 0 !important;
+    }
+
+    .app-main .scan-detail-modal-grid {
+      grid-template-columns: minmax(0, 1fr) !important;
+      gap: 16px !important;
+    }
+
+    .scan-detail-side {
+      border-left: 0 !important;
+      border-top: 1px solid var(--border-subtle) !important;
+      padding-left: 0 !important;
+      padding-top: 16px !important;
+    }
+
+    .scan-line-items-table {
+      border-spacing: 0 8px !important;
+    }
+
+    .scan-line-items-table tr {
+      background: var(--bg-primary) !important;
+      box-shadow: none !important;
+    }
+
+    .scan-line-items-table td {
+      grid-template-columns: minmax(62px, 0.3fr) minmax(0, 1fr) !important;
+    }
+
+    @media (max-width: 420px) {
+      .scan-history-actions {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .scan-history-actions button[title],
+      .scan-history-actions button:last-child {
+        width: 100% !important;
+      }
+    }
+
 
     .platform-owner-portal table.platform-table {
       width: 100% !important;
@@ -1077,6 +1238,7 @@
       background: var(--accent-glow);
     }
 
+    .mobile-bottom-item.mobile-scan-action,
     .mobile-bottom-item.mobile-quick-add {
       min-height: 64px;
       margin-top: -22px;
@@ -1085,11 +1247,13 @@
       gap: 5px;
     }
 
+    .mobile-bottom-item.mobile-scan-action.active,
     .mobile-bottom-item.mobile-quick-add.active {
       color: var(--text-primary);
       background: transparent;
     }
 
+    .mobile-bottom-item.mobile-scan-action .mobile-bottom-icon,
     .mobile-bottom-item.mobile-quick-add .mobile-bottom-icon {
       width: 56px;
       height: 56px;
@@ -1101,6 +1265,7 @@
         0 14px 30px oklch(26% 0.16 255 / 0.32);
     }
 
+    .mobile-bottom-item.mobile-scan-action span:last-child,
     .mobile-bottom-item.mobile-quick-add span:last-child {
       font-size: 10px;
       font-weight: 850;

@@ -9,6 +9,14 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.rhinopeak.domain.errors import AppError
+from apps.rhinopeak.services.assistant_service import handle_assistant_command
+from apps.rhinopeak.services.bill_scan_service import (
+    approve_bill_scan,
+    get_bill_scan,
+    list_bill_scans,
+    parse_bill_scan,
+    upload_bill_scan,
+)
 from apps.rhinopeak.services.mongo_service import (
     authenticate_access_token,
     authenticate_platform_token,
@@ -179,10 +187,20 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
                 "apiVersion": "4.0-mongo",
                 "offlineCache": True,
                 "recommendedSyncSeconds": 30,
+                "crudNamespace": "/api/mobile",
+                "syncPush": "/api/mobile/sync/push",
+                "syncPull": "/api/mobile/sync/pull",
             },
         }
+
+    if segments[:1] == ["mobile"]:
+        segments = segments[1:]
+
     if method == "GET" and len(segments) == 3 and segments[0] == "details":
         return {"detail": detail_payload(user, segments[1], unquote(segments[2]))}
+
+    if method == "POST" and segments == ["assistant", "command"]:
+        return handle_assistant_command(user, body)
 
     if method == "POST" and segments == ["sales"]:
         return create_sale(user, body)
@@ -239,6 +257,21 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
         return update_generic_record(user, "documents", segments[1], body)
     if method == "DELETE" and len(segments) == 2 and segments[0] == "documents":
         return delete_document(user, segments[1])
+
+    if method == "GET" and segments == ["bill-scans"]:
+        return list_bill_scans(user)
+    if method == "POST" and segments == ["bill-scans", "upload"]:
+        return upload_bill_scan(user, body)
+    if method == "GET" and len(segments) == 2 and segments[0] == "bill-scans":
+        return get_bill_scan(user, segments[1])
+    if method == "POST" and len(segments) == 3 and segments[0] == "bill-scans" and segments[2] == "parse":
+        return parse_bill_scan(user, segments[1], body)
+    if method == "POST" and len(segments) == 3 and segments[0] == "bill-scans" and segments[2] == "approve":
+        return approve_bill_scan(user, segments[1], body)
+    if method == "PATCH" and len(segments) == 2 and segments[0] == "bill-scans":
+        return update_generic_record(user, "bill-scans", segments[1], body)
+    if method == "DELETE" and len(segments) == 2 and segments[0] == "bill-scans":
+        return delete_generic_record(user, "bill-scans", segments[1])
 
     if method == "POST" and segments == ["reminder-templates"]:
         return create_reminder_template(user, body)

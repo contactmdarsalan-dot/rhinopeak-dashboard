@@ -1,6 +1,7 @@
 import type {
   AppLanguage,
   AuditLog,
+  BillScan,
   BillingRecord,
   Business,
   CashBankAccount,
@@ -19,6 +20,7 @@ import type {
   PlatformOrganization,
   PlanType,
   PermissionKey,
+  ParsedBillScan,
   Purchase,
   ReminderLog,
   ReminderTemplate,
@@ -69,6 +71,7 @@ export interface BackendBootstrap {
   moneyMovements?: MoneyMovement[];
   journalEntries?: JournalEntry[];
   documents?: DocumentAttachment[];
+  billScans?: BillScan[];
   reminderTemplates?: ReminderTemplate[];
   reminderLogs?: ReminderLog[];
   syncOperations?: SyncOperation[];
@@ -93,6 +96,29 @@ export interface EntityDetail {
   id: string;
   record: Record<string, unknown>;
   related: Record<string, Record<string, unknown>[]>;
+}
+
+export interface AssistantCommandResult {
+  id: string;
+  transcript: string;
+  normalizedTranscript: string;
+  language: 'en' | 'ne' | string;
+  intent: string;
+  confidence: number;
+  requiresConfirmation: boolean;
+  canExecute: boolean;
+  route: string;
+  slots: Record<string, unknown>;
+  warnings: string[];
+  reply: string;
+  safety: {
+    autoExecute: boolean;
+    reason: string;
+  };
+  executionStatus: 'Draft' | 'Executed' | string;
+  createdAt: string;
+  executedAt?: string;
+  result?: Record<string, unknown>;
 }
 
 interface AuthResponse {
@@ -502,6 +528,50 @@ export async function patchDocumentInBackend(documentId: string, patch: Partial<
 
 export async function deleteDocumentInBackend(documentId: string) {
   return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/documents/${documentId}`, { method: 'DELETE' });
+}
+
+export async function uploadBillScanInBackend(input: {
+  rawText?: string;
+  imageDataUrl?: string;
+  fileName?: string;
+  mimeType?: string;
+  size?: number;
+  sourceType?: 'camera' | 'upload' | 'manual';
+}) {
+  return request<{ billScan: BillScan; bootstrap: BackendBootstrap }>('/bill-scans/upload', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function parseBillScanInBackend(scanId: string, rawText?: string) {
+  return request<{ billScan: BillScan; parsed: ParsedBillScan; bootstrap: BackendBootstrap }>(`/bill-scans/${scanId}/parse`, {
+    method: 'POST',
+    body: JSON.stringify({ rawText }),
+  });
+}
+
+export async function approveBillScanInBackend(scanId: string, targetRecordType: 'Expense' | 'Purchase' | 'Sale', approved: ParsedBillScan) {
+  return request<{ billScan: BillScan; target: Record<string, unknown>; document: DocumentAttachment; bootstrap: BackendBootstrap }>(`/bill-scans/${scanId}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ targetRecordType, approved }),
+  });
+}
+
+export async function deleteBillScanInBackend(scanId: string) {
+  return request<{ ok: boolean; bootstrap: BackendBootstrap }>(`/bill-scans/${scanId}`, { method: 'DELETE' });
+}
+
+export async function runAssistantCommandInBackend(input: {
+  transcript: string;
+  language?: AppLanguage;
+  confirm?: boolean;
+  overrides?: Record<string, unknown>;
+}) {
+  return request<{ assistantCommand: AssistantCommandResult; bootstrap?: BackendBootstrap }>('/assistant/command', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export async function createReminderTemplateInBackend(template: ReminderTemplate) {

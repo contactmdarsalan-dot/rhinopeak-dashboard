@@ -23,8 +23,12 @@ export function KpiCard({ label, value, change, format = 'currency', icon, delay
       className="animate-fade-in"
       style={{
         animationDelay: `${delay}ms`,
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
+        background: 'rgba(17, 24, 39, 0.45)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
         borderRadius: 12,
         padding: '20px 24px',
         display: 'flex',

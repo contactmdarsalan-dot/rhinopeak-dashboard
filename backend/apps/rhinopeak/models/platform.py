@@ -19,7 +19,6 @@ class PlatformAdmin(models.Model):
     class Meta:
         db_table = "rp_platform_admins"
         indexes = [
-            models.Index(fields=["email_normalized"]),
             models.Index(fields=["role"]),
             models.Index(fields=["status"]),
         ]
@@ -38,7 +37,6 @@ class PlatformSession(models.Model):
     class Meta:
         db_table = "rp_platform_sessions"
         indexes = [
-            models.Index(fields=["admin"]),
             models.Index(fields=["expires_at"]),
             models.Index(fields=["revoked_at"]),
         ]

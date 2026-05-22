@@ -225,6 +225,40 @@ class AppController extends StateNotifier<AppState> {
     });
   }
 
+  Future<void> createRecord(String entity, Map<String, dynamic> record) {
+    return _withLoading(() async {
+      final next = await _mobileRepository.createRecord(entity, record);
+      await _saveBootstrap(next);
+      state = state.copyWith(
+          bootstrap: next,
+          notice: AppStrings.tr(state.language, 'saved'),
+          clearError: true);
+    });
+  }
+
+  Future<void> updateRecord(
+      String entity, String id, Map<String, dynamic> patch) {
+    return _withLoading(() async {
+      final next = await _mobileRepository.updateRecord(entity, id, patch);
+      await _saveBootstrap(next);
+      state = state.copyWith(
+          bootstrap: next,
+          notice: AppStrings.tr(state.language, 'saved'),
+          clearError: true);
+    });
+  }
+
+  Future<void> deleteRecord(String entity, String id) {
+    return _withLoading(() async {
+      final next = await _mobileRepository.deleteRecord(entity, id);
+      await _saveBootstrap(next);
+      state = state.copyWith(
+          bootstrap: next,
+          notice: AppStrings.tr(state.language, 'saved'),
+          clearError: true);
+    });
+  }
+
   Future<void> createProduct(Map<String, dynamic> product) {
     return _withLoading(() async {
       final next = await _mobileRepository.createProduct(product);
@@ -250,6 +284,54 @@ class AppController extends StateNotifier<AppState> {
   Future<void> recordStockMovement(Map<String, dynamic> movement) {
     return _withLoading(() async {
       final next = await _mobileRepository.recordStockMovement(movement);
+      await _saveBootstrap(next);
+      state = state.copyWith(
+          bootstrap: next,
+          notice: AppStrings.tr(state.language, 'saved'),
+          clearError: true);
+    });
+  }
+
+  Future<Map<String, dynamic>?> uploadBillScan(Map<String, dynamic> input) async {
+    state = state.copyWith(loading: true, clearError: true, clearNotice: true);
+    try {
+      final scan = await _mobileRepository.uploadBillScan(input);
+      await refreshBootstrap();
+      return scan;
+    } catch (error) {
+      state = state.copyWith(error: error.toString());
+      return null;
+    } finally {
+      state = state.copyWith(loading: false);
+    }
+  }
+
+  Future<Map<String, dynamic>?> parseBillScan(
+      String scanId, String rawText) async {
+    state = state.copyWith(loading: true, clearError: true, clearNotice: true);
+    try {
+      final result = await _mobileRepository.parseBillScan(scanId, rawText);
+      await refreshBootstrap();
+      return result;
+    } catch (error) {
+      state = state.copyWith(error: error.toString());
+      return null;
+    } finally {
+      state = state.copyWith(loading: false);
+    }
+  }
+
+  Future<void> approveBillScan({
+    required String scanId,
+    required String targetRecordType,
+    required Map<String, dynamic> approved,
+  }) {
+    return _withLoading(() async {
+      final next = await _mobileRepository.approveBillScan(
+        scanId: scanId,
+        targetRecordType: targetRecordType,
+        approved: approved,
+      );
       await _saveBootstrap(next);
       state = state.copyWith(
           bootstrap: next,
@@ -317,6 +399,7 @@ class AppController extends StateNotifier<AppState> {
       'moneyMovements': bootstrap.moneyMovements,
       'journalEntries': bootstrap.journalEntries,
       'documents': bootstrap.documents,
+      'billScans': bootstrap.billScans,
       'reminderTemplates': bootstrap.reminderTemplates,
       'reminderLogs': bootstrap.reminderLogs,
       'syncOperations': bootstrap.syncOperations,
