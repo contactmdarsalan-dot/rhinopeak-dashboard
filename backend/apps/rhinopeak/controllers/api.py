@@ -1,14 +1,34 @@
 from __future__ import annotations
 
 import json
+import os
+import time
+from collections import defaultdict
 from typing import Any
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 from django.conf import settings
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.rhinopeak.domain.errors import AppError
+
+# ---------------------------------------------------------------------------
+# Simple in-memory rate limiter (resets on server restart, good enough for
+# low-traffic protection against brute-force on auth endpoints).
+# ---------------------------------------------------------------------------
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit(key: str, max_attempts: int, window_seconds: int) -> None:
+    """Raise AppError 429 if key exceeds max_attempts within window_seconds."""
+    now = time.time()
+    window_start = now - window_seconds
+    # Prune stale entries
+    _rate_limit_store[key] = [t for t in _rate_limit_store[key] if t > window_start]
+    if len(_rate_limit_store[key]) >= max_attempts:
+        raise AppError(429, "Too many attempts. Please try again later.")
+    _rate_limit_store[key].append(now)
 from apps.rhinopeak.services.assistant_service import handle_assistant_command
 from apps.rhinopeak.services.bill_scan_service import (
     approve_bill_scan,
@@ -18,9 +38,11 @@ from apps.rhinopeak.services.bill_scan_service import (
     upload_bill_scan,
 )
 from apps.rhinopeak.services.mongo_service import (
+    accept_invite,
     authenticate_access_token,
     authenticate_platform_token,
     bootstrap_payload,
+    complete_payment_session,
     create_customer,
     create_cash_bank_account,
     create_credit_entry,
@@ -36,6 +58,7 @@ from apps.rhinopeak.services.mongo_service import (
     create_platform_feature_flag,
     create_platform_organization,
     create_platform_support_ticket,
+    create_payment_session,
     create_product,
     create_purchase,
     create_reminder_log,
@@ -94,6 +117,11 @@ from apps.rhinopeak.services.mongo_service import (
     update_supplier,
     update_user_role,
     delete_generic_record,
+    get_dashboard_kpis,
+    get_invite,
+    iso_now,
+    list_records_since,
+    workspace_for,
 )
 
 
@@ -103,6 +131,8 @@ def api_entry(request: HttpRequest, route: str = "") -> HttpResponse:
         return with_cors(HttpResponse(status=204), request)
     try:
         payload = dispatch(request, route)
+        if isinstance(payload, HttpResponse):
+            return with_cors(payload, request)
         return with_cors(JsonResponse(payload, safe=isinstance(payload, dict)), request)
     except AppError as error:
         return with_cors(JsonResponse({"error": error.message}, status=error.status), request)
@@ -124,15 +154,42 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
     if method == "POST" and segments == ["auth", "register"]:
         return register_user(body)
     if method == "POST" and segments == ["auth", "login"]:
+        client_ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "unknown"))
+        _check_rate_limit(f"login:{client_ip}", max_attempts=10, window_seconds=60)
         return login_user(body)
     if method == "POST" and segments == ["auth", "refresh"]:
         return refresh_session(body)
     if method == "POST" and segments == ["auth", "logout"]:
         return logout(bearer_token(request, required=False), body)
     if method == "POST" and segments == ["auth", "password", "request"]:
+        client_ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "unknown"))
+        _check_rate_limit(f"pwreset:{client_ip}", max_attempts=3, window_seconds=3600)
         return request_password_reset(body)
     if method == "POST" and segments == ["auth", "password", "reset"]:
         return reset_password(body)
+
+    if method == "GET" and len(segments) == 2 and segments[0] == "invites":
+        return get_invite(unquote(segments[1]))
+    if method == "POST" and segments == ["invites", "accept"]:
+        return accept_invite(body)
+
+    if method == "GET" and len(segments) == 3 and segments[:2] == ["payments", "esewa"] and segments[2] == "callback":
+        from apps.rhinopeak.services.payment_service import verify_esewa_callback
+
+        data = request.GET.get("data", "")
+        result = verify_esewa_callback(data)
+        frontend_url = os.environ.get("RHINOPEAK_FRONTEND_URL", "http://localhost:3000")
+        if result.get("success"):
+            try:
+                complete_payment_session(
+                    str(result.get("transaction_uuid", "")),
+                    "eSewa",
+                    str(result.get("transaction_code", "")),
+                )
+            except Exception as payment_error:
+                return HttpResponseRedirect(f"{frontend_url}/billing?payment=error&reason={quote(str(payment_error))}")
+            return HttpResponseRedirect(f"{frontend_url}/billing?payment=success&gateway=esewa")
+        return HttpResponseRedirect(f"{frontend_url}/billing?payment=failed&reason={quote(str(result.get('error', 'verification_failed')))}")
 
     if method == "GET" and segments == ["platform", "auth", "state"]:
         return platform_state()
@@ -192,6 +249,35 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
                 "syncPull": "/api/mobile/sync/pull",
             },
         }
+    if method in {"GET", "POST"} and segments in (["mobile", "session"], ["mobile", "auth", "session"]):
+        workspace = workspace_for(user)
+        return {
+            "user": {
+                "id": user["id"],
+                "name": user["name"],
+                "email": user["email"],
+                "role": user["role"],
+            },
+            "workspace": {
+                "id": workspace.get("id", ""),
+                "name": workspace.get("name", ""),
+                "plan": workspace.get("plan", "free"),
+                "currency": workspace.get("currency", "NPR"),
+            },
+            "apiVersion": "4.1",
+            "lastSyncAt": user.get("lastSyncAt", None),
+        }
+    if method == "GET" and segments == ["mobile", "sync"]:
+        since = request.GET.get("since", "")
+        kinds = ["sales", "inventory", "customers", "expenses", "purchases"]
+        result: dict[str, Any] = {}
+        for kind in kinds:
+            records = list_records_since(user["workspaceId"], kind, since)
+            if records:
+                result[kind] = records
+        return {"delta": result, "syncedAt": iso_now()}
+    if method == "GET" and segments == ["mobile", "dashboard"]:
+        return {"kpis": get_dashboard_kpis(user["workspaceId"])}
 
     if segments[:1] == ["mobile"]:
         segments = segments[1:]
@@ -358,6 +444,37 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
     if method == "PATCH" and len(segments) == 3 and segments[0] == "users" and segments[2] == "role":
         return update_user_role(user, segments[1], str(body.get("role", "")))
 
+    # ------------------------------------------------------------------
+    # Payment routes
+    # ------------------------------------------------------------------
+    if method == "POST" and segments == ["payments", "initiate"]:
+        from apps.rhinopeak.services.payment_service import initiate_esewa_payment, initiate_khalti_payment
+
+        payment_session = create_payment_session(user, body)
+        gateway = str(payment_session["gateway"]).lower()
+        amount = float(payment_session["amount"])
+        plan = str(payment_session["plan"])
+        transaction_uuid = str(payment_session["transactionUuid"])
+        if gateway == "khalti":
+            result = initiate_khalti_payment(
+                transaction_uuid, amount, plan,
+                customer_name=user.get("name", ""),
+                customer_email=user.get("email", ""),
+            )
+        else:  # default: esewa
+            result = initiate_esewa_payment(transaction_uuid, amount, plan)
+        return {"payment": result, "transactionUuid": transaction_uuid, "session": payment_session}
+
+    if method == "POST" and segments == ["payments", "khalti", "verify"]:
+        from apps.rhinopeak.services.payment_service import verify_khalti_payment
+
+        pidx = str(body.get("pidx", ""))
+        result = verify_khalti_payment(pidx)
+        if result.get("success"):
+            transaction_uuid = str(body.get("transactionUuid") or pidx.removeprefix("demo_"))
+            complete_payment_session(transaction_uuid, "Khalti", str(result.get("transaction_id", "")))
+        return result
+
     raise AppError(404, "Route not found.")
 
 
@@ -381,8 +498,11 @@ def bearer_token(request: HttpRequest, required: bool) -> str | None:
 
 def with_cors(response: HttpResponse, request: HttpRequest) -> HttpResponse:
     origin = request.headers.get("Origin")
-    allowed_origin = origin if origin in settings.CORS_ORIGINS else "*"
-    response["Access-Control-Allow-Origin"] = allowed_origin
+    if origin in settings.CORS_ORIGINS:
+        response["Access-Control-Allow-Origin"] = origin
+        response["Vary"] = "Origin"
+    elif settings.DEBUG:
+        response["Access-Control-Allow-Origin"] = "*"
     response["Access-Control-Allow-Methods"] = "GET,POST,PATCH,DELETE,OPTIONS"
     response["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
     response["Access-Control-Max-Age"] = "86400"

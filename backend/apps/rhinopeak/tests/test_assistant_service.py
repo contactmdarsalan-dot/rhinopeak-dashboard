@@ -46,6 +46,28 @@ class AssistantCommandParserTests(SimpleTestCase):
                 self.assertFalse(command["canExecute"])
                 self.assertFalse(command["warnings"])
 
+    def test_nepali_unicode_business_questions(self) -> None:
+        cases = [
+            ("मेरो जम्मा सेल्स कती छ", "sales_total", "all_time"),
+            ("आजको बिक्री कति भयो", "sales_total", "today"),
+            ("यो महिनाको खर्च कति छ", "expenses_total", "this_month"),
+            ("साहुलाई कति तिर्नु बाँकी छ", "supplier_payable", "all_time"),
+            ("ग्राहकबाट कति उठ्न बाँकी छ", "customer_receivable", "all_time"),
+            ("नगद ब्यालेन्स कति छ", "cash_balance", "all_time"),
+            ("स्टकको स्थिति कस्तो छ", "inventory_status", "all_time"),
+            ("यो वर्षको नाफा कति भयो", "profit_estimate", "this_year"),
+        ]
+
+        for transcript, q_type, scope in cases:
+            with self.subTest(transcript=transcript):
+                command = parse_assistant_command({"transcript": transcript})
+                self.assertEqual(command["intent"], "business_question")
+                self.assertEqual(command["slots"]["questionType"], q_type)
+                self.assertEqual(command["slots"]["scope"], scope)
+                self.assertFalse(command["requiresConfirmation"])
+                self.assertFalse(command["canExecute"])
+                self.assertFalse(command["warnings"])
+
     def test_nepali_digits_are_normalized_for_amount_detection(self) -> None:
         command = parse_assistant_command({"transcript": "खर्च रु १२३४ ढुवानी"})
 

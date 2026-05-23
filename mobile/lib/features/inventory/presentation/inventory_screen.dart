@@ -59,7 +59,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               Expanded(
                 child: _ActionButton(
                   icon: Icons.category_rounded,
-                  label: tr(ref, 'categoryCrud'),
+                  label: tr(ref, 'addCategory'),
                   onTap: () => _showCategorySheet(context, ref),
                   isPrimary: false,
                 ),
@@ -116,7 +116,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               icon: Icons.inventory_2_outlined,
               message: _search.isEmpty
                   ? tr(ref, 'emptyStock')
-                  : 'No products match "$_search"',
+                  : '${tr(ref, 'noProductsMatch')} "$_search"',
             )
           else
             ...products.map(
@@ -127,7 +127,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => ApiDetailScreen(
-                          title: product.name,
+                          title: trValue(ref, product.name),
                           entity: 'inventory',
                           id: product.id,
                         ),
@@ -165,7 +165,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  product.name,
+                                  trValue(ref, product.name),
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w900,
@@ -173,8 +173,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  '${product.category}'
-                                  '${product.supplier.isNotEmpty ? ' - ${product.supplier}' : ''}',
+                                  '${trValue(ref, product.category)}'
+                                  '${product.supplier.isNotEmpty ? ' - ${trValue(ref, product.supplier)}' : ''}',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: colorScheme.onSurfaceVariant
@@ -202,7 +202,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                             Expanded(
                               child: _MiniMetric(
                                 label: tr(ref, 'stock'),
-                                value: quantity(product.stock, product.unit),
+                                value: trQuantity(ref, product.stock, product.unit),
                                 icon: Icons.layers_outlined,
                               ),
                             ),
@@ -218,8 +218,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                             Expanded(
                               child: _MiniMetric(
                                 label: tr(ref, 'reorder'),
-                                value: quantity(
-                                    product.reorderLevel, product.unit),
+                                value: trQuantity(
+                                    ref, product.reorderLevel, product.unit),
                                 icon: Icons.warning_amber_rounded,
                                 highlight:
                                     product.stock <= product.reorderLevel,
@@ -243,7 +243,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (_) => ApiDetailScreen(
-                                      title: product.name,
+                                      title: trValue(ref, product.name),
                                       entity: 'inventory',
                                       id: product.id,
                                     ),
@@ -262,7 +262,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                 context,
                                 ref,
                                 entity: 'inventory',
-                                title: product.name,
+                                title: trValue(ref, product.name),
                                 initial: _productRecord(product),
                               ),
                               icon: const Icon(Icons.edit_outlined, size: 18),
@@ -385,12 +385,12 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-class _StatsRow extends StatelessWidget {
+class _StatsRow extends ConsumerWidget {
   const _StatsRow({required this.products});
   final List<Product> products;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final lowStock = products.where((p) => p.stock <= p.reorderLevel).length;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -399,7 +399,7 @@ class _StatsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatPill(
-            label: 'Total Items',
+            label: tr(ref, 'totalItems'),
             value: '${products.length}',
             color: colorScheme.primary,
             isDark: isDark,
@@ -408,7 +408,7 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: _StatPill(
-            label: 'Low Stock',
+            label: tr(ref, 'lowStock'),
             value: '$lowStock',
             color: lowStock > 0
                 ? const Color(0xFFEF4444)
@@ -485,12 +485,12 @@ class _VerticalDivider extends StatelessWidget {
   }
 }
 
-class _StockBadge extends StatelessWidget {
+class _StockBadge extends ConsumerWidget {
   const _StockBadge({required this.product});
   final Product product;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isLow = product.stock <= product.reorderLevel;
     final color =
         isLow ? const Color(0xFFEF4444) : Theme.of(context).colorScheme.primary;
@@ -514,7 +514,7 @@ class _StockBadge extends StatelessWidget {
             const SizedBox(width: 4),
           ],
           Text(
-            quantity(product.stock, product.unit),
+            trQuantity(ref, product.stock, product.unit),
             style: TextStyle(
               color: color,
               fontSize: 11,
@@ -720,7 +720,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
                 initialValue: _category,
                 items: categories
                     .map((item) =>
-                        DropdownMenuItem(value: item, child: Text(item)))
+                        DropdownMenuItem(value: item, child: Text(trValue(ref, item))))
                     .toList(),
                 onChanged: (value) => setState(() => _category = value),
                 decoration: InputDecoration(
@@ -732,7 +732,7 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
                 initialValue: _unit,
                 items: const ['pcs', 'kg', 'liter', 'meter', 'box', 'service']
                     .map((item) =>
-                        DropdownMenuItem(value: item, child: Text(item)))
+                        DropdownMenuItem(value: item, child: Text(trValue(ref, item))))
                     .toList(),
                 onChanged: (value) => setState(() => _unit = value ?? 'pcs'),
                 decoration: InputDecoration(
@@ -812,6 +812,66 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
     _controller.clear();
   }
 
+  Future<void> _editCategory(String category) async {
+    final controller = TextEditingController(text: category);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename Category'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'New Category Name',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(tr(ref, 'cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final newName = controller.text.trim();
+    if (newName.isEmpty || newName == category) return;
+    await ref
+        .read(appControllerProvider.notifier)
+        .updateInventoryCategory(category, newName);
+  }
+
+  Future<void> _deleteCategory(String category) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Category'),
+        content: Text('${tr(ref, 'deleteRecordBody')}\n\n${trValue(ref, category)}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(tr(ref, 'cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: Text(tr(ref, 'delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref
+        .read(appControllerProvider.notifier)
+        .deleteInventoryCategory(category);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(appControllerProvider);
@@ -867,12 +927,69 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
             ],
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final category in categories) RpTag(label: category)
-            ],
+          Text(
+            tr(ref, 'category'),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 250),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: categories.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                final isGeneral = category.toLowerCase() == 'general';
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.label_rounded, color: colorScheme.primary, size: 18),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          trValue(ref, category),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                      if (!isGeneral) ...[
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          onPressed: () => _editCategory(category),
+                          tooltip: tr(ref, 'edit'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                          onPressed: () => _deleteCategory(category),
+                          tooltip: tr(ref, 'delete'),
+                        ),
+                      ] else ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            tr(ref, 'settings'),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
           const SizedBox(height: 8),
         ],
@@ -1000,7 +1117,7 @@ Future<void> _confirmDeleteProduct(
     context: context,
     builder: (context) => AlertDialog(
       title: Text(tr(ref, 'deleteRecordTitle')),
-      content: Text('${tr(ref, 'deleteRecordBody')}\n\n${product.name}'),
+      content: Text('${tr(ref, 'deleteRecordBody')}\n\n${trValue(ref, product.name)}'),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),

@@ -12,7 +12,23 @@ MONGO_SERVER_SELECTION_TIMEOUT_MS = int(os.environ.get("RHINOPEAK_MONGO_TIMEOUT_
 
 SECRET_KEY = os.environ.get("RHINOPEAK_SECRET_KEY", "rhinopeak-local-development-key")
 DEBUG = os.environ.get("RHINOPEAK_DEBUG", "1") != "0"
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("RHINOPEAK_ALLOWED_HOSTS", "*" if DEBUG else "").split(",")
+    if host.strip()
+]
+if not DEBUG:
+    missing = [
+        name
+        for name in ("RHINOPEAK_SECRET_KEY", "RHINOPEAK_MONGO_URI", "RHINOPEAK_CORS_ORIGINS")
+        if not os.environ.get(name)
+    ]
+    if SECRET_KEY == "rhinopeak-local-development-key":
+        missing.append("RHINOPEAK_SECRET_KEY")
+    if not ALLOWED_HOSTS:
+        missing.append("RHINOPEAK_ALLOWED_HOSTS")
+    if missing:
+        raise RuntimeError(f"Missing production environment variables: {', '.join(sorted(set(missing)))}")
 
 INSTALLED_APPS = [
     "apps.rhinopeak.apps.RhinoPeakConfig",
@@ -48,7 +64,7 @@ CORS_ORIGINS = {
     origin.strip()
     for origin in os.environ.get(
         "RHINOPEAK_CORS_ORIGINS",
-        "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://127.0.0.1:3002",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://127.0.0.1:3002",
     ).split(",")
     if origin.strip()
 }

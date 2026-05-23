@@ -48,9 +48,9 @@ function unitMeta(unit?: string) {
   return unitOptions.find((item) => item.value === unit) ?? unitOptions[0];
 }
 
-function formatQuantity(value: number, unit?: string) {
+function formatQuantity(value: number, unit?: string, language?: Parameters<typeof uiText>[0]) {
   const rounded = Number.isInteger(value) ? value.toString() : value.toFixed(2).replace(/\.?0+$/, '');
-  return `${rounded} ${unitMeta(unit).short}`;
+  return `${rounded} ${uiText(language, unitMeta(unit).short)}`;
 }
 
 export function InventoryPage() {
@@ -403,24 +403,24 @@ export function InventoryPage() {
                         background: selected?.id === product.id ? 'var(--accent-glow)' : 'transparent',
                       }}
                     >
-                      <td data-label={tx('Product')} data-card-primary="true" style={{ padding: '12px 14px', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{product.name}</td>
+                      <td data-label={tx('Product')} data-card-primary="true" style={{ padding: '12px 14px', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{tx(product.name)}</td>
                       <td data-label={tx('SKU')} style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: 12, fontFamily: 'monospace' }}>{product.sku}</td>
-                      <td data-label={tx('Category')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{product.category}</td>
+                      <td data-label={tx('Category')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{tx(product.category)}</td>
                       <td data-label={tx('Unit')} style={{ padding: '12px 14px' }}>
                         <Badge tone="info">{tx(meta.label)}</Badge>
                       </td>
                       <td data-label={tx('Stock')} style={{ padding: '12px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13, minWidth: 44 }}>{formatQuantity(product.stock, product.unit)}</span>
+                          <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13, minWidth: 44 }}>{formatQuantity(product.stock, product.unit, settings.language)}</span>
                           <div style={{ width: 70, height: 5, background: 'var(--border)', borderRadius: 999, overflow: 'hidden' }}>
                             <div style={{ width: `${Math.min(100, (product.stock / Math.max(product.reorderLevel * 3, 1)) * 100)}%`, height: '100%', background: status === 'In Stock' ? 'var(--success)' : status === 'Low Stock' ? 'var(--warning)' : 'var(--danger)' }} />
                           </div>
                         </div>
                       </td>
-                      <td data-label={tx('Reorder')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 13 }}>{formatQuantity(product.reorderLevel, product.unit)}</td>
+                      <td data-label={tx('Reorder')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 13 }}>{formatQuantity(product.reorderLevel, product.unit, settings.language)}</td>
                       <td data-label={tx('Price')} style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{formatCurrency(product.price)}</td>
                       <td data-label={tx('Margin')} style={{ padding: '12px 14px', color: margin > 35 ? 'var(--success)' : 'var(--warning)', fontWeight: 700, fontSize: 13 }}>{margin.toFixed(1)}%</td>
-                      <td data-label={tx('Supplier')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{product.supplier}</td>
+                      <td data-label={tx('Supplier')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{tx(product.supplier)}</td>
                       <td data-label={tx('Status')} style={{ padding: '12px 14px' }}><Badge tone={statusTone(status)}>{translateStockStatus(settings.language, status)}</Badge></td>
                       <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
                         <Link href={`/details/inventory/${product.id}`} onClick={(event) => event.stopPropagation()} style={detailLinkStyle}>
@@ -437,7 +437,7 @@ export function InventoryPage() {
 
         {selected && (
           <Panel>
-            <PanelHeader title={selected.name} subtitle={tx('Stock movement history')} />
+            <PanelHeader title={tx(selected.name)} subtitle={tx('Stock movement history')} />
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                 <Link href={`/details/inventory/${selected.id}`} style={detailLinkStyle}>
@@ -454,7 +454,7 @@ export function InventoryPage() {
                 </Button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <StatTile label={tx('On hand')} value={formatQuantity(selected.stock, selected.unit)} tone={selected.status === 'In Stock' ? 'success' : 'warning'} />
+                <StatTile label={tx('On hand')} value={formatQuantity(selected.stock, selected.unit, settings.language)} tone={selected.status === 'In Stock' ? 'success' : 'warning'} />
                 <StatTile label={tx('Cost value')} value={formatCurrency(selected.stock * selected.costPrice)} tone="accent" />
               </div>
               <div>
@@ -464,10 +464,10 @@ export function InventoryPage() {
                   return (
                     <div key={movement.id} style={{ borderLeft: '2px solid var(--border)', paddingLeft: 10, marginBottom: 10 }}>
                       <p style={{ color: movement.delta >= 0 ? 'var(--success)' : 'var(--danger)', fontSize: 13, fontWeight: 700 }}>
-                        {movement.delta >= 0 ? '+' : '-'}{formatQuantity(Math.abs(movement.delta), movementUnit)} - {tx(movement.reason)}
+                        {movement.delta >= 0 ? '+' : '-'}{formatQuantity(Math.abs(movement.delta), movementUnit, settings.language)} - {tx(movement.reason)}
                       </p>
                       <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>{uiFormat(settings.language, '{createdAt} by {user}', { createdAt: movement.createdAt, user: movement.user })}</p>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{movement.note}</p>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{tx(movement.note)}</p>
                     </div>
                   );
                 }) : <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{tx('No movements recorded yet.')}</p>}
@@ -746,7 +746,7 @@ export function InventoryPage() {
           <form onSubmit={submitMovement} style={{ display: 'grid', gap: 13 }}>
             <Field label={tx('Product')}>
               <select value={movementProductId} onChange={(event) => setMovementProductId(event.target.value)} style={controlStyle}>
-                {inventory.map((product) => <option key={product.id} value={product.id}>{product.name} ({formatQuantity(product.stock, product.unit)})</option>)}
+                {inventory.map((product) => <option key={product.id} value={product.id}>{tx(product.name)} ({formatQuantity(product.stock, product.unit, settings.language)})</option>)}
               </select>
             </Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

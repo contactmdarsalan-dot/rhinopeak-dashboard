@@ -121,7 +121,7 @@ export interface AssistantCommandResult {
   result?: Record<string, unknown>;
 }
 
-interface AuthResponse {
+export interface AuthResponse {
   user: Omit<TeamMember, 'status' | 'lastActive'>;
   session: {
     accessToken: string;
@@ -224,6 +224,24 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (accessToken && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${accessToken}`);
   }
+
+  const response = await fetch(apiUrl(path), {
+    ...options,
+    cache: 'no-store',
+    headers,
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? `API request failed with status ${response.status}`);
+  }
+
+  return payload as T;
+}
+
+async function publicRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers);
+  headers.set('Content-Type', 'application/json');
 
   const response = await fetch(apiUrl(path), {
     ...options,
@@ -720,6 +738,30 @@ export async function patchBillingPlanInBackend(input: {
   });
 }
 
+export async function initiatePaymentInBackend(input: {
+  gateway: 'esewa' | 'khalti';
+  amount: number;
+  plan: 'pro';
+  billingCycle: 'monthly' | 'annual';
+}) {
+  return request<{
+    transactionUuid: string;
+    payment: {
+      gateway: 'esewa' | 'khalti';
+      form_url?: string;
+      fields?: Record<string, string>;
+      payment_url?: string;
+      pidx?: string;
+      error?: string;
+      note?: string;
+    };
+    session: Record<string, unknown>;
+  }>('/payments/initiate', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export async function createRoleInBackend(role: WorkspaceRole) {
   return request<{ role: WorkspaceRole }>('/roles', {
     method: 'POST',
@@ -753,6 +795,25 @@ export async function inviteUserInBackend(input: {
   permissions?: PermissionKey[];
 }) {
   return request<{ user: TeamMember }>('/users/invite', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getInviteInBackend(token: string) {
+  return publicRequest<{
+    invite: {
+      token: string;
+      workspaceName: string;
+      inviterName: string;
+      role: string;
+      email: string;
+    };
+  }>(`/invites/${encodeURIComponent(token)}`);
+}
+
+export async function acceptInviteInBackend(input: { token: string; password: string }) {
+  return publicRequest<AuthResponse>('/invites/accept', {
     method: 'POST',
     body: JSON.stringify(input),
   });

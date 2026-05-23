@@ -88,6 +88,22 @@ class MoreScreen extends ConsumerWidget {
       createAction(Icons.settings_outlined, 'settings', 'settingsModuleHelp',
           customOnTap: onOpenSettings),
     ];
+    Widget buildGrid(List<_MoreAction> actions) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: actions.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 1.6,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemBuilder: (context, index) {
+          return _MoreActionGridTile(action: actions[index]);
+        },
+      );
+    }
 
     return RpPage(
       title: tr(ref, 'more'),
@@ -95,48 +111,16 @@ class MoreScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeader(title: tr(ref, 'dailyOperations')),
-          _SectionCard(
-            children: [
-              for (int i = 0; i < dailyOps.length; i++)
-                _MoreActionRow(
-                  action: dailyOps[i],
-                  isLast: i == dailyOps.length - 1,
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
+          buildGrid(dailyOps),
+          const SizedBox(height: 24),
           _SectionHeader(title: tr(ref, 'financialsLedgers')),
-          _SectionCard(
-            children: [
-              for (int i = 0; i < financials.length; i++)
-                _MoreActionRow(
-                  action: financials[i],
-                  isLast: i == financials.length - 1,
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
+          buildGrid(financials),
+          const SizedBox(height: 24),
           _SectionHeader(title: tr(ref, 'analyticsReminders')),
-          _SectionCard(
-            children: [
-              for (int i = 0; i < analytics.length; i++)
-                _MoreActionRow(
-                  action: analytics[i],
-                  isLast: i == analytics.length - 1,
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
+          buildGrid(analytics),
+          const SizedBox(height: 24),
           _SectionHeader(title: tr(ref, 'systemAdmin')),
-          _SectionCard(
-            children: [
-              for (int i = 0; i < systemAdmin.length; i++)
-                _MoreActionRow(
-                  action: systemAdmin[i],
-                  isLast: i == systemAdmin.length - 1,
-                ),
-            ],
-          ),
+          buildGrid(systemAdmin),
           const SizedBox(height: 32),
           OutlinedButton.icon(
             onPressed: () => ref.read(appControllerProvider.notifier).logout(),
@@ -147,7 +131,6 @@ class MoreScreen extends ConsumerWidget {
       ),
     );
   }
-
   void _openModule(BuildContext context, _MoreAction action) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -195,71 +178,16 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color ?? colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color:
-              colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.4),
-          width: 1,
-        ),
-        boxShadow: isDark
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                )
-              ]
-            : [
-                BoxShadow(
-                  color: colorScheme.primary.withValues(alpha: 0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Column(
-          children: children,
-        ),
-      ),
-    );
-  }
-}
-
-class _MoreActionRow extends StatefulWidget {
-  const _MoreActionRow({
-    required this.action,
-    required this.isLast,
-  });
+class _MoreActionGridTile extends StatefulWidget {
+  const _MoreActionGridTile({required this.action});
 
   final _MoreAction action;
-  final bool isLast;
 
   @override
-  State<_MoreActionRow> createState() => _MoreActionRowState();
+  State<_MoreActionGridTile> createState() => _MoreActionGridTileState();
 }
 
-class _MoreActionRowState extends State<_MoreActionRow>
+class _MoreActionGridTileState extends State<_MoreActionGridTile>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -270,7 +198,7 @@ class _MoreActionRowState extends State<_MoreActionRow>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 100),
-      lowerBound: 0.96,
+      lowerBound: 0.95,
       upperBound: 1.0,
       value: 1.0,
     );
@@ -295,83 +223,74 @@ class _MoreActionRowState extends State<_MoreActionRow>
         color: Colors.transparent,
         child: InkWell(
           onTap: widget.action.onTap,
-          onTapDown: (_) =>
-              widget.action.onTap != null ? _controller.reverse() : null,
-          onTapUp: (_) =>
-              widget.action.onTap != null ? _controller.forward() : null,
-          onTapCancel: () =>
-              widget.action.onTap != null ? _controller.forward() : null,
-          splashColor: colorScheme.primary.withValues(alpha: 0.06),
-          highlightColor: colorScheme.primary.withValues(alpha: 0.03),
-          child: Column(
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                child: Row(
+          onTapDown: (_) => widget.action.onTap != null ? _controller.reverse() : null,
+          onTapUp: (_) => widget.action.onTap != null ? _controller.forward() : null,
+          onTapCancel: () => widget.action.onTap != null ? _controller.forward() : null,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.cardTheme.color ?? colorScheme.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withOpacity(isDark ? 0.1 : 0.4),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.01),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withOpacity(isDark ? 0.12 : 0.08),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: colorScheme.primary.withOpacity(isDark ? 0.25 : 0.18),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    widget.action.icon,
+                    size: 18,
+                    color: colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary
-                            .withValues(alpha: isDark ? 0.12 : 0.08),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: colorScheme.primary
-                              .withValues(alpha: isDark ? 0.25 : 0.18),
-                          width: 1.5,
-                        ),
+                    Text(
+                      widget.action.title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
                       ),
-                      child: Icon(
-                        widget.action.icon,
-                        size: 20,
-                        color: colorScheme.primary,
-                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.action.title,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            widget.action.subtitle,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurfaceVariant
-                                  .withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.action.subtitle,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
                       ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color:
-                          colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                      size: 20,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-              ),
-              if (!widget.isLast)
-                Padding(
-                  padding: const EdgeInsets.only(left: 64),
-                  child: Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: colorScheme.outlineVariant
-                        .withValues(alpha: isDark ? 0.1 : 0.3),
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -613,8 +532,8 @@ class _ModuleDetailScreen extends ConsumerWidget {
         return [
           for (final sale in bootstrap.sales)
             _DataCard(
-              title: sale.customer,
-              subtitle: '${sale.products} - ${shortDate(sale.date)}',
+              title: trValue(ref, sale.customer),
+              subtitle: '${trProductList(ref, sale.products)} - ${shortDate(sale.date)}',
               trailing: money(sale.amount),
               entity: 'sales',
               id: sale.id,
@@ -833,6 +752,9 @@ class _DataCard extends ConsumerWidget {
     final canOpen = entity != null && id != null && id!.isNotEmpty;
     final canEdit = canOpen && canEditMobileRecord(entity!);
     final colorScheme = Theme.of(context).colorScheme;
+    final displayTitle = trRecordText(ref, title);
+    final displaySubtitle = trRecordText(ref, subtitle);
+    final displayTrailing = trRecordText(ref, trailing);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: RpCard(
@@ -841,7 +763,7 @@ class _DataCard extends ConsumerWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => ApiDetailScreen(
-                      title: title,
+                      title: displayTitle,
                       entity: entity!,
                       id: id!,
                     ),
@@ -858,10 +780,10 @@ class _DataCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title,
+                      Text(displayTitle,
                           style: const TextStyle(fontWeight: FontWeight.w900)),
                       const SizedBox(height: 3),
-                      Text(subtitle,
+                      Text(displaySubtitle,
                           style:
                               TextStyle(color: colorScheme.onSurfaceVariant)),
                     ],
@@ -870,7 +792,7 @@ class _DataCard extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Flexible(
                   child: Text(
-                    trailing,
+                    displayTrailing,
                     textAlign: TextAlign.right,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w900),
@@ -895,7 +817,7 @@ class _DataCard extends ConsumerWidget {
                   if (canOpen)
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => _openDetail(context),
+                        onPressed: () => _openDetail(context, displayTitle),
                         icon: const Icon(Icons.visibility_outlined, size: 18),
                         label: Text(tr(ref, 'view')),
                       ),
@@ -908,7 +830,7 @@ class _DataCard extends ConsumerWidget {
                           context,
                           ref,
                           entity: entity!,
-                          title: title,
+                          title: displayTitle,
                           initial: record,
                         ),
                         icon: const Icon(Icons.edit_outlined, size: 18),
@@ -922,7 +844,8 @@ class _DataCard extends ConsumerWidget {
                       child: IconButton.outlined(
                         tooltip: tr(ref, 'delete'),
                         onPressed: () =>
-                            _confirmDelete(context, ref, entity!, id!, title),
+                            _confirmDelete(
+                                context, ref, entity!, id!, displayTitle),
                         icon: const Icon(Icons.delete_outline_rounded),
                         style: IconButton.styleFrom(
                           foregroundColor: colorScheme.error,
@@ -942,12 +865,12 @@ class _DataCard extends ConsumerWidget {
     );
   }
 
-  void _openDetail(BuildContext context) {
+  void _openDetail(BuildContext context, String displayTitle) {
     if (entity == null || id == null || id!.isEmpty) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ApiDetailScreen(
-          title: title,
+          title: displayTitle,
           entity: entity!,
           id: id!,
         ),
@@ -971,7 +894,7 @@ class _EmptyCard extends StatelessWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
+class _SummaryCard extends ConsumerWidget {
   const _SummaryCard({
     required this.title,
     required this.value,
@@ -983,14 +906,16 @@ class _SummaryCard extends StatelessWidget {
   final String subtitle;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final displayTitle = trRecordText(ref, title);
+    final displaySubtitle = trRecordText(ref, subtitle);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: RpCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
+            Text(displayTitle,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 6),
@@ -1000,7 +925,7 @@ class _SummaryCard extends StatelessWidget {
                     .headlineSmall
                     ?.copyWith(fontWeight: FontWeight.w900)),
             const SizedBox(height: 4),
-            Text(subtitle),
+            Text(displaySubtitle),
           ],
         ),
       ),

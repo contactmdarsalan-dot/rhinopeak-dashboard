@@ -5,7 +5,7 @@ import { Download, Eye, FileDown, Plus, Printer, Search, Trash2, Upload } from '
 import { Badge, Button, Field, Modal, Panel, PanelHeader, StatTile, controlStyle } from '@/components/ui/Primitives';
 import { getEntityDetail, type EntityDetail } from '@/lib/api';
 import { type Business, type Customer, type Sale, type SaleStatus } from '@/lib/domain';
-import { translatePaymentMethod, translateSaleStatus, uiFormat, uiText } from '@/lib/i18n';
+import { translatePaymentMethod, translateSaleStatus, uiFormat, uiProductList, uiText } from '@/lib/i18n';
 import { paymentMethods, saleStatuses, useAppStore } from '@/lib/store';
 import { downloadCsv, formatCurrency } from '@/lib/utils';
 
@@ -412,8 +412,8 @@ export function SalesPage() {
                     }}
                   >
                     <td data-label={tx('Order')} data-card-primary="true" style={{ padding: '10px 14px', color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>{sale.id}</td>
-                    <td data-label={tx('Customer')} style={{ padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13 }}>{sale.customer}</td>
-                    <td data-label={tx('Products')} style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{sale.products}</td>
+                    <td data-label={tx('Customer')} style={{ padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13 }}>{tx(sale.customer)}</td>
+                    <td data-label={tx('Products')} style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{uiProductList(settings.language, sale.products)}</td>
                     <td data-label={tx('Amount')} style={{ padding: '10px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{formatCurrency(sale.amount)}</td>
                     <td data-label={tx('Payment')} style={{ padding: '10px 14px' }}><Badge>{translatePaymentMethod(settings.language, sale.payment)}</Badge></td>
                     <td data-label={tx('Status')} style={{ padding: '10px 14px' }}><Badge tone={statusTone(sale.status)}>{translateSaleStatus(settings.language, sale.status)}</Badge></td>
@@ -446,8 +446,8 @@ export function SalesPage() {
               </Field>
               {[
                 ['Invoice', selected.invoiceNo ?? selected.id],
-                ['Customer', selected.customer],
-                ['Products', selected.products],
+                ['Customer', tx(selected.customer)],
+                ['Products', uiProductList(settings.language, selected.products)],
                 ['Amount', formatCurrency(selected.amount)],
                 ['Payment', translatePaymentMethod(settings.language, selected.payment)],
                 ['VAT', formatCurrency(selected.vatAmount ?? selected.taxTotal ?? 0)],
@@ -510,7 +510,7 @@ export function SalesPage() {
                   style={controlStyle}
                 >
                   <option value="">{tx('Create new customer')}</option>
-                  {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+                  {customers.map((customer) => <option key={customer.id} value={customer.id}>{tx(customer.name)}</option>)}
                 </select>
               </Field>
               <Field label={tx('Date')}>
@@ -548,10 +548,10 @@ export function SalesPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.6fr', gap: 12 }}>
               <Field label={tx('Product')}>
                 <select value={productId} onChange={(event) => setProductId(event.target.value)} style={controlStyle}>
-                  {inventory.map((product) => <option key={product.id} value={product.id}>{product.name} - {formatCurrency(product.price)} / {product.unit ?? 'pcs'}</option>)}
+                  {inventory.map((product) => <option key={product.id} value={product.id}>{tx(product.name)} - {formatCurrency(product.price)} / {tx(product.unit ?? 'pcs')}</option>)}
                 </select>
               </Field>
-              <Field label={tx('Quantity')} hint={`${tx('Available')}: ${selectedProduct?.stock ?? 0} ${selectedProductUnit}`}>
+              <Field label={tx('Quantity')} hint={`${tx('Available')}: ${selectedProduct?.stock ?? 0} ${tx(selectedProductUnit)}`}>
                 <input type="number" min={quantityStep} step={quantityStep} inputMode="decimal" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} style={controlStyle} />
               </Field>
             </div>

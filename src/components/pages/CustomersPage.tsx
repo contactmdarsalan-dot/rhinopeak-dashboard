@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { CreditCard, Download, Edit3, Eye, Plus, Search, Trash2 } from 'lucide-react';
 import { Badge, Button, Field, Modal, Panel, PanelHeader, StatTile, controlStyle } from '@/components/ui/Primitives';
 import { type Customer, type CustomerSegment } from '@/lib/domain';
-import { translateCustomerSegment, translatePaymentMethod, uiFormat, uiText } from '@/lib/i18n';
+import { translateCustomerSegment, translatePaymentMethod, uiFormat, uiProductList, uiText } from '@/lib/i18n';
 import { paymentMethods, useAppStore } from '@/lib/store';
 import { downloadCsv, formatCurrency } from '@/lib/utils';
 
@@ -215,7 +215,7 @@ export function CustomersPage() {
                 const lastCredit = creditLedger.find((entry) => entry.customerId === customer.id);
                 return (
                   <tr key={customer.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td data-label={tx('Customer')} data-card-primary="true" style={{ padding: '11px 14px', color: 'var(--text-primary)', fontWeight: 750 }}>{customer.name}</td>
+                    <td data-label={tx('Customer')} data-card-primary="true" style={{ padding: '11px 14px', color: 'var(--text-primary)', fontWeight: 750 }}>{tx(customer.name)}</td>
                     <td data-label={tx('Contact')} style={{ padding: '11px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{customer.phone || customer.email || tx('No contact')}</td>
                     <td data-label={tx('Credit due')} style={{ padding: '11px 14px', color: 'var(--warning)', fontSize: 13, fontWeight: 750 }}>{formatCurrency(customer.balance ?? 0)}</td>
                     <td data-label={tx('Last credit')} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 12 }}>{lastCredit?.date ?? tx('No date')}</td>
@@ -263,7 +263,7 @@ export function CustomersPage() {
                           {customer.name.charAt(0)}
                         </div>
                         <div>
-                          <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{customer.name}</p>
+                          <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{tx(customer.name)}</p>
                           <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>{customer.id}</p>
                         </div>
                       </div>
@@ -300,7 +300,7 @@ export function CustomersPage() {
 
         {selected && (
           <Panel>
-            <PanelHeader title={selected.name} subtitle={tx('Purchase history and CRM detail')} />
+            <PanelHeader title={tx(selected.name)} subtitle={tx('Purchase history and CRM detail')} />
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
                 <Link href={`/details/customers/${selected.id}`} style={detailLinkStyle}>
@@ -327,7 +327,7 @@ export function CustomersPage() {
               )}
               <div>
                 <p style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', fontWeight: 700 }}>{tx('Notes')}</p>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6 }}>{selected.notes || tx('No notes yet.')}</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6 }}>{selected.notes ? tx(selected.notes) : tx('No notes yet.')}</p>
               </div>
               <div>
                 <p style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>{tx('Credit Timeline')}</p>
@@ -337,7 +337,7 @@ export function CustomersPage() {
                       {entry.type === 'Payment Received' ? '-' : '+'}{formatCurrency(entry.amount)} - {tx(entry.type)}
                     </p>
                     <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>{entry.date}{entry.dueDate ? ` · ${tx('Due')} ${entry.dueDate}` : ''}</p>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{entry.note}</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{tx(entry.note)}</p>
                   </div>
                 )) : <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{tx('No credit history.')}</p>}
               </div>
@@ -346,7 +346,7 @@ export function CustomersPage() {
                 {customerSales.length ? customerSales.map((sale) => (
                   <div key={sale.id} style={{ borderLeft: '2px solid var(--border)', paddingLeft: 10, marginBottom: 10 }}>
                     <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{sale.id} - {formatCurrency(sale.amount)}</p>
-                    <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>{uiFormat(settings.language, '{products} on {date}', { products: sale.products, date: sale.date })}</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>{uiFormat(settings.language, '{products} on {date}', { products: uiProductList(settings.language, sale.products), date: sale.date })}</p>
                   </div>
                 )) : (
                   <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{tx('No purchases recorded.')}</p>
@@ -403,7 +403,7 @@ export function CustomersPage() {
                 setCreditCustomerId(event.target.value);
                 setCreditAmount(customer?.balance ?? 0);
               }} style={controlStyle}>
-                {creditCustomers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name} - {formatCurrency(customer.balance ?? 0)}</option>)}
+                {creditCustomers.map((customer) => <option key={customer.id} value={customer.id}>{tx(customer.name)} - {formatCurrency(customer.balance ?? 0)}</option>)}
               </select>
             </Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

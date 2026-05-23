@@ -1403,6 +1403,12 @@ def request_password_reset(data: dict[str, Any]) -> dict[str, Any]:
     )
     if settings.EXPOSE_RESET_TOKEN:
         response["resetToken"] = token
+    # Send reset email (non-blocking; failure does not prevent API response)
+    try:
+        from apps.rhinopeak.services.email_service import send_password_reset
+        send_password_reset(email, token, user.get('name', ''))
+    except Exception as email_err:
+        print(f'[Email] Error sending reset email: {email_err}')
     return response
 
 
@@ -1427,6 +1433,55 @@ def reset_password(data: dict[str, Any]) -> dict[str, Any]:
     collection("sessions").update_many({"userId": user["id"]}, {"$set": {"revokedAt": iso_now()}})
     create_audit(user["workspaceId"], user["name"], "Reset password", "Auth", f"{user['email']} changed password.")
     return {"ok": True, "message": "Password updated."}
+
+
+def get_invite(token: str) -> dict[str, Any]:
+    token = str(token or "").strip()
+    if not token:
+        raise AppError(400, "Invite token is required.")
+    invited = hydrate_user(collection("users").find_one({"id": token, "status": "Invited"}))
+    if invited is None:
+        raise AppError(404, "Invitation not found or already accepted.")
+    workspace = workspace_for(invited)
+    inviter = collection("users").find_one({"id": invited.get("invitedBy", "")}) or {}
+    return {
+        "invite": {
+            "token": token,
+            "workspaceName": workspace.get("name", "RhinoPeak Workspace"),
+            "inviterName": inviter.get("name", "Your admin"),
+            "role": invited.get("role", "Staff"),
+            "email": invited.get("email", ""),
+        }
+    }
+
+
+def accept_invite(data: dict[str, Any]) -> dict[str, Any]:
+    token = require_text(data, "token", "Invite token")
+    password = require_text(data, "password", "Password")
+    if len(password) < 8:
+        raise AppError(400, "Password must be at least 8 characters.")
+    invited = hydrate_user(collection("users").find_one({"id": token, "status": "Invited"}))
+    if invited is None:
+        raise AppError(404, "Invitation not found or already accepted.")
+    salt, digest = hash_password(password)
+    now = iso_now()
+    collection("users").update_one(
+        {"id": invited["id"]},
+        {
+            "$set": {
+                "passwordSalt": salt,
+                "passwordHash": digest,
+                "status": "Active",
+                "lastActive": now,
+                "lastLoginAt": now,
+                "isEmailVerified": True,
+                "updatedAt": now,
+            }
+        },
+    )
+    user = hydrate_user(collection("users").find_one({"id": invited["id"]})) or invited
+    create_audit(user["workspaceId"], user["name"], "Accepted invite", "Team", f"{user['email']} joined the workspace.")
+    return auth_response(user, create_session(user))
 
 
 def apply_inventory_delta(user: dict[str, Any], product_id: str, delta: float) -> dict[str, Any] | None:
@@ -2326,6 +2381,84 @@ def update_billing_plan(user: dict[str, Any], payload: dict[str, Any]) -> dict[s
     return {"bootstrap": bootstrap_payload(user)}
 
 
+def create_payment_session(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    require_permission(user, "billing.manage")
+    gateway = str(payload.get("gateway", "esewa")).strip().lower()
+    if gateway not in {"esewa", "khalti"}:
+        raise AppError(400, "Gateway must be eSewa or Khalti.")
+    plan = str(payload.get("plan", "pro")).strip().lower()
+    billing_cycle = str(payload.get("billingCycle", payload.get("cycle", "monthly"))).strip().lower()
+    amount = float(payload.get("amount", 1499))
+    if plan != "pro":
+        raise AppError(400, "Only Pro upgrades are supported by online checkout.")
+    if billing_cycle not in {"monthly", "annual"}:
+        raise AppError(400, "Billing cycle must be monthly or annual.")
+    transaction_uuid = str(payload.get("transactionUuid") or f"RP-{make_id('pay').replace('-', '').upper()}")
+    now = iso_now()
+    session = {
+        "id": make_id("pay"),
+        "transactionUuid": transaction_uuid,
+        "workspaceId": user["workspaceId"],
+        "userId": user["id"],
+        "gateway": "eSewa" if gateway == "esewa" else "Khalti",
+        "plan": plan,
+        "billingCycle": billing_cycle,
+        "amount": amount,
+        "currency": str(payload.get("currency", "NPR")),
+        "status": "Initiated",
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    collection("payment_sessions").insert_one(session)
+    create_audit(user["workspaceId"], user["name"], "Started checkout", "Billing", f"{session['gateway']} checkout {transaction_uuid}.")
+    return strip_mongo_id(session) or session
+
+
+def complete_payment_session(transaction_uuid: str, gateway: str, transaction_id: str = "") -> dict[str, Any]:
+    transaction_uuid = str(transaction_uuid or "").strip()
+    if not transaction_uuid:
+        raise AppError(400, "Transaction id is required.")
+    session = strip_mongo_id(collection("payment_sessions").find_one({"transactionUuid": transaction_uuid}))
+    if session is None:
+        raise AppError(404, "Payment session not found.")
+    user = hydrate_user(collection("users").find_one({"id": session["userId"]}))
+    if user is None:
+        raise AppError(404, "Payment user not found.")
+    now = iso_now()
+    collection("payment_sessions").update_one(
+        {"transactionUuid": transaction_uuid},
+        {
+            "$set": {
+                "status": "Paid",
+                "paidAt": now,
+                "transactionId": transaction_id,
+                "updatedAt": now,
+            }
+        },
+    )
+    record = {
+        "id": f"BILL-{transaction_uuid}",
+        "description": f"{session.get('gateway', gateway)} payment for RhinoPeak Pro",
+        "gateway": session.get("gateway", gateway),
+        "plan": session.get("plan", "pro"),
+        "billingCycle": session.get("billingCycle", "monthly"),
+        "amount": float(session.get("amount", 0)),
+        "currency": session.get("currency", "NPR"),
+        "invoiceNo": f"INV-{transaction_uuid}",
+        "date": today_string(),
+        "paidAt": now,
+        "status": "Paid",
+    }
+    return update_billing_plan(
+        user,
+        {
+            "plan": session.get("plan", "pro"),
+            "billingCycle": session.get("billingCycle", "monthly"),
+            "record": record,
+        },
+    )
+
+
 def create_role(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     require_permission(user, "roles.manage")
     name = require_text(payload, "name", "Role name")
@@ -2428,6 +2561,20 @@ def invite_user(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]
     collection("users").insert_one(invited)
     invited = hydrate_user(invited) or invited
     create_audit(user["workspaceId"], user["name"], "Invited user", "Team", f"{email} invited as {role['name']}.")
+    # Send team invite email (non-blocking; failure does not prevent API response)
+    try:
+        from apps.rhinopeak.services.email_service import send_team_invite
+        workspace = workspace_for(user)
+        invite_token = payload.get('inviteToken', invited.get('id', email))
+        send_team_invite(
+            email,
+            workspace.get('name', 'RhinoPeak Workspace'),
+            user.get('name', 'Your admin'),
+            role['name'],
+            invite_token,
+        )
+    except Exception as email_err:
+        print(f'[Email] Error sending invite email: {email_err}')
     return {"user": user_payload(invited)}
 
 
@@ -3067,4 +3214,68 @@ def schema_audit() -> dict[str, Any]:
         "collections": sorted(db_collections),
         "entities": entity_results,
         "recordEntities": record_results,
+    }
+
+
+def list_records_since(workspace_id: str, kind: str, since_iso: str) -> list[dict]:
+    """Return records of kind changed/created since given ISO datetime (for mobile delta sync)."""
+    query: dict[str, Any] = {"workspaceId": workspace_id, "kind": kind, "deletedAt": None}
+    if since_iso:
+        try:
+            query["$or"] = [
+                {"createdAt": {"$gt": since_iso}},
+                {"updatedAt": {"$gt": since_iso}},
+            ]
+        except Exception:
+            pass
+    records = list(
+        collection("records").find(query, {"_id": 0}).sort("updatedAt", -1).limit(100)
+    )
+    return [dict(r.get("payload", {})) for r in records]
+
+
+def get_dashboard_kpis(workspace_id: str) -> dict[str, Any]:
+    """Return aggregated KPI metrics for mobile dashboard."""
+    today = today_string()
+    this_month = today[:7]  # YYYY-MM
+
+    sales = list(
+        collection("records").find(
+            {"workspaceId": workspace_id, "kind": "sales", "deletedAt": None},
+            {"_id": 0, "payload": 1},
+        )
+    )
+    today_revenue = sum(
+        float(s.get("payload", {}).get("total", 0))
+        for s in sales
+        if s.get("payload", {}).get("date", "") == today
+    )
+    month_revenue = sum(
+        float(s.get("payload", {}).get("total", 0))
+        for s in sales
+        if s.get("payload", {}).get("date", "").startswith(this_month)
+    )
+    total_sales = len(sales)
+
+    inventory = list(
+        collection("records").find(
+            {"workspaceId": workspace_id, "kind": "inventory", "deletedAt": None},
+            {"_id": 0, "payload": 1},
+        )
+    )
+    low_stock = [
+        p for p in inventory
+        if float(p.get("payload", {}).get("quantity", 99)) <= float(p.get("payload", {}).get("reorderPoint", 5))
+    ]
+
+    customers = collection("records").count_documents(
+        {"workspaceId": workspace_id, "kind": "customers", "deletedAt": None}
+    )
+
+    return {
+        "todayRevenue": today_revenue,
+        "monthRevenue": month_revenue,
+        "totalSales": total_sales,
+        "lowStockCount": len(low_stock),
+        "customerCount": customers,
     }

@@ -46,7 +46,7 @@ class ApiDetailScreen extends ConsumerWidget {
                   stretch: true,
                   backgroundColor: Theme.of(context).colorScheme.surface,
                   surfaceTintColor: Colors.transparent,
-                  title: Text(title,
+                  title: Text(trRecordText(ref, title),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   actions: [
                     IconButton(
@@ -70,7 +70,7 @@ class ApiDetailScreen extends ConsumerWidget {
                         _FriendlyErrorCard(error: snapshot.error)
                       else
                         _DetailContent(
-                          title: title,
+                          title: trRecordText(ref, title),
                           entity: entity,
                           detail: detail,
                           offlineFallback: useFallback,
@@ -112,8 +112,8 @@ class _DetailContent extends ConsumerWidget {
       children: [
         _HeroCard(
           title: title,
-          subtitle: _label(entity),
-          status: status,
+          subtitle: trValue(ref, _label(entity)),
+          status: trValue(ref, status),
           amount: amount,
           offlineFallback: offlineFallback,
         ),
@@ -146,7 +146,7 @@ class _DetailContent extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'No related records yet. New sales, payments, stock logs, and documents will appear here.',
+                    trValue(ref, 'No related records yet. New sales, payments, stock logs, and documents will appear here.'),
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 13),
@@ -301,13 +301,13 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-class _QuickFacts extends StatelessWidget {
+class _QuickFacts extends ConsumerWidget {
   const _QuickFacts({required this.record});
 
   final Map<String, dynamic> record;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final facts = [
       _Fact(Icons.badge_outlined, 'ID', _text(record, 'id')),
       _Fact(Icons.calendar_today_outlined, 'Date',
@@ -360,14 +360,14 @@ class _QuickFacts extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(fact.label,
+                    Text(trValue(ref, fact.label),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w600,
                             )),
                     const SizedBox(height: 2),
                     Text(
-                      fact.value,
+                      _displayLocalized(ref, fact.value),
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontWeight: FontWeight.w900, fontSize: 13),
@@ -434,14 +434,14 @@ class _FriendlyErrorCard extends StatelessWidget {
   }
 }
 
-class _DetailSection extends StatelessWidget {
+class _DetailSection extends ConsumerWidget {
   const _DetailSection({required this.title, required this.rows});
 
   final String title;
   final Map<String, dynamic> rows;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final entries = rows.entries
         .where(
             (entry) => entry.value != null && entry.value.toString().isNotEmpty)
@@ -451,7 +451,7 @@ class _DetailSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
+          Text(trValue(ref, title),
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
@@ -479,7 +479,7 @@ class _DetailSection extends StatelessWidget {
                   Expanded(
                     flex: 2,
                     child: Text(
-                      _label(entries[i].key),
+                      trValue(ref, _label(entries[i].key)),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w600,
@@ -490,8 +490,10 @@ class _DetailSection extends StatelessWidget {
                   Expanded(
                     flex: 3,
                     child: Text(
-                      _display(entries[i].value),
+                      _displayLocalized(ref, entries[i].value),
                       textAlign: TextAlign.end,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         height: 1.35,
@@ -507,14 +509,14 @@ class _DetailSection extends StatelessWidget {
   }
 }
 
-class _RelatedSection extends StatelessWidget {
+class _RelatedSection extends ConsumerWidget {
   const _RelatedSection({required this.title, required this.rows});
 
   final String title;
   final List<Map<String, dynamic>> rows;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (rows.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -522,7 +524,7 @@ class _RelatedSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_label(title),
+            Text(trValue(ref, _label(title)),
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -554,17 +556,17 @@ class _RelatedSection extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _text(row, 'name',
+                            _displayLocalized(ref, _text(row, 'name',
                                 fallback: _text(row, 'customer',
                                     fallback: _text(row, 'title',
-                                        fallback: _text(row, 'id')))),
+                                        fallback: _text(row, 'id'))))),
                             style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            _text(row, 'date',
+                            _displayLocalized(ref, _text(row, 'date',
                                 fallback: _text(row, 'status',
-                                    fallback: _text(row, 'type'))),
+                                    fallback: _text(row, 'type')))),
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 12,
@@ -574,7 +576,7 @@ class _RelatedSection extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Text(_display(row['amount'] ?? row['delta'] ?? ''),
+                    Text(_displayLocalized(ref, row['amount'] ?? row['delta'] ?? ''),
                         style: const TextStyle(fontWeight: FontWeight.w900)),
                   ],
                 ),
@@ -737,5 +739,19 @@ String _display(Object? value) {
   if (value is bool) return value ? 'Yes' : 'No';
   if (value is List) return '${value.length} items';
   if (value is Map) return '${value.length} fields';
-  return value.toString();
+  final valStr = value.toString();
+  if (valStr.startsWith('data:') && valStr.contains(';base64,')) {
+    final mimeEnd = valStr.indexOf(';');
+    final mime = mimeEnd != -1 ? valStr.substring(5, mimeEnd) : 'file';
+    return '$mime data (truncated)';
+  }
+  if (valStr.length > 60 && !valStr.contains(' ')) {
+    return '${valStr.substring(0, 15)}...${valStr.substring(valStr.length - 15)} (truncated)';
+  }
+  return valStr;
+}
+
+String _displayLocalized(WidgetRef ref, Object? value) {
+  final display = _display(value);
+  return trRecordText(ref, display);
 }

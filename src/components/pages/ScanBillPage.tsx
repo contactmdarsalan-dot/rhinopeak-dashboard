@@ -6,8 +6,7 @@ import { BrainCircuit, Camera, CheckCircle2, Plus, Trash2, Sparkles, RefreshCw, 
 import { approveBillScanInBackend, parseBillScanInBackend, uploadBillScanInBackend, deleteBillScanInBackend } from '@/lib/api';
 import type { BillScan, ParsedBillScan, BillScanItem } from '@/lib/domain';
 import { useAppStore } from '@/lib/store';
-import { uiText } from '@/lib/i18n';
-import { formatCurrency } from '@/lib/utils';
+import { uiCurrency, uiDate, uiDateTime, uiDigits, uiFormat, uiNumber, uiPercent, uiRecordText, uiText } from '@/lib/i18n';
 import { Badge, Button, Field, Panel, PanelHeader, StatTile, controlStyle, Modal } from '@/components/ui/Primitives';
 
 type SaveTarget = 'Expense' | 'Purchase' | 'Sale';
@@ -124,6 +123,13 @@ function billScanDisplayDate(item: BillScan) {
 export function ScanBillPage() {
   const { settings, billScans, hydrateFromBackend, expenseCategories } = useAppStore();
   const tx = (value: string) => uiText(settings.language, value);
+  const tv = (value: string | null | undefined) => uiRecordText(settings.language, value);
+  const td = (value: string | null | undefined) => uiDate(settings.language, value);
+  const tdt = (value: string | null | undefined) => uiDateTime(settings.language, value);
+  const tn = (value: number, options?: Intl.NumberFormatOptions) => uiNumber(settings.language, value, options);
+  const tc = (value: number) => uiCurrency(settings.language, value);
+  const tp = (value: number) => uiPercent(settings.language, value);
+  const tid = (value: string | number | null | undefined) => uiDigits(settings.language, value);
   const [rawText, setRawText] = useState('');
   const [fileMeta, setFileMeta] = useState<{ dataUrl: string; name: string; type: string; size: number } | null>(null);
   const [scan, setScan] = useState<BillScan | null>(null);
@@ -149,7 +155,7 @@ export function ScanBillPage() {
     return savedBillScans.reduce((sum, item) => sum + Number(billScanRecordData(item).totalAmount || 0), 0);
   }, [savedBillScans]);
 
-  const latestSavedDate = savedHistory[0] ? billScanDisplayDate(savedHistory[0]) : tx('None');
+  const latestSavedDate = savedHistory[0] ? td(billScanDisplayDate(savedHistory[0])) : tx('None');
 
   const handleDeleteScan = async (scanId: string) => {
     if (!confirm(tx('Are you sure you want to delete this scan?'))) return;
@@ -426,8 +432,8 @@ export function ScanBillPage() {
 
       {/* Overview Stat Tiles */}
       <div className="scan-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-        <StatTile label="Saved scan records" value={savedBillScans.length} detail="Approved and posted to records" tone="accent" />
-        <StatTile label="Saved total" value={formatCurrency(savedScanTotal)} detail="From committed scans" tone="success" />
+        <StatTile label="Saved scan records" value={tn(savedBillScans.length)} detail="Approved and posted to records" tone="accent" />
+        <StatTile label="Saved total" value={tc(savedScanTotal)} detail="From committed scans" tone="success" />
         <StatTile label="Latest saved" value={latestSavedDate} detail="Last committed scan" tone="neutral" />
       </div>
 
@@ -444,13 +450,13 @@ export function ScanBillPage() {
         
         {/* Left Column: Image Dropzone & Simulator */}
         <Panel className="premium-glass-panel">
-          <PanelHeader title="Scan Bill" subtitle="Powered by KaroBrain™ Vision Engine — upload a receipt or pick a quick simulator." />
+          <PanelHeader title="Scan Bill" subtitle="Powered by KaroBrain Vision Engine. Upload a receipt or pick a quick simulator." />
           <div style={{ padding: 18, display: 'grid', gap: 16 }}>
             
             {/* Template Simulator Selectors */}
             <div style={{ display: 'grid', gap: 8 }}>
               <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Sparkles size={12} style={{ color: '#2dd4bf' }} /> Quick Simulator Templates
+                <Sparkles size={12} style={{ color: '#2dd4bf' }} /> {tx('Quick Simulator Templates')}
               </span>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {templates.map((tmpl, idx) => (
@@ -465,7 +471,7 @@ export function ScanBillPage() {
                       fontWeight: 650,
                     }}
                   >
-                    {tmpl.name}
+                    {tx(tmpl.name)}
                   </button>
                 ))}
               </div>
@@ -527,14 +533,14 @@ export function ScanBillPage() {
             {/* OCR Text Input fallback accordion */}
             <details style={{ border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: 10, padding: '8px 12px', background: 'rgba(0, 0, 0, 0.1)' }}>
               <summary style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', cursor: 'pointer', outline: 'none' }}>
-                View extracted raw text
+                {tx('View extracted raw text')}
               </summary>
               <div style={{ marginTop: 10 }}>
                 <textarea
                   style={{ ...controlStyle, minHeight: 140, fontSize: 12, fontFamily: 'monospace', background: '#090d16' }}
                   value={rawText}
                   onChange={(event) => setRawText(event.target.value)}
-                  placeholder="Paste OCR text if manual scan is required..."
+                  placeholder={tx('Paste OCR text if manual scan is required...')}
                 />
                 <Button
                   style={{ marginTop: 8, width: '100%' }}
@@ -551,7 +557,7 @@ export function ScanBillPage() {
               <div style={{ display: 'grid', gap: 10, padding: 14, background: 'rgba(17, 24, 39, 0.5)', borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: 8, marginBottom: 4 }}>
                   <BrainCircuit size={16} style={{ color: '#2dd4bf' }} />
-                  <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-primary)' }}>KaroBrain™ Vision Engine</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-primary)' }}>{tx('KaroBrain Vision Engine')}</span>
                 </div>
 
                 {[
@@ -585,8 +591,8 @@ export function ScanBillPage() {
           <Panel className="premium-glass-panel">
             <PanelHeader
               title="Scan Success Summary"
-              subtitle="The bill was parsed using KaroBrain™ Vision AI."
-              action={<Badge tone={scan.status === 'Approved' ? 'success' : 'warning'}>{scan.status}</Badge>}
+              subtitle="The bill was parsed using KaroBrain Vision AI."
+              action={<Badge tone={scan.status === 'Approved' ? 'success' : 'warning'}>{tx(scan.status)}</Badge>}
             />
             <div style={{ padding: 18, display: 'grid', gap: 18 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '16px 0', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
@@ -602,29 +608,29 @@ export function ScanBillPage() {
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed rgba(255,255,255,0.05)', paddingBottom: 8 }}>
                   <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{tx('Shop or vendor')}</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{approved.vendorName || tx('Unknown')}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{tv(approved.vendorName) || tx('Unknown')}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed rgba(255,255,255,0.05)', paddingBottom: 8 }}>
                   <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{tx('Bill number')}</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{approved.billNumber || tx('N/A')}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{tid(approved.billNumber || tx('N/A'))}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed rgba(255,255,255,0.05)', paddingBottom: 8 }}>
                   <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{tx('Bill date')}</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{approved.billDate}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{td(approved.billDate)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed rgba(255,255,255,0.05)', paddingBottom: 8 }}>
                   <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{tx('Payment method')}</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}><Badge tone="info">{approved.paymentMethod}</Badge></span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}><Badge tone="info">{tx(approved.paymentMethod)}</Badge></span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed rgba(255,255,255,0.05)', paddingBottom: 8 }}>
                   <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{tx('Confidence score')}</span>
                   <span style={{ color: isLowConfidence ? '#eab308' : '#2dd4bf', fontWeight: 750, fontSize: 13 }}>
-                    {((scan.confidence ?? 0.95) * 100).toFixed(0)}%
+                    {tp((scan.confidence ?? 0.95) * 100)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
                   <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 14 }}>{tx('Total Amount')}</span>
-                  <span style={{ color: '#2dd4bf', fontWeight: 900, fontSize: 18 }}>{formatCurrency(reviewedTotal)}</span>
+                  <span style={{ color: '#2dd4bf', fontWeight: 900, fontSize: 18 }}>{tc(reviewedTotal)}</span>
                 </div>
               </div>
 
@@ -634,7 +640,7 @@ export function ScanBillPage() {
                 </Button>
                 {downloadUrl && (
                   <a href={downloadUrl} download={`${approved.billNumber || 'smart-bill'}.html`} style={{ textDecoration: 'none', width: '100%' }}>
-                    <Button variant="secondary" style={{ width: '100%' }}><FileSpreadsheet size={15} /> Download PDF</Button>
+                    <Button variant="secondary" style={{ width: '100%' }}><FileSpreadsheet size={15} /> {tx('Download PDF')}</Button>
                   </a>
                 )}
               </div>
@@ -656,7 +662,7 @@ export function ScanBillPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.3)', color: '#eab308' }}>
                 <AlertCircle size={16} />
                 <span style={{ fontSize: 13, fontWeight: 500 }}>
-                  Low confidence extraction ({((scan?.confidence ?? 0.8) * 100).toFixed(0)}%). Please double check the highlighted fields below.
+                  {uiFormat(settings.language, 'Low confidence extraction ({confidence}). Please double check the highlighted fields below.', { confidence: tp((scan?.confidence ?? 0.8) * 100) })}
                 </span>
               </div>
             )}
@@ -681,7 +687,7 @@ export function ScanBillPage() {
             <div style={{ display: 'grid', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <p style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{tx('Items')}</p>
-                <Button variant="secondary" onClick={addItem} style={{ height: 32, padding: '0 10px' }}><Plus size={14} /> Add row</Button>
+                <Button variant="secondary" onClick={addItem} style={{ height: 32, padding: '0 10px' }}><Plus size={14} /> {tx('Add row')}</Button>
               </div>
               
               {approved.items.map((item, index) => (
@@ -694,7 +700,7 @@ export function ScanBillPage() {
                   </Field>
                   <Field label="Unit">
                     <select style={controlStyle} value={item.unit} onChange={(event) => updateItem(index, { unit: event.target.value })}>
-                      {['pcs', 'kg', 'gram', 'liter', 'tola', 'aana', 'unit', 'box', 'pack', 'set'].map((unit) => <option key={unit}>{unit}</option>)}
+                      {['pcs', 'kg', 'gram', 'liter', 'tola', 'aana', 'unit', 'box', 'pack', 'set'].map((unit) => <option key={unit} value={unit}>{tx(unit)}</option>)}
                     </select>
                   </Field>
                   <Field label="Rate">
@@ -725,7 +731,12 @@ export function ScanBillPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }}>
                 <AlertCircle size={16} />
                 <span style={{ fontSize: 13, fontWeight: 500 }}>
-                  Mathematical Mismatch: Subtotal ({approved.subtotal}) + VAT ({approved.vatAmount}) - Discount ({approved.discountAmount}) does not equal Total ({approved.totalAmount}).
+                  {uiFormat(settings.language, 'Mathematical mismatch: subtotal {subtotal} + VAT {vat} - discount {discount} does not equal total {total}.', {
+                    subtotal: tc(approved.subtotal),
+                    vat: tc(approved.vatAmount),
+                    discount: tc(approved.discountAmount),
+                    total: tc(approved.totalAmount),
+                  })}
                 </span>
               </div>
             )}
@@ -804,7 +815,7 @@ export function ScanBillPage() {
                     <option value="">{tx('Select category...')}</option>
                     {expenseCategories.map((cat) => (
                       <option key={cat} value={cat}>
-                        {cat}
+                        {tx(cat)}
                       </option>
                     ))}
                   </select>
@@ -816,7 +827,7 @@ export function ScanBillPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifySelf: 'stretch', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 16, marginTop: 4 }}>
               <div>
                 <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{tx('Final total')}</p>
-                <p style={{ color: '#2dd4bf', fontSize: 26, fontWeight: 900, textShadow: '0 0 10px rgba(45, 212, 191, 0.2)' }}>{formatCurrency(reviewedTotal)}</p>
+                <p style={{ color: '#2dd4bf', fontSize: 26, fontWeight: 900, textShadow: '0 0 10px rgba(45, 212, 191, 0.2)' }}>{tc(reviewedTotal)}</p>
               </div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Button variant="secondary" onClick={() => setIsReviewOpen(false)} style={{ minHeight: 44 }}>
@@ -824,11 +835,11 @@ export function ScanBillPage() {
                 </Button>
                 {downloadUrl && (
                   <a href={downloadUrl} download={`${approved.billNumber || 'smart-bill'}.html`} style={{ textDecoration: 'none' }}>
-                    <Button variant="secondary" style={{ minHeight: 44 }}><FileSpreadsheet size={15} /> Download PDF</Button>
+                    <Button variant="secondary" style={{ minHeight: 44 }}><FileSpreadsheet size={15} /> {tx('Download PDF')}</Button>
                   </a>
                 )}
                 <Button disabled={loading || !scan} onClick={saveApproved} style={{ minHeight: 44, padding: '0 16px', background: 'var(--accent)' }}>
-                  <CheckCircle2 size={16} /> Save and Commit
+                  <CheckCircle2 size={16} /> {tx('Save and Commit')}
                 </Button>
               </div>
             </div>
@@ -859,9 +870,9 @@ export function ScanBillPage() {
               {savedHistory.map((item) => {
                 const data = billScanRecordData(item);
                 const displayTotal = data.totalAmount || 0;
-                const displayDate = billScanDisplayDate(item);
-                const displayVendor = data.vendorName || tx('Unknown');
-                const displayBillNo = data.billNumber || tx('N/A');
+                const displayDate = td(billScanDisplayDate(item));
+                const displayVendor = tv(data.vendorName) || tx('Unknown');
+                const displayBillNo = tid(data.billNumber || tx('N/A'));
                 return (
                   <tr key={item.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                     <td data-label={tx('Vendor')} data-card-primary="true" style={{ padding: '12px 16px', fontWeight: 650, color: 'var(--text-primary)' }}>
@@ -879,14 +890,14 @@ export function ScanBillPage() {
                         item.status === 'Rejected' ? 'danger' :
                         item.status === 'Needs Review' ? 'warning' : 'info'
                       }>
-                        {item.status}
+                        {tx(item.status)}
                       </Badge>
                     </td>
                     <td data-label={tx('Confidence')} style={{ color: (item.confidence ?? 0) < 0.80 ? '#eab308' : '#2dd4bf', fontWeight: 650 }}>
-                      {((item.confidence ?? 0.95) * 100).toFixed(0)}%
+                      {tp((item.confidence ?? 0.95) * 100)}
                     </td>
                     <td data-label={tx('Total Amount')} style={{ color: 'var(--text-primary)', fontWeight: 800, textAlign: 'right' }}>
-                      {formatCurrency(displayTotal)}
+                      {tc(displayTotal)}
                     </td>
                     <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div className="scan-history-actions" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
@@ -917,8 +928,8 @@ export function ScanBillPage() {
           </table>
           {!savedHistory.length && (
             <EmptyState
-              title="No saved scan records yet."
-              copy="Approve and save a scanned bill to expenses, purchases, or sales to see it here."
+              title={tx('No saved scan records yet.')}
+              copy={tx('Approve and save a scanned bill to expenses, purchases, or sales to see it here.')}
             />
           )}
         </div>
@@ -927,8 +938,8 @@ export function ScanBillPage() {
       {/* Scanned Bill Complete Detail View Modal */}
       {selectedScan && (
         <Modal
-          title="Scanned Bill Detail View"
-          subtitle={`Detailed AI extraction report for "${selectedScan.fileName}"`}
+          title={tx('Scanned Bill Detail View')}
+          subtitle={`${tx('Detailed AI extraction report for')} "${selectedScan.fileName}"`}
           onClose={() => setSelectedScan(null)}
           width={960}
         >
@@ -940,7 +951,7 @@ export function ScanBillPage() {
                   {tx('Uploaded Bill Document')}
                 </span>
                 <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-                  {tx('Size')}: {(selectedScan.size / 1024).toFixed(1)} KB
+                  {tx('Size')}: {tn(selectedScan.size / 1024, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} KB
                 </span>
               </div>
 
@@ -1005,7 +1016,7 @@ export function ScanBillPage() {
                 <div>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 650 }}>{tx('Pipeline Confidence')}</span>
                   <span style={{ fontSize: 15, fontWeight: 800, color: (selectedScan.confidence ?? 0) < 0.80 ? '#eab308' : '#2dd4bf' }}>
-                    {((selectedScan.confidence ?? 0.95) * 100).toFixed(0)}% {tx('Match')}
+                    {tp((selectedScan.confidence ?? 0.95) * 100)} {tx('Match')}
                   </span>
                 </div>
                 <Badge tone={
@@ -1013,7 +1024,7 @@ export function ScanBillPage() {
                   selectedScan.status === 'Rejected' ? 'danger' :
                   selectedScan.status === 'Needs Review' ? 'warning' : 'info'
                 }>
-                  {selectedScan.status}
+                  {tx(selectedScan.status)}
                 </Badge>
               </div>
 
@@ -1026,19 +1037,19 @@ export function ScanBillPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       <div>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 650 }}>{tx('Vendor')}</span>
-                        <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text-primary)' }}>{data.vendorName || tx('Unknown')}</span>
+                        <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text-primary)' }}>{tv(data.vendorName) || tx('Unknown')}</span>
                       </div>
                       <div>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 650 }}>{tx('Bill Number')}</span>
-                        <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text-primary)' }}>{data.billNumber || tx('N/A')}</span>
+                        <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text-primary)' }}>{tid(data.billNumber || tx('N/A'))}</span>
                       </div>
                       <div>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 650 }}>{tx('Bill Date')}</span>
-                        <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text-primary)' }}>{data.billDate || 'N/A'}</span>
+                        <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text-primary)' }}>{data.billDate ? td(data.billDate) : tx('N/A')}</span>
                       </div>
                       <div>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 650 }}>{tx('Payment Method')}</span>
-                        <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text-primary)' }}><Badge tone="info">{data.paymentMethod || 'Cash'}</Badge></span>
+                        <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text-primary)' }}><Badge tone="info">{tx(data.paymentMethod || 'Cash')}</Badge></span>
                       </div>
                     </div>
 
@@ -1061,10 +1072,10 @@ export function ScanBillPage() {
                             <tbody>
                               {lineItems.map((item: BillScanItem, idx: number) => (
                                 <tr key={idx} style={{ borderBottom: idx < lineItems.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                                  <td data-label={tx('Item')} data-card-primary="true" style={{ padding: '8px 12px', color: 'var(--text-primary)', fontWeight: 550 }}>{item.name}</td>
-                                  <td data-label={tx('Qty')} style={{ padding: '8px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>{item.quantity} {item.unit}</td>
-                                  <td data-label={tx('Rate')} style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{formatCurrency(item.unitPrice)}</td>
-                                  <td data-label={tx('Total')} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#2dd4bf' }}>{formatCurrency(item.lineTotal)}</td>
+                                  <td data-label={tx('Item')} data-card-primary="true" style={{ padding: '8px 12px', color: 'var(--text-primary)', fontWeight: 550 }}>{tv(item.name)}</td>
+                                  <td data-label={tx('Qty')} style={{ padding: '8px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>{tn(Number(item.quantity || 0))} {tx(item.unit)}</td>
+                                  <td data-label={tx('Rate')} style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{tc(Number(item.unitPrice || 0))}</td>
+                                  <td data-label={tx('Total')} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#2dd4bf' }}>{tc(Number(item.lineTotal || 0))}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -1089,18 +1100,18 @@ export function ScanBillPage() {
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                         <span style={{ color: 'var(--text-muted)' }}>{tx('Subtotal')}</span>
-                        <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{formatCurrency(data.subtotal || 0)}</span>
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{tc(Number(data.subtotal || 0))}</span>
                       </div>
                       {Number(data.discountAmount || 0) > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                           <span style={{ color: 'var(--text-muted)' }}>{tx('Discount')}</span>
-                          <span style={{ color: 'var(--danger)', fontWeight: 500 }}>-{formatCurrency(data.discountAmount || 0)}</span>
+                          <span style={{ color: 'var(--danger)', fontWeight: 500 }}>-{tc(Number(data.discountAmount || 0))}</span>
                         </div>
                       )}
                       {Number(data.vatAmount || 0) > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                           <span style={{ color: 'var(--text-muted)' }}>{tx('VAT / Tax')}</span>
-                          <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>+{formatCurrency(data.vatAmount || 0)}</span>
+                          <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>+{tc(Number(data.vatAmount || 0))}</span>
                         </div>
                       )}
                       <div style={{
@@ -1113,7 +1124,7 @@ export function ScanBillPage() {
                         marginTop: 4
                       }}>
                         <span style={{ color: 'var(--text-primary)' }}>{tx('Total Amount')}</span>
-                        <span style={{ color: '#2dd4bf', textShadow: '0 0 10px rgba(45, 212, 191, 0.15)' }}>{formatCurrency(data.totalAmount || 0)}</span>
+                        <span style={{ color: '#2dd4bf', textShadow: '0 0 10px rgba(45, 212, 191, 0.15)' }}>{tc(Number(data.totalAmount || 0))}</span>
                       </div>
                     </div>
                   </div>
@@ -1122,8 +1133,8 @@ export function ScanBillPage() {
 
               {/* Metadata log */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: 'rgba(0,0,0,0.1)', padding: 10, borderRadius: 8, fontSize: 11, border: '1px solid rgba(255,255,255,0.03)' }}>
-                <span style={{ color: 'var(--text-muted)' }}>{tx('Scan Source')}: <strong style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{selectedScan.sourceType}</strong></span>
-                <span style={{ color: 'var(--text-muted)' }}>{tx('Created At')}: <strong style={{ color: 'var(--text-secondary)' }}>{selectedScan.createdAt}</strong></span>
+                <span style={{ color: 'var(--text-muted)' }}>{tx('Scan Source')}: <strong style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{tx(selectedScan.sourceType)}</strong></span>
+                <span style={{ color: 'var(--text-muted)' }}>{tx('Created At')}: <strong style={{ color: 'var(--text-secondary)' }}>{tdt(selectedScan.createdAt)}</strong></span>
               </div>
 
               {/* Action buttons */}

@@ -6,8 +6,8 @@ import '../../../shared/widgets/rp_widgets.dart';
 import '../../dashboard/presentation/dashboard_screen.dart';
 import '../../inventory/presentation/inventory_screen.dart';
 import '../../more/presentation/more_screen.dart';
-import '../../quick_add/presentation/quick_add_screen.dart';
-import '../../sales/presentation/sales_screen.dart';
+import '../../more/presentation/parties_screen.dart';
+import '../../quick_add/presentation/scan_bill_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 
 class AppShell extends ConsumerStatefulWidget {
@@ -29,8 +29,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     final pages = [
       const DashboardScreen(),
-      const SalesScreen(),
-      const QuickAddScreen(),
+      const PartiesScreen(),
       const InventoryScreen(),
       MoreScreen(
         onOpenSettings: () {
@@ -45,7 +44,19 @@ class _AppShellState extends ConsumerState<AppShell> {
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: _MobileBottomNav(
         currentIndex: _index,
-        onTap: (value) => setState(() => _index = value),
+        onTap: (buttonIndex) {
+          if (buttonIndex == 2) {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ScanBillScreen()),
+            );
+          } else {
+            int targetScreenIndex = buttonIndex;
+            if (buttonIndex > 2) {
+              targetScreenIndex = buttonIndex - 1;
+            }
+            setState(() => _index = targetScreenIndex);
+          }
+        },
       ),
     );
   }
@@ -60,6 +71,15 @@ class _MobileBottomNav extends ConsumerWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
+  bool _isButtonSelected(int currentTab, int buttonIndex) {
+    if (buttonIndex == 0) return currentTab == 0;
+    if (buttonIndex == 1) return currentTab == 1;
+    if (buttonIndex == 2) return false;
+    if (buttonIndex == 3) return currentTab == 2;
+    if (buttonIndex == 4) return currentTab == 3;
+    return false;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
@@ -67,8 +87,8 @@ class _MobileBottomNav extends ConsumerWidget {
 
     final items = [
       _NavItem(icon: Icons.grid_view_rounded, label: tr(ref, 'home')),
-      _NavItem(icon: Icons.receipt_long_outlined, label: tr(ref, 'sales')),
-      _NavItem(icon: Icons.add, label: tr(ref, 'quickAdd'), primary: true),
+      _NavItem(icon: Icons.people_outline_rounded, label: tr(ref, 'parties')),
+      _NavItem(icon: Icons.document_scanner_outlined, label: tr(ref, 'scanBill'), primary: true),
       _NavItem(icon: Icons.inventory_2_outlined, label: tr(ref, 'stock')),
       _NavItem(icon: Icons.more_horiz, label: tr(ref, 'more')),
     ];
@@ -104,7 +124,7 @@ class _MobileBottomNav extends ConsumerWidget {
               Expanded(
                 child: _NavButton(
                   item: items[i],
-                  selected: currentIndex == i,
+                  selected: _isButtonSelected(currentIndex, i),
                   onTap: () => onTap(i),
                 ),
               ),

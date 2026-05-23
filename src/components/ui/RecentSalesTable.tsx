@@ -1,6 +1,6 @@
 'use client';
 import { Badge, Panel, PanelHeader } from '@/components/ui/Primitives';
-import { translatePaymentMethod, translateSaleStatus, uiText } from '@/lib/i18n';
+import { translatePaymentMethod, translateSaleStatus, uiProductList, uiText } from '@/lib/i18n';
 import { useAppStore } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
 
@@ -77,8 +77,8 @@ export function RecentSalesTable() {
                 <td data-label={tx('Order')} data-card-primary="true" style={{ padding: '12px 16px' }}>
                   <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>{sale.id}</span>
                 </td>
-                <td data-label={tx('Customer')} style={{ padding: '12px 16px', color: 'var(--text-primary)', fontSize: 13 }}>{sale.customer}</td>
-                <td data-label={tx('Products')} style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>{sale.products}</td>
+                <td data-label={tx('Customer')} style={{ padding: '12px 16px', color: 'var(--text-primary)', fontSize: 13 }}>{tx(sale.customer)}</td>
+                <td data-label={tx('Products')} style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>{uiProductList(language, sale.products)}</td>
                 <td data-label={tx('Amount')} style={{ padding: '12px 16px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>
                   {formatCurrency(sale.amount)}
                 </td>

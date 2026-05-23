@@ -438,7 +438,7 @@ Here is the raw OCR text:
     }
     
     req = urllib.request.Request(
-        f'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}',
+        f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}',
         data=json.dumps(payload).encode('utf-8'),
         headers={'Content-Type': 'application/json'},
         method='POST'
@@ -516,15 +516,22 @@ def _structure_ocr_text_offline(raw_text: str, categories: List[str] = None) -> 
         item_lines = []
         footer_lines = lines[sep_indices[0] + 1:]
     else:
-        total_lines = len(lines)
-        if total_lines >= 12:
-            header_lines = lines[:8]
-            footer_lines = lines[-6:]
-            item_lines = lines[8:-6]
-        else:
-            header_lines = lines[:min(3, total_lines)]
-            footer_lines = lines[max(0, total_lines - 3):]
-            item_lines = lines[min(3, total_lines): max(0, total_lines - 3)]
+        footer_start_idx = len(lines)
+        for i, line in enumerate(lines):
+            if i < 2:
+                continue
+            lower = line.lower()
+            is_footer_kw = (
+                any(kw in lower for kw in ["total", "subtotal", "sub total", "vat", "tax", "discount", "disc", "payable"])
+                or any(kw in line for kw in _NE_TOTAL_KEYWORDS | _NE_DISCOUNT_KEYWORDS | _NE_VAT_KEYWORDS)
+            )
+            if is_footer_kw:
+                footer_start_idx = i
+                break
+        
+        header_lines = lines[:min(3, footer_start_idx)]
+        footer_lines = lines[footer_start_idx:]
+        item_lines = lines[min(3, footer_start_idx): footer_start_idx]
 
     # 5. Extract vendor name from header
     vendor = _extract_vendor(header_lines, lines)
@@ -645,7 +652,8 @@ def structure_ocr_text(raw_text: str, categories: List[str] = None) -> Dict[str,
     offline_result = _structure_ocr_text_offline(raw_text, categories)
     
     # Check minimum confidence threshold for local parser
-    min_confidence = float(os.environ.get("KAROBRAIN_MIN_CONFIDENCE", "0.80"))
+    # Default 0.65 — offline parser is quite good, only escalate genuinely ambiguous bills
+    min_confidence = float(os.environ.get("KAROBRAIN_PARSE_MIN_CONFIDENCE", "0.65"))
     
     if offline_result and offline_result.get("confidence", 0.0) >= min_confidence:
         print(f"[KaroBrain™] Custom offline parser succeeded with high confidence ({offline_result['confidence']:.2f}). Skipping Gemini.")
@@ -921,7 +929,9 @@ _ITEM_BLOCKED_KEYWORDS = {
     "total", "subtotal", "sub total", "sub-total",
     "vat", "tax", "discount", "disc",
     "grand total", "net total", "total amount",
-    "payment", "paid", "change", "balance due",
+    "payment method", "payment mode", "payment type", "payment date", "payment amount", "payment details",
+    "paid by", "paid to", "paid date", "paid amount", "paid details",
+    "change", "balance due",
     "date", "bill", "invoice", "receipt",
     "pan", "phone", "tel", "mobile", "www", "http",
     "mob", "mob.", "shop", "ph.", "ph:", "phone:", "tel:", "email", "e-mail",
@@ -929,7 +939,8 @@ _ITEM_BLOCKED_KEYWORDS = {
     "pan no", "vat no", "pin no", "no.", "s.n.", "s.no.", "s.no",
     # Nepali
     "जम्मा", "कुल", "छुट", "भ्याट", "मु.अ.कर",
-    "भुक्तानी", "मिति", "बिल", "फोन", "मोवाईल", "मोवाइल", "इमेल",
+    "भुक्तानी विधि", "भुक्तानी तरिका", "भुक्तानी मिति", "भुक्तानी रकम",
+    "मिति", "बिल", "फोन", "मोवाईल", "मोवाइल", "इमेल",
     "पोष्ट", "प्यान", "भ्याट"
 }
 
@@ -1012,18 +1023,25 @@ def _extract_items(lines: List[str]) -> tuple:
 
         # Step 2: Strip explicit QTY x RATE format (3 x 150.00)
         name_clean = re.sub(r"\b\d+(?:\.\d+)?\s*[xX]\s*\d+(?:\.\d+)?\b", "", protected)
+        # Also strip x2 or x 2 format
+        name_clean = re.sub(r"\b[xX]\s*\d+(?:\.\d+)?\b", "", name_clean)
+        name_clean = re.sub(r"\b\d+(?:\.\d+)?\s*[xX]\b", "", name_clean)
+
         # Step 3: Strip standalone qty + unit that are NOT product specs
         name_clean = re.sub(r"\b(\d+(?:\.\d+)?)\s*(pcs|kg|ltr|liter|litre|units?)\b", "", name_clean, flags=re.I)
         # Step 4: Strip currency values
         name_clean = re.sub(r"(?:NPR|Rs\.?|₹|₨|रू)\s*[\d,]+(?:\.\d+)?", "", name_clean, flags=re.I)
-        # Step 5: Strip trailing line total (the rightmost number at end of line)
-        name_clean = re.sub(r"\s+[\d,]+\.\d{2}\s*$", "", name_clean.rstrip())
+        # Step 5: Strip trailing line total (the rightmost number at end of line) - dynamic int or decimal
+        name_clean = re.sub(r"\s+[\d,]+(?:\.\d{1,2})?\s*$", "", name_clean.rstrip())
         # Step 6: Strip leading/trailing punctuation
         name_clean = name_clean.strip(" :-–—|/")
 
         # Restore protected product codes
         for placeholder, original in placeholders.items():
             name_clean = name_clean.replace(placeholder, original)
+
+        # Post-processing: If the name clean has a trailing unit spec (like "5kg" or "1 liter"), strip it
+        name_clean = re.sub(r"\s+\d+(?:\.\d+)?\s*(?:kg|liter|litre|ltr|pcs|gm|g|ml|L|meter|m)\s*$", "", name_clean, flags=re.I)
 
         name_clean = re.sub(r"\s{2,}", " ", name_clean).strip()
 
@@ -1035,7 +1053,11 @@ def _extract_items(lines: List[str]) -> tuple:
         unit = "pcs"
 
         # Pattern: "3 x 150.00" or "3x150"
-        qty_x = re.search(r"\b(\d+(?:\.\d+)?)\s*[xX]\s*\d", line)
+        qty_x = re.search(r"\b(\d+(?:\.\d+)?)\s*[xX]\b", line)
+        if not qty_x:
+            # Pattern: "x 2" or "x2"
+            qty_x = re.search(r"\b[xX]\s*(\d+(?:\.\d+)?)\b", line)
+
         if qty_x:
             try:
                 quantity = float(qty_x.group(1))

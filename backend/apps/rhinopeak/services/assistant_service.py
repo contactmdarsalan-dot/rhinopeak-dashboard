@@ -38,6 +38,7 @@ INTENT_ROUTES = {
 }
 
 SAFE_EXECUTION_INTENTS = {"add_expense", "add_customer", "add_supplier", "add_product", "create_report"}
+ROUTE_ACTION_INTENTS = {"scan_bill", "open_dashboard", "open_analytics"}
 
 PAYMENT_ALIASES = {
     "cash": "Cash",
@@ -89,6 +90,25 @@ QUESTION_WORDS = [
     "kothiyo",
     "katiyo",
     "bhayo",
+    "cha",
+    "chha",
+    "मेरो",
+    "हाम्रो",
+    "कति",
+    "कती",
+    "छ",
+    "छन्",
+    "भयो",
+    "देखाउ",
+    "देखाउनुहोस्",
+    "भन",
+    "भन्नुहोस्",
+    "कुल",
+    "जम्मा",
+    "स्थिति",
+    "विवरण",
+    "ब्यालेन्स",
+    "बाँकी",
 ]
 
 BUSINESS_METRIC_WORDS = [
@@ -122,6 +142,40 @@ BUSINESS_METRIC_WORDS = [
     "tirna",
     "saman",
     "grahak",
+    "les",
+    "सेल्स",
+    "बिक्री",
+    "बिक्रि",
+    "आम्दानी",
+    "राजस्व",
+    "खर्च",
+    "खर्चा",
+    "खरिद",
+    "खरिदहरू",
+    "परचेज",
+    "नगद",
+    "बैंक",
+    "पैसा",
+    "रकम",
+    "नाफा",
+    "नोक्सान",
+    "घाटा",
+    "फाइदा",
+    "ग्राहक",
+    "ग्राहकहरू",
+    "उधारो",
+    "उधार",
+    "असामी",
+    "सप्लायर",
+    "सप्लायरहरू",
+    "आपूर्तिकर्ता",
+    "साहु",
+    "तिर्नुपर्ने",
+    "स्टक",
+    "सामान",
+    "इन्भेन्टरी",
+    "पार्टी",
+    "पार्टीहरू",
 ]
 
 QUESTION_ROUTES = {
@@ -175,6 +229,7 @@ def parse_assistant_command(payload: dict[str, Any], user: dict[str, Any] | None
     warnings = validation_warnings(intent, slots)
     confidence = confidence_for(intent, slots, warnings)
     can_execute = intent in SAFE_EXECUTION_INTENTS and not warnings
+    requires_confirmation = can_execute
 
     return {
         "id": make_id("ASST"),
@@ -183,7 +238,7 @@ def parse_assistant_command(payload: dict[str, Any], user: dict[str, Any] | None
         "language": language,
         "intent": intent,
         "confidence": confidence,
-        "requiresConfirmation": True,
+        "requiresConfirmation": requires_confirmation,
         "canExecute": can_execute,
         "route": INTENT_ROUTES.get(intent, "/dashboard"),
         "slots": slots,
@@ -191,7 +246,7 @@ def parse_assistant_command(payload: dict[str, Any], user: dict[str, Any] | None
         "reply": assistant_reply(intent, slots, warnings, can_execute),
         "safety": {
             "autoExecute": False,
-            "reason": "Voice commands must be reviewed and confirmed before writing business data.",
+            "reason": "Write actions must be reviewed and confirmed before saving business data.",
         },
         "executionStatus": "Draft",
         "createdAt": iso_now(),
@@ -207,7 +262,7 @@ def business_question_command(
     question_type = classify_business_question(normalized)
     scope = question_scope(normalized)
     if user:
-        answer = answer_business_question(user, question_type, scope, normalized)
+        answer = answer_business_question(user, question_type, scope, normalized, language)
         reply = answer["reply"]
         slots = answer["slots"]
         route = answer["route"]
@@ -249,6 +304,7 @@ def answer_business_question(
     question_type: str,
     scope: str,
     normalized: str,
+    language: str = "en",
 ) -> dict[str, Any]:
     workspace_id = user["workspaceId"]
     sales = filter_by_scope(active_sales(list_records(workspace_id, "sales")), scope)
@@ -298,6 +354,8 @@ def answer_business_question(
         "cashBankBalance": cash_total,
         "customerReceivable": receivable_total,
         "supplierPayable": payable_total,
+        "customerCount": len(customers),
+        "supplierCount": len(suppliers),
         "inventoryProducts": product_count,
         "inventoryUnits": stock_units,
         "lowStockItems": low_stock_count,
@@ -350,6 +408,9 @@ def answer_business_question(
             f"expenses {format_money(expenses_total)}, cash/bank {format_money(cash_total)}, "
             f"customer receivable {format_money(receivable_total)}, supplier payable {format_money(payable_total)}."
         )
+
+    if language == "ne":
+        reply = nepali_business_reply(question_type, scope, slots)
 
     return {
         "reply": reply,
@@ -525,40 +586,67 @@ def is_business_question(text: str) -> bool:
             "business summary",
             "profit",
             "loss",
+            # Nepali phrase fallbacks
+            "आजको बिक्री",
+            "आजको सेल्स",
+            "जम्मा बिक्री",
+            "कुल बिक्री",
+            "जम्मा सेल्स",
+            "कुल सेल्स",
+            "नगद ब्यालेन्स",
+            "बैंक ब्यालेन्स",
+            "जम्मा खर्च",
+            "कुल खर्च",
+            "खर्च कुल",
+            "जम्मा खरिद",
+            "कुल खरिद",
+            "साहुको उधारो",
+            "साहुलाई तिर्नुपर्ने",
+            "साहुको बाँकी",
+            "ग्राहकको उधारो",
+            "ग्राहकबाट उठ्नुपर्ने",
+            "ग्राहकको बाँकी",
+            "स्टकको मूल्य",
+            "सामानको मूल्य",
+            "जम्मा स्टक",
+            "नाफा नोक्सान",
+            "घाटा नाफा",
+            "व्यापार सारांश",
+            "कारोबार विवरण",
         ],
     )
 
 
 def classify_business_question(text: str) -> str:
-    if has_any(text, ["profit", "loss", "margin", "net", "earning"]):
+    if has_any(text, ["profit", "loss", "margin", "net", "earning", "नाफा", "नोक्सान", "घाटा", "फाइदा"]):
         return "profit_estimate"
-    if has_any(text, ["receivable", "customer credit", "credit due", "customer balance", "udhar", "grahak"]):
+    if has_any(text, ["receivable", "customer credit", "credit due", "customer balance", "udhar", "grahak", "ग्राहकको उधारो", "उठ्नुपर्ने", "उठ्न बाँकी", "उठाउन बाँकी", "उधारो", "ग्राहक उधार"]):
         return "customer_receivable"
-    if has_any(text, ["payable", "supplier payable", "supplier balance", "tirnu", "tirna"]):
+    if has_any(text, ["payable", "supplier payable", "supplier balance", "tirnu", "tirna", "तिर्नुपर्ने", "तिर्न बाँकी", "तिर्नु बाँकी", "साहु", "सप्लायर उधार", "तिर्नु", "तिर्न"]):
         return "supplier_payable"
-    if has_any(text, ["cash", "bank", "wallet", "cash drawer", "balance"]):
+    if has_any(text, ["cash", "bank", "wallet", "cash drawer", "balance", "नगद", "बैंक", "ब्यालेन्स", "पैसा", "रकम"]):
         return "cash_balance"
-    if has_any(text, ["stock", "inventory", "saman", "low stock", "out of stock"]):
+    if has_any(text, ["stock", "inventory", "saman", "low stock", "out of stock", "स्टक", "सामान", "इन्भेन्टरी"]):
         return "inventory_status"
-    if has_any(text, ["purchase", "purchases", "supplier bill", "stock came"]):
+    if has_any(text, ["purchase", "purchases", "supplier bill", "stock came", "खरिद", "परचेज"]):
         return "purchases_total"
-    if has_any(text, ["expense", "expenses", "kharcha", "kharach", "spent"]):
+    if has_any(text, ["expense", "expenses", "kharcha", "kharach", "spent", "खर्च", "खर्चा"]):
         return "expenses_total"
-    if has_any(text, ["sale", "sales", "revenue", "income", "bikri"]):
+    if has_any(text, ["sale", "sales", "revenue", "income", "bikri", "बिक्री", "बिक्रि", "सेल्स", "आम्दानी"]):
         return "sales_total"
-    if has_any(text, ["customer", "customers"]):
+    if has_any(text, ["customer", "customers", "grahak", "ग्राहक"]):
         return "customer_status"
-    if has_any(text, ["supplier", "suppliers"]):
+    if has_any(text, ["supplier", "suppliers", "सप्लायर", "आपूर्तिकर्ता"]):
         return "supplier_status"
     return "business_summary"
 
 
 def question_scope(text: str) -> str:
-    if has_any(text, ["today", "aaja", "daily"]):
+    if has_any(text, ["today", "aaja", "daily", "आज", "आजको", "दैनिक"]):
         return "today"
-    if has_any(text, ["this month", "month", "monthly", "mahina"]):
+    if has_any(text, ["this month", "month", "monthly", "mahina", "महिना", "यो महिना", "मासिक"]):
         return "this_month"
-    if has_any(text, ["this year", "year", "yearly", "barsa"]):
+    if has_any(text, ["this year", "year", "yearly", "barsa", "वर्ष", "यो वर्ष", "वार्षिक"]):
         return "this_year"
     return "all_time"
 
@@ -839,6 +927,8 @@ def assistant_reply(intent: str, slots: dict[str, Any], warnings: list[str], can
         return "I can answer this from saved workspace records."
     if intent == "scan_bill":
         return "Opening the bill scanner. Take a clear photo, then review the extracted fields."
+    if intent in ROUTE_ACTION_INTENTS:
+        return "Opening the right page now."
     if can_execute:
         return "I prepared this action. Review it once, then confirm to save it."
     return "I can open the right page for this task and keep the user in control."
@@ -854,6 +944,48 @@ def executed_reply(intent: str, slots: dict[str, Any]) -> str:
     if intent == "add_product":
         return f"Product {slots.get('name')} created."
     return "Report created."
+
+
+def nepali_business_reply(question_type: str, scope: str, slots: dict[str, Any]) -> str:
+    subject = nepali_scope_subject(scope)
+    if question_type == "sales_total":
+        return f"{subject} बिक्री जम्मा {format_money(slots['salesTotal'])} हो। {slots['salesCount']} बिलबाट।"
+    if question_type == "expenses_total":
+        return f"{subject} खर्च जम्मा {format_money(slots['expensesTotal'])} हो। {slots['expenseCount']} रेकर्डबाट।"
+    if question_type == "purchases_total":
+        return f"{subject} खरिद जम्मा {format_money(slots['purchasesTotal'])} हो। {slots['purchaseCount']} बिलबाट।"
+    if question_type == "cash_balance":
+        return f"हाल नगद र बैंक ब्यालेन्स {format_money(slots['cashBankBalance'])} छ।"
+    if question_type == "customer_receivable":
+        return f"ग्राहकबाट उठ्न बाँकी रकम {format_money(slots['customerReceivable'])} छ।"
+    if question_type == "supplier_payable":
+        return f"सप्लायरलाई तिर्न बाँकी रकम {format_money(slots['supplierPayable'])} छ।"
+    if question_type == "inventory_status":
+        return (
+            f"स्टकमा {slots['inventoryProducts']} सामान छन्। "
+            f"कम स्टक {slots['lowStockItems']} र स्टक सकिएका {slots['outOfStockItems']} छन्। "
+            f"स्टक मूल्य {format_money(slots['stockValue'])}।"
+        )
+    if question_type == "profit_estimate":
+        return f"{subject} अनुमानित सञ्चालन नतिजा {format_money(slots['operatingResult'])} हो।"
+    if question_type == "customer_status":
+        return f"कुल ग्राहक {slots['customerCount']} छन्। ग्राहक उधारो {format_money(slots['customerReceivable'])} छ।"
+    if question_type == "supplier_status":
+        return f"कुल सप्लायर {slots['supplierCount']} छन्। सप्लायरलाई तिर्न बाँकी {format_money(slots['supplierPayable'])} छ।"
+    return (
+        f"व्यवसाय सारांश: बिक्री {format_money(slots['salesTotal'])}, "
+        f"खरिद {format_money(slots['purchasesTotal'])}, खर्च {format_money(slots['expensesTotal'])}, "
+        f"नगद/बैंक {format_money(slots['cashBankBalance'])}।"
+    )
+
+
+def nepali_scope_subject(scope: str) -> str:
+    return {
+        "today": "आजको",
+        "this_month": "यो महिनाको",
+        "this_year": "यो वर्षको",
+        "all_time": "कुल",
+    }.get(scope, "कुल")
 
 
 def has_any(text: str, needles: list[str]) -> bool:

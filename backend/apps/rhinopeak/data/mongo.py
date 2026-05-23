@@ -67,6 +67,10 @@ def ensure_indexes() -> None:
     db.password_reset_tokens.create_index([("userId", ASCENDING), ("tokenHash", ASCENDING), ("usedAt", ASCENDING)])
     db.password_reset_tokens.create_index([("expiresAt", ASCENDING)])
 
+    db.payment_sessions.create_index([("transactionUuid", ASCENDING)], unique=True)
+    db.payment_sessions.create_index([("workspaceId", ASCENDING), ("createdAt", DESCENDING)])
+    db.payment_sessions.create_index([("status", ASCENDING)])
+
     db.settings.create_index([("workspaceId", ASCENDING)], unique=True)
 
     db.records.create_index([("workspaceId", ASCENDING), ("kind", ASCENDING), ("id", ASCENDING)], unique=True)

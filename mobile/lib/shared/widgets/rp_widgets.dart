@@ -8,6 +8,66 @@ String tr(WidgetRef ref, String key) {
   return AppStrings.tr(ref.watch(appControllerProvider).language, key);
 }
 
+String trValue(WidgetRef ref, String value) {
+  return AppStrings.trValue(ref.watch(appControllerProvider).language, value);
+}
+
+String trProductList(WidgetRef ref, String value) {
+  final parts = value.split(',');
+  return parts.map((part) {
+    final trimmed = part.trim();
+    final match = RegExp(r'^(.+?)\s+x\s+([0-9.,]+)\s*([A-Za-z]+)?$')
+        .firstMatch(trimmed);
+    if (match == null) return trValue(ref, trimmed);
+
+    final name = trValue(ref, match.group(1)!.trim());
+    final quantity = match.group(2)!;
+    final unit = (match.group(3) ?? '').trim();
+    return unit.isEmpty ? '$name x $quantity' : '$name x $quantity ${trValue(ref, unit)}';
+  }).join(', ');
+}
+
+String trRecordText(WidgetRef ref, String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return value;
+  if (trimmed.contains(' x ')) return trProductList(ref, trimmed);
+
+  final labelValueMatch = RegExp(r'^([A-Za-z ]+):\s*(.+)$').firstMatch(trimmed);
+  if (labelValueMatch != null) {
+    return '${trValue(ref, labelValueMatch.group(1)!.trim())}: '
+        '${trRecordText(ref, labelValueMatch.group(2)!.trim())}';
+  }
+
+  final suffixMatch =
+      RegExp(r'^(.+?)\s+(voucher|account)$', caseSensitive: false)
+          .firstMatch(trimmed);
+  if (suffixMatch != null) {
+    return '${trRecordText(ref, suffixMatch.group(1)!.trim())} '
+        '${trValue(ref, suffixMatch.group(2)!.toLowerCase())}';
+  }
+
+  final countMatch = RegExp(r'^([0-9]+)\s+([A-Za-z ]+)$').firstMatch(trimmed);
+  if (countMatch != null) {
+    return '${countMatch.group(1)} ${trValue(ref, countMatch.group(2)!.trim())}';
+  }
+
+  if (trimmed.contains(' - ')) {
+    return trimmed
+        .split(' - ')
+        .map((part) => trRecordText(ref, part))
+        .join(' - ');
+  }
+
+  return trValue(ref, trimmed);
+}
+
+String trQuantity(WidgetRef ref, num value, String unit) {
+  final rounded = value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+  return '$rounded ${trValue(ref, unit)}';
+}
+
 class RpPage extends StatelessWidget {
   const RpPage({
     required this.title,

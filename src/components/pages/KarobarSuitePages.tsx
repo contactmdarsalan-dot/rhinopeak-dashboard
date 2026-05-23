@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { BrainCircuit, Building2, CheckCircle2, Eye, Mic, Plus, ReceiptText, Send, Sparkles, Square, Trash2, Upload, WalletCards } from 'lucide-react';
 import { Badge, Button, Field, Panel, PanelHeader, StatTile, controlStyle, Modal } from '@/components/ui/Primitives';
 import { formatCurrency } from '@/lib/utils';
@@ -123,6 +124,7 @@ export function QuickAddPage() {
 function AssistantCommandPanel() {
   const { settings, hydrateFromBackend } = useAppStore();
   const tx = (value: string) => uiText(settings.language, value);
+  const router = useRouter();
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const [transcript, setTranscript] = useState('');
   const [assistantCommand, setAssistantCommand] = useState<AssistantCommandResult | null>(null);
@@ -145,10 +147,14 @@ function AssistantCommandPanel() {
         confirm,
         overrides: assistantCommand?.slots,
       });
-      setAssistantCommand(response.assistantCommand);
-      setTranscript(response.assistantCommand.transcript);
+      const command = response.assistantCommand;
+      setAssistantCommand(command);
+      setTranscript(command.transcript);
       if (response.bootstrap) hydrateFromBackend(response.bootstrap);
-      setNotice(response.assistantCommand.reply);
+      setNotice(tx(command.reply));
+      if (['scan_bill', 'open_dashboard', 'open_analytics'].includes(command.intent) && command.route) {
+        router.push(command.route);
+      }
     } catch (error) {
       setNotice(error instanceof Error ? error.message : tx('Assistant could not complete this command.'));
     } finally {
@@ -231,7 +237,7 @@ function AssistantCommandPanel() {
               <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{tx('Confidence')}: {Math.round(assistantCommand.confidence * 100)}%</p>
             </div>
             <Badge tone={assistantCommand.warnings.length ? 'warning' : assistantCommand.executionStatus === 'Executed' ? 'success' : 'info'}>
-              {assistantCommand.executionStatus}
+              {tx(assistantCommand.executionStatus)}
             </Badge>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
@@ -325,10 +331,10 @@ export function PartiesPage() {
               {parties.map((party) => (
                 <tr key={party.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                   <td data-label={tx('Party')} data-card-primary="true" style={{ padding: '12px 14px' }}>
-                    <button onClick={() => setSelected(party.id)} style={{ background: 'transparent', border: 0, color: 'var(--text-primary)', fontWeight: 800, cursor: 'pointer', padding: 0 }}>{party.name}</button>
+                    <button onClick={() => setSelected(party.id)} style={{ background: 'transparent', border: 0, color: 'var(--text-primary)', fontWeight: 800, cursor: 'pointer', padding: 0 }}>{tx(party.name)}</button>
                     <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{party.id}</p>
                   </td>
-                  <td data-label={tx('Type')} style={{ padding: '12px 14px' }}><Badge tone="info">{party.type}</Badge></td>
+                  <td data-label={tx('Type')} style={{ padding: '12px 14px' }}><Badge tone="info">{tx(party.type)}</Badge></td>
                   <td data-label={tx('Contact')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{party.phone || party.email || tx('No contact')}</td>
                   <td data-label={tx('Balance')} style={{ padding: '12px 14px', color: party.balance ? 'var(--warning)' : 'var(--success)', fontWeight: 850 }}>{formatCurrency(party.balance)}</td>
                   <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
@@ -350,7 +356,7 @@ export function PartiesPage() {
       {selectedParty && (
         <Panel>
           <PanelHeader
-            title={`${selectedParty.name} ledger`}
+            title={`${tx(selectedParty.name)} ${tx('ledger')}`}
             subtitle={`${tx('Current balance')}: ${formatCurrency(selectedParty.balance)}`}
             action={
               <Button onClick={() => setIsSettlePaymentOpen(true)}>
@@ -361,7 +367,7 @@ export function PartiesPage() {
           <div>
             {selectedLedger.map((entry) => (
               <div key={entry.id} style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                <div><p style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{tx(entry.type)}</p><p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{entry.date} - {entry.note}</p></div>
+                <div><p style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{tx(entry.type)}</p><p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{entry.date} - {tx(entry.note)}</p></div>
                 <p style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{formatCurrency(entry.amount)}</p>
               </div>
             ))}
@@ -509,10 +515,10 @@ export function PurchasesPage() {
               {purchases.map((purchase) => (
                 <tr key={purchase.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                   <td data-label={tx('Bill')} data-card-primary="true" style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 850 }}>{purchase.billNo}</td>
-                  <td data-label={tx('Supplier')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{purchase.supplierName}</td>
-                  <td data-label={tx('Items')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{purchase.items.map((item) => item.productName).join(', ') || tx('No items')}</td>
+                  <td data-label={tx('Supplier')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{tx(purchase.supplierName)}</td>
+                  <td data-label={tx('Items')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{purchase.items.map((item) => tx(item.productName)).join(', ') || tx('No items')}</td>
                   <td data-label={tx('Payment')} style={{ padding: '12px 14px' }}><Badge tone={purchase.payment === 'Credit' ? 'warning' : 'success'}>{translatePaymentMethod(settings.language, purchase.payment)}</Badge></td>
-                  <td data-label={tx('Status')} style={{ padding: '12px 14px' }}><Badge tone={purchase.status === 'Received' ? 'success' : purchase.status === 'Pending' ? 'warning' : 'danger'}>{purchase.status}</Badge></td>
+                  <td data-label={tx('Status')} style={{ padding: '12px 14px' }}><Badge tone={purchase.status === 'Received' ? 'success' : purchase.status === 'Pending' ? 'warning' : 'danger'}>{tx(purchase.status)}</Badge></td>
                   <td data-label={tx('Date')} style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: 12 }}>{purchase.date}</td>
                   <td data-label={tx('Amount')} style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 850 }}>{formatCurrency(purchase.amount)}</td>
                   <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
@@ -540,10 +546,10 @@ export function PurchasesPage() {
           width={540}
         >
           <div style={{ display: 'grid', gap: 12 }}>
-            <Field label="Supplier"><select style={controlStyle} value={supplierId} onChange={(event) => setSupplierId(event.target.value)}><option value="">{tx('Type supplier name below')}</option>{suppliers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+            <Field label="Supplier"><select style={controlStyle} value={supplierId} onChange={(event) => setSupplierId(event.target.value)}><option value="">{tx('Type supplier name below')}</option>{suppliers.map((item) => <option key={item.id} value={item.id}>{tx(item.name)}</option>)}</select></Field>
             {!supplierId && <Field label="Supplier name"><input style={controlStyle} value={form.supplierName} onChange={(event) => setForm({ ...form, supplierName: event.target.value })} /></Field>}
             <Field label="Bill no."><input style={controlStyle} value={form.billNo} onChange={(event) => setForm({ ...form, billNo: event.target.value })} /></Field>
-            <Field label="Item"><select style={controlStyle} value={productId} onChange={(event) => setProductId(event.target.value)}>{inventory.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.unit ?? 'pcs'})</option>)}</select></Field>
+            <Field label="Item"><select style={controlStyle} value={productId} onChange={(event) => setProductId(event.target.value)}>{inventory.map((item) => <option key={item.id} value={item.id}>{tx(item.name)} ({tx(item.unit ?? 'pcs')})</option>)}</select></Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Field label="Quantity"><input style={controlStyle} type="number" value={form.quantity} onChange={(event) => setForm({ ...form, quantity: event.target.value })} /></Field>
               <Field label="Buying cost"><input style={controlStyle} type="number" value={form.unitCost} onChange={(event) => setForm({ ...form, unitCost: event.target.value })} /></Field>
@@ -571,7 +577,7 @@ export function PurchasesPage() {
           width={500}
         >
           <div style={{ display: 'grid', gap: 12 }}>
-            <Field label="Supplier"><select style={controlStyle} value={payingSupplier} onChange={(event) => setPayingSupplier(event.target.value)}><option value="">{tx('Choose supplier')}</option>{suppliers.filter((item) => item.payableBalance > 0).map((item) => <option key={item.id} value={item.id}>{item.name} ({formatCurrency(item.payableBalance)})</option>)}</select></Field>
+            <Field label="Supplier"><select style={controlStyle} value={payingSupplier} onChange={(event) => setPayingSupplier(event.target.value)}><option value="">{tx('Choose supplier')}</option>{suppliers.filter((item) => item.payableBalance > 0).map((item) => <option key={item.id} value={item.id}>{tx(item.name)} ({formatCurrency(item.payableBalance)})</option>)}</select></Field>
             <Field label="Amount"><input style={controlStyle} type="number" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} /></Field>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
               <Button variant="secondary" onClick={() => setIsPaySupplierOpen(false)}>{tx('Cancel')}</Button>
@@ -680,7 +686,7 @@ export function ExpensesPage() {
             <Field label="Vendor"><input style={controlStyle} value={form.vendor} onChange={(event) => setForm({ ...form, vendor: event.target.value })} placeholder={tx('Landlord, transport, repair shop')} /></Field>
             <Field label="Amount"><input style={controlStyle} type="number" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></Field>
             <Field label="VAT"><input style={controlStyle} type="number" value={form.taxAmount} onChange={(event) => setForm({ ...form, taxAmount: event.target.value })} /></Field>
-            <Field label="Paid from"><select style={controlStyle} value={form.paymentAccountId} onChange={(event) => setForm({ ...form, paymentAccountId: event.target.value })}>{cashBankAccounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+            <Field label="Paid from"><select style={controlStyle} value={form.paymentAccountId} onChange={(event) => setForm({ ...form, paymentAccountId: event.target.value })}>{cashBankAccounts.map((item) => <option key={item.id} value={item.id}>{tx(item.name)}</option>)}</select></Field>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
               <Button variant="secondary" onClick={() => setIsAddExpenseOpen(false)}>{tx('Cancel')}</Button>
               <Button onClick={submit}>{tx('Save expense')}</Button>
@@ -818,15 +824,15 @@ export function CashBankPage() {
               {cashBankAccounts.map((account) => (
                 <tr key={account.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                   <td data-label={tx('Account')} data-card-primary="true" style={{ padding: '12px 14px' }}>
-                    <p style={{ color: 'var(--text-primary)', fontWeight: 850 }}>{account.name}</p>
+                    <p style={{ color: 'var(--text-primary)', fontWeight: 850 }}>{tx(account.name)}</p>
                     <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{account.id}</p>
                   </td>
-                  <td data-label={tx('Type')} style={{ padding: '12px 14px' }}><Badge tone={account.type === 'Cash' ? 'success' : account.type === 'Bank' ? 'info' : 'accent'}>{account.type}</Badge></td>
+                  <td data-label={tx('Type')} style={{ padding: '12px 14px' }}><Badge tone={account.type === 'Cash' ? 'success' : account.type === 'Bank' ? 'info' : 'accent'}>{tx(account.type)}</Badge></td>
                   <td data-label={tx('Institution')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>
-                    <p>{account.institution || tx('Not added')}</p>
+                    <p>{account.institution ? tx(account.institution) : tx('Not added')}</p>
                     {account.accountNumber && <p style={{ color: 'var(--text-muted)', marginTop: 2 }}>{account.accountNumber}</p>}
                   </td>
-                  <td data-label={tx('Status')} style={{ padding: '12px 14px' }}><Badge tone={account.active === false ? 'warning' : 'success'}>{account.active === false ? 'Paused' : 'Active'}</Badge></td>
+                  <td data-label={tx('Status')} style={{ padding: '12px 14px' }}><Badge tone={account.active === false ? 'warning' : 'success'}>{account.active === false ? tx('Paused') : tx('Active')}</Badge></td>
                   <td data-label={tx('Balance')} style={{ padding: '12px 14px', color: account.balance ? 'var(--success)' : 'var(--text-primary)', fontWeight: 900 }}>{formatCurrency(account.balance)}</td>
                   <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -866,9 +872,9 @@ export function CashBankPage() {
                       <p style={{ color: 'var(--text-primary)', fontWeight: 850 }}>{tx(movement.type)}</p>
                       <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{movement.id}</p>
                     </td>
-                    <td data-label={tx('Account')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontWeight: 700 }}>{movement.accountName}</td>
+                    <td data-label={tx('Account')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontWeight: 700 }}>{tx(movement.accountName)}</td>
                     <td data-label={tx('Date')} style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: 12 }}>{movement.date}</td>
-                    <td data-label={tx('Note')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{movement.note || tx('No note')}</td>
+                    <td data-label={tx('Note')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{movement.note ? tx(movement.note) : tx('No note')}</td>
                     <td data-label={tx('Amount')} style={{ padding: '12px 14px', color: inbound ? 'var(--success)' : outbound ? 'var(--warning)' : 'var(--text-primary)', fontWeight: 900 }}>{formatCurrency(movement.amount)}</td>
                     <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
                       <Link href={`/details/money-movements/${movement.id}`} style={detailLinkStyle}>
@@ -906,7 +912,7 @@ export function CashBankPage() {
             <Field label="Account">
               <select style={controlStyle} value={selectedAccountId} onChange={(event) => { const account = cashBankAccounts.find((item) => item.id === event.target.value); setSelectedAccountId(event.target.value); setRenameAccount(account?.name ?? ''); }}>
                 <option value="">{tx('Choose account')}</option>
-                {cashBankAccounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                {cashBankAccounts.map((item) => <option key={item.id} value={item.id}>{tx(item.name)}</option>)}
               </select>
             </Field>
             <Field label="Account name"><input style={controlStyle} value={renameAccount} onChange={(event) => setRenameAccount(event.target.value)} /></Field>
@@ -936,8 +942,8 @@ export function CashBankPage() {
           <div style={{ display: 'grid', gap: 12 }}>
             <Field label="Account">
               <select style={controlStyle} value={movementForm.accountId} onChange={(event) => setMovementForm({ ...movementForm, accountId: event.target.value })}>
-                {activeAccounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                {!activeAccounts.length && cashBankAccounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                {activeAccounts.map((item) => <option key={item.id} value={item.id}>{tx(item.name)}</option>)}
+                {!activeAccounts.length && cashBankAccounts.map((item) => <option key={item.id} value={item.id}>{tx(item.name)}</option>)}
               </select>
             </Field>
             <Field label="Movement"><select style={controlStyle} value={movementForm.type} onChange={(event) => setMovementForm({ ...movementForm, type: event.target.value })}>{(['Receipt', 'Payment', 'Deposit', 'Withdrawal', 'Adjustment'] as MoneyMovementType[]).map((item) => <option key={item}>{tx(item)}</option>)}</select></Field>
@@ -1047,7 +1053,7 @@ export function RemindersPage() {
         <Panel>
           <PanelHeader title="Send reminder" subtitle="Choose party and amount." />
           <div style={{ padding: 16, display: 'grid', gap: 12 }}>
-            <Field label="Party"><select style={controlStyle} value={partyId} onChange={(event) => setPartyId(event.target.value)}>{parties.map((party) => <option key={party.id} value={party.id}>{party.name} ({formatCurrency(party.balance)})</option>)}</select></Field>
+            <Field label="Party"><select style={controlStyle} value={partyId} onChange={(event) => setPartyId(event.target.value)}>{parties.map((party) => <option key={party.id} value={party.id}>{tx(party.name)} ({formatCurrency(party.balance)})</option>)}</select></Field>
             <Field label="Amount"><input style={controlStyle} type="number" value={amount} onChange={(event) => setAmount(event.target.value)} /></Field>
             <Field label="Due date"><input style={controlStyle} type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></Field>
             <div style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5 }}>{message}</div>

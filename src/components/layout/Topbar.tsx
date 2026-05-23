@@ -26,6 +26,7 @@ const pageTitleKey: Record<string, Parameters<typeof translate>[1]> = {
   '/team': 'nav.team',
   '/billing': 'nav.billing',
   '/settings': 'nav.settings',
+  '/scan-bill': 'nav.scanBill',
 };
 
 const getPageTitle = (pathname: string, language: Parameters<typeof translate>[0]) => {
@@ -71,7 +72,7 @@ export function Topbar() {
         id: product.id,
         severity: product.status === 'Out of Stock' ? 'critical' : 'warning',
         message: uiFormat(settings.language, '{name}: {stock} units left, threshold {threshold}.', {
-          name: product.name,
+          name: tx(product.name),
           stock: product.stock,
           threshold: product.reorderLevel,
         }),
@@ -359,7 +360,7 @@ export function Topbar() {
             height: 36,
             borderRadius: 8,
             border: 'none',
-            background: 'linear-gradient(135deg, #6366f1, #22d3ee)',
+            background: 'linear-gradient(135deg, #7c3aed, #d946ef)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

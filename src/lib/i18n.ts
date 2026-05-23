@@ -308,7 +308,69 @@ const uiTextNepali: Record<string, string> = {
   'Could not scan this bill.': 'यो बिल स्क्यान गर्न सकिएन।',
   'Saved. Your records, accounting, and document library are updated.': 'सेभ भयो। रेकर्ड, लेखा र कागजात अपडेट भयो।',
   'Could not save this bill.': 'यो बिल सेभ गर्न सकिएन।',
+  'Scan deleted successfully.': 'स्क्यान सफलतापूर्वक मेटियो।',
+  'Could not delete scan.': 'स्क्यान मेटाउन सकिएन।',
+  'Are you sure you want to delete this scan?': 'यो स्क्यान मेटाउने हो?',
+  'Saved scan records': 'सेभ भएका स्क्यान रेकर्ड',
+  'Approved and posted to records': 'स्वीकृत गरी रेकर्डमा पोस्ट गरिएको',
+  'Saved total': 'सेभ भएको कुल',
+  'From committed scans': 'पोस्ट गरिएका स्क्यानबाट',
+  'Latest saved': 'पछिल्लो सेभ',
+  'Last committed scan': 'पछिल्लो पोस्ट गरिएको स्क्यान',
   'Scan bill': 'बिल स्क्यान',
+  'Scan Bill': 'बिल स्क्यान',
+  'Powered by KaroBrain Vision Engine. Upload a receipt or pick a quick simulator.': 'KaroBrain Vision Engine द्वारा सञ्चालित। रसिद अपलोड गर्नुहोस् वा द्रुत नमुना छान्नुहोस्।',
+  'Quick Simulator Templates': 'द्रुत नमुना टेम्प्लेट',
+  'Himalaya Hotel': 'हिमालय होटल',
+  'City Mart NPR': 'सिटी मार्ट NPR',
+  'Office Rent Receipt': 'अफिस भाडा रसिद',
+  'DREAM SKY EDUCATION CONSULTANCY PVT LTD': 'ड्रिम स्काई एजुकेशन कन्सल्टेन्सी प्रा. लि.',
+  'PTE Class': 'PTE कक्षा',
+  'Drag receipt here or Click to upload': 'रसिद यहाँ तान्नुहोस् वा अपलोड गर्न क्लिक गर्नुहोस्',
+  'PNG, JPG, or PDF. Automatic OCR extraction & GPT-based field structures will execute immediately.': 'PNG, JPG वा PDF। OCR र GPT आधारित विवरण तुरुन्तै निकालिन्छ।',
+  'View extracted raw text': 'निकालिएको कच्चा टेक्स्ट हेर्नुहोस्',
+  'Paste OCR text if manual scan is required...': 'म्यानुअल स्क्यान चाहिएमा OCR टेक्स्ट पेस्ट गर्नुहोस्...',
+  'Process manual text': 'म्यानुअल टेक्स्ट प्रक्रिया गर्नुहोस्',
+  'KaroBrain Vision Engine': 'KaroBrain Vision Engine',
+  'Uploading & decoding image': 'तस्बिर अपलोड र डिकोड हुँदैछ',
+  'OpenCV preprocessing & deskew': 'OpenCV तयारी र सीधा बनाउँदै',
+  'KaroBrain OCR + Gemini Vision': 'KaroBrain OCR + Gemini Vision',
+  'AI structuring & field extraction': 'AI संरचना र विवरण निकाल्दै',
+  'Scan Success Summary': 'स्क्यान सफलताको सारांश',
+  'The bill was parsed using KaroBrain Vision AI.': 'यो बिल KaroBrain Vision AI प्रयोग गरी पढियो।',
+  'Receipt Extracted!': 'रसिद निकालियो!',
+  'Double check the values and commit the entry to ledger.': 'मानहरू फेरि जाँच गरी लेजरमा पोस्ट गर्नुहोस्।',
+  'Confidence score': 'भरोसा स्कोर',
+  'Review Extracted Fields': 'निकालिएका विवरण जाँच गर्नुहोस्',
+  'Verify and adjust AI extracted transaction entries before committing to ledger.': 'लेजरमा पोस्ट गर्नुअघि AI ले निकालेका कारोबार विवरण जाँच र मिलाउनुहोस्।',
+  'Low confidence extraction ({confidence}). Please double check the highlighted fields below.': 'कम भरोसा निकालिएको छ ({confidence})। तल हाइलाइट गरिएका क्षेत्रहरू फेरि जाँच गर्नुहोस्।',
+  'Add row': 'लाइन थप्नुहोस्',
+  'Mathematical mismatch: subtotal {subtotal} + VAT {vat} - discount {discount} does not equal total {total}.': 'गणना मिलेन: उपकुल {subtotal} + VAT {vat} - छुट {discount} कुल {total} सँग मिलेन।',
+  'Save to records as': 'रेकर्डमा यस रूपमा सेभ',
+  'Select category...': 'श्रेणी छान्नुहोस्...',
+  'Save and Commit': 'सेभ गरी पोस्ट गर्नुहोस्',
+  'Edit & Commit': 'सम्पादन गरी पोस्ट गर्नुहोस्',
+  'Delete Scan Record': 'स्क्यान रेकर्ड मेटाउनुहोस्',
+  'Scan History': 'स्क्यान इतिहास',
+  'Saved bill scans that were committed to business records. Draft scans stay in review until saved.': 'व्यवसाय रेकर्डमा पोस्ट भएका सेभ बिल स्क्यानहरू। ड्राफ्ट स्क्यान सेभ नभएसम्म समीक्षा मै रहन्छन्।',
+  'No saved scan records yet.': 'अहिलेसम्म सेभ गरिएको स्क्यान रेकर्ड छैन।',
+  'Approve and save a scanned bill to expenses, purchases, or sales to see it here.': 'स्क्यान गरिएको बिल खर्च, खरिद वा बिक्रीमा सेभ गरेपछि यहाँ देखिन्छ।',
+  'Bill Number': 'बिल नम्बर',
+  'Bill Date': 'बिल मिति',
+  'Payment Method': 'भुक्तानी विधि',
+  'Total Amount': 'कुल रकम',
+  Size: 'आकार',
+  'No image attachment found.': 'तस्बिर संलग्न भेटिएन।',
+  'Show Extracted Raw OCR Text': 'निकालिएको कच्चा OCR टेक्स्ट देखाउनुहोस्',
+  'Pipeline Confidence': 'प्रक्रिया भरोसा',
+  Match: 'मिलान',
+  'Scan Source': 'स्क्यान स्रोत',
+  'Created At': 'बनाइएको समय',
+  Close: 'बन्द गर्नुहोस्',
+  Unknown: 'अज्ञात',
+  'N/A': 'लागू छैन',
+  camera: 'क्यामेरा',
+  manual: 'म्यानुअल',
   'Take a photo or paste bill text. Staff can review before saving.': 'फोटो लिनुहोस् वा बिलको टेक्स्ट राख्नुहोस्। सेभ गर्नुअघि कर्मचारीले जाँच गर्न सक्छन्।',
   'Take or upload photo': 'फोटो लिनुहोस् वा अपलोड गर्नुहोस्',
   'Works with restaurant bills, VAT bills, purchase invoices, and handwritten receipts.': 'रेस्टुरेन्ट बिल, VAT बिल, खरिद इनभ्वाइस र हातले लेखेको रसिदमा काम गर्छ।',
@@ -653,6 +715,20 @@ const uiTextNepali: Record<string, string> = {
   Return: 'फिर्ता',
   Correction: 'सुधार',
   Active: 'सक्रिय',
+  Paused: 'रोकिएको',
+  Approved: 'स्वीकृत',
+  Rejected: 'अस्वीकृत',
+  'Needs Review': 'जाँच चाहिन्छ',
+  Received: 'प्राप्त भयो',
+  ledger: 'लेजर',
+  account: 'खाता',
+  voucher: 'भौचर',
+  Format: 'ढाँचा',
+  Narration: 'विवरण',
+  'Document No.': 'कागजात नं.',
+  'Prepared by': 'तयार गर्ने',
+  'Approved by': 'स्वीकृत गर्ने',
+  'Received by': 'प्राप्त गर्ने',
   Invited: 'आमन्त्रित',
   Suspended: 'निलम्बित',
   Trial: 'ट्रायल',
@@ -957,6 +1033,11 @@ const uiTextNepali: Record<string, string> = {
   'Amount received': 'प्राप्त रकम',
   'Payment note': 'भुक्तानी नोट',
   'No contact': 'सम्पर्क छैन',
+  'No vendor': 'भेन्डर छैन',
+  'No note': 'नोट छैन',
+  'Unknown account': 'अज्ञात खाता',
+  'Not found': 'फेला परेन',
+  'No update yet': 'अहिलेसम्म अपडेट छैन',
   Invoice: 'इनभ्वाइस',
   'Buyer PAN': 'खरिदकर्ताको PAN',
   'Credit due date': 'उधारो तिर्ने मिति',
@@ -1061,8 +1142,109 @@ const uiTextNepali: Record<string, string> = {
   'Last month': 'अघिल्लो महिना',
   'This year': 'यो वर्ष',
   'Confidence': 'भरोसा',
+  'View Details': 'विवरण हेर्नुहोस्',
+  'Delete scan': 'स्क्यान मेटाउनुहोस्',
+  'Scanned Bill Detail View': 'स्क्यान गरिएको बिल विवरण',
+  'Detailed AI extraction report for': 'AI ले निकालेको विस्तृत रिपोर्ट',
+  'Uploaded Bill Document': 'अपलोड गरिएको बिल कागजात',
+  'Extracted Line Items': 'निकालिएका सामान लाइनहरू',
+  'AI business assistant': 'AI व्यवसाय सहायक',
+  'Speak or type simple tasks like add expense, add customer, scan bill, or add product milk liter.': 'खर्च थप, ग्राहक थप, बिल स्क्यान वा दूध लिटर सामान थप जस्ता सरल काम बोल्नुहोस् वा लेख्नुहोस्।',
+  'Example: add expense NPR 500 rent paid cash': 'उदाहरण: add expense NPR 500 rent paid cash',
+  'Say or type a business task first.': 'पहिले व्यवसायको काम लेख्नुहोस् वा बोल्नुहोस्।',
+  'Assistant could not complete this command.': 'सहायकले यो काम पूरा गर्न सकेन।',
+  'Speech is not supported in this browser. Type the command instead.': 'यो ब्राउजरमा आवाज समर्थित छैन। कृपया टाइप गर्नुहोस्।',
+  'Could not hear clearly. Please try again or type the command.': 'स्पष्ट सुनिएन। फेरि प्रयास गर्नुहोस् वा टाइप गर्नुहोस्।',
+  'Speak': 'बोल्नुहोस्',
+  'Stop': 'रोक्नुहोस्',
+  'Working...': 'काम हुँदैछ...',
+  'Understand': 'बुझ्नुहोस्',
+  'Open page': 'पेज खोल्नुहोस्',
+  'Confirm and save': 'पुष्टि गरी सेभ',
+  'business question': 'व्यवसाय प्रश्न',
+  'scan bill': 'बिल स्क्यान',
+  'add expense': 'खर्च थप',
+  'add customer': 'ग्राहक थप',
+  'add supplier': 'सप्लायर थप',
+  'add product': 'सामान थप',
+  'Executed': 'पूरा भयो',
+  'Answered': 'जवाफ दिइयो',
+  'Opening the bill scanner. Take a clear photo, then review the extracted fields.': 'बिल स्क्यानर खुल्दैछ। स्पष्ट फोटो लिनुहोस्, अनि निकालिएका विवरण जाँच गर्नुहोस्।',
+  'Opening the right page now.': 'ठीक पेज खुल्दैछ।',
+  'I prepared this action. Review it once, then confirm to save it.': 'मैले यो काम तयार गरें। एक पटक जाँच गरी सेभ गर्न पुष्टि गर्नुहोस्।',
+  'I can open the right page for this task and keep the user in control.': 'यो कामका लागि सही पेज खोल्न सक्छु, नियन्त्रण तपाईंमै रहन्छ।',
+  'I can answer this from saved workspace records.': 'सुरक्षित कार्यक्षेत्र रेकर्डबाट यसको जवाफ दिन सक्छु।',
   'Low confidence — please review this field': 'कम भरोसा — यो क्षेत्र जाँच गर्नुहोस्',
   'Math mismatch — totals do not add up': 'गणना मेल खाएन — कुल जोड मिलेन',
+
+  // Server/demo record values. These stay stored in English, but render in the
+  // selected workspace language so reports, search, and exports remain stable.
+  'RatoPanda Mart': 'रातोपान्डा मार्ट',
+  'Buffalo Milk': 'भैंसीको दूध',
+  'Basmati Rice 25kg': 'बासमती चामल २५ केजी',
+  'Instant Noodles': 'इन्स्ट्यान्ट चाउचाउ',
+  'CTC Tea 500g': 'CTC चिया ५०० ग्राम',
+  'Himal Dairy Suppliers': 'हिमाल डेरी सप्लायर्स',
+  'Everest Wholesale': 'एभरेस्ट होलसेल',
+  'Sita Kirana': 'सीता किराना',
+  'Hari Cafe': 'हरि क्याफे',
+  'Maya Store': 'माया स्टोर',
+  'Walk-in customer': 'वाक-इन ग्राहक',
+  'Shop cash': 'पसल नगद',
+  'Shop cash drawer': 'पसल नगद दराज',
+  'Nabil Bank': 'नबिल बैंक',
+  'Nabil Bank current': 'नबिल बैंक करेन्ट',
+  'eSewa wallet': 'ईसेवा वालेट',
+  Himal: 'हिमाल',
+  Everest: 'एभरेस्ट',
+  QuickBite: 'क्विकबाइट',
+  'Nepal Tea': 'नेपाल चिया',
+  Kavre: 'काभ्रे',
+  Kalanki: 'कलंकी',
+  Ramesh: 'रमेश',
+  Anita: 'अनिता',
+  'Cold shelf': 'चिसो शेल्फ',
+  'Aisle 1': 'आइल १',
+  'Aisle 2': 'आइल २',
+  Snacks: 'स्न्याक्स',
+  Fuel: 'इन्धन',
+  'Facebook boost': 'फेसबुक बुस्ट',
+  'Monthly shop rent': 'मासिक पसल भाडा',
+  'Weekend promotion': 'सप्ताहन्त प्रमोसन',
+  'Delivery bike': 'डेलिभरी बाइक',
+  'House owner': 'घरधनी',
+  'Monthly rent': 'मासिक भाडा',
+  'Fuel expense': 'इन्धन खर्च',
+  'Rice supplier payment': 'चामल सप्लायर भुक्तानी',
+  'Cash sale': 'नगद बिक्री',
+  'Milk purchase payable': 'दूध खरिद तिर्नुपर्ने',
+  'Morning delivery.': 'बिहान डेलिभरी।',
+  'Weekly bulk supply.': 'साप्ताहिक थोक आपूर्ति।',
+  'Supplier payable.': 'सप्लायरलाई तिर्नुपर्ने।',
+  'Buys dairy every morning.': 'हरेक बिहान डेरी सामान किन्छ।',
+  'Pays weekly.': 'साप्ताहिक भुक्तानी गर्छ।',
+  'Prefers FonePay.': 'FonePay रुचाउँछ।',
+  liter: 'लिटर',
+  ltr: 'लिटर',
+  L: 'लिटर',
+  bag: 'बोरा',
+  gram: 'ग्राम',
+  packet: 'प्याकेट',
+  pack: 'प्याक',
+  pkt: 'प्याकेट',
+  pcs: 'गोटा',
+  piece: 'गोटा',
+  pieces: 'गोटा',
+  kg: 'केजी',
+  gm: 'ग्राम',
+  tola: 'तोला',
+  aana: 'आना',
+  unit: 'इकाइ',
+  set: 'सेट',
+  meter: 'मिटर',
+  service: 'सेवा',
+  bottle: 'बोतल',
+  box: 'बक्स',
 };
 
 
@@ -1088,18 +1270,123 @@ export function languageName(language: AppLanguage) {
   return language === 'ne' ? 'नेपाली' : 'English';
 }
 
-export function uiText(language: AppLanguage | undefined, text: string) {
+const nepaliDigits: Record<string, string> = {
+  '0': '०',
+  '1': '१',
+  '2': '२',
+  '3': '३',
+  '4': '४',
+  '5': '५',
+  '6': '६',
+  '7': '७',
+  '8': '८',
+  '9': '९',
+};
+
+export function uiDigits(language: AppLanguage | undefined, value: string | number | null | undefined): string {
+  const text = String(value ?? '');
+  if ((language ?? 'en') !== 'ne') return text;
+  return text.replace(/[0-9]/g, (digit) => nepaliDigits[digit] ?? digit);
+}
+
+export function uiNumber(language: AppLanguage | undefined, value: number, options?: Intl.NumberFormatOptions): string {
+  const amount = Number.isFinite(value) ? value : 0;
+  const locale = (language ?? 'en') === 'ne' ? 'ne-NP' : 'en-US';
+  return new Intl.NumberFormat(locale, options).format(amount);
+}
+
+export function uiCurrency(language: AppLanguage | undefined, value: number, currency = 'NPR'): string {
+  const amount = Number.isFinite(value) ? value : 0;
+  if ((language ?? 'en') === 'ne') {
+    return `रु ${uiNumber(language, amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  }
+  return new Intl.NumberFormat('en-NP', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export function uiPercent(language: AppLanguage | undefined, value: number, fractionDigits = 0): string {
+  return `${uiNumber(language, value, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits })}%`;
+}
+
+export function uiDate(language: AppLanguage | undefined, value: string | null | undefined): string {
+  if (!value) return '';
+  return uiDigits(language, String(value).slice(0, 10));
+}
+
+export function uiDateTime(language: AppLanguage | undefined, value: string | null | undefined): string {
+  if (!value) return '';
+  return uiDigits(language, String(value).replace('T', ' '));
+}
+
+export function uiText(language: AppLanguage | undefined, text: string): string {
   if ((language ?? 'en') !== 'ne') return text;
   const direct = uiTextNepali[text];
   if (direct) return direct;
   const translatedValue = translatedEnglishValues[text];
   if (translatedValue) return translatedValue;
-  if (/^\d+ entries$/.test(text)) return text.replace('entries', 'प्रविष्टि');
-  if (/^\d+ files$/.test(text)) return text.replace('files', 'फाइल');
+  const quantityUnit = text.match(/^([+-]?[0-9.,]+)\s+([A-Za-z]+)$/);
+  if (quantityUnit) return `${uiDigits(language, quantityUnit[1])} ${uiText(language, quantityUnit[2])}`;
+  const countValue = text.match(/^([0-9]+)\s+(entries|files|accounts|categories|permissions|products)$/);
+  if (countValue) {
+    const countLabels: Record<string, string> = {
+      entries: 'प्रविष्टि',
+      files: 'फाइल',
+      accounts: 'खाता',
+      categories: 'श्रेणी',
+      permissions: 'अनुमति',
+      products: 'उत्पादन',
+    };
+    return `${uiDigits(language, countValue[1])} ${countLabels[countValue[2]]}`;
+  }
   for (const [pattern, replacement] of runtimePatterns) {
     if (pattern.test(text)) return text.replace(pattern, replacement);
   }
   return text;
+}
+
+export function uiRecordText(language: AppLanguage | undefined, text: string | null | undefined): string {
+  if (!text) return '';
+  const value = text.trim();
+  if (!value) return text;
+  if (/\s+x\s+/.test(value)) return uiProductList(language, value);
+  const labelValueMatch = value.match(/^([A-Za-z ]+):\s*(.+)$/);
+  if (labelValueMatch) {
+    return `${uiText(language, labelValueMatch[1].trim())}: ${uiRecordText(language, labelValueMatch[2].trim())}`;
+  }
+  const suffixMatch = value.match(/^(.+?)\s+(voucher|account)$/i);
+  if (suffixMatch) {
+    return `${uiRecordText(language, suffixMatch[1])} ${uiText(language, suffixMatch[2].toLowerCase())}`;
+  }
+  for (const separator of [' · ', ' - ']) {
+    if (value.includes(separator)) {
+      return value.split(separator).map((part) => uiRecordText(language, part)).join(separator);
+    }
+  }
+  return uiText(language, value);
+}
+
+export function uiProductList(language: AppLanguage | undefined, text: string | null | undefined): string {
+  if (!text) return '';
+  return text
+    .split(',')
+    .map((part) => {
+      const value = part.trim();
+      const match = value.match(/^(.+?)\s+x\s+([0-9.,]+)\s*([A-Za-z]+)?$/);
+      if (!match) return uiText(language, value);
+      const [, productName, quantity, unit = ''] = match;
+      const localizedUnit = unit ? ` ${uiText(language, unit.trim())}` : '';
+      return `${uiText(language, productName.trim())} x ${uiDigits(language, quantity)}${localizedUnit}`;
+    })
+    .join(', ');
+}
+
+export function uiQuantity(language: AppLanguage | undefined, value: number, unit?: string): string {
+  const rounded = Number.isInteger(value) ? value.toString() : value.toFixed(2).replace(/\.?0+$/, '');
+  return `${uiDigits(language, rounded)}${unit ? ` ${uiText(language, unit)}` : ''}`;
 }
 
 export function uiFormat(language: AppLanguage | undefined, template: string, values: Record<string, string | number>) {

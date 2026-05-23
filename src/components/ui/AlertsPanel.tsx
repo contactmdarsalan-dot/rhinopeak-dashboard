@@ -32,8 +32,8 @@ export function AlertsPanel() {
             severity: product.status === 'Out of Stock' ? 'critical' as const : 'warning' as const,
             message:
               product.status === 'Out of Stock'
-                ? uiFormat(settings.language, '{name}: out of stock. Record stock-in or reorder from {supplier}.', { name: product.name, supplier: product.supplier })
-                : uiFormat(settings.language, '{name}: {stock} units left, threshold {threshold}.', { name: product.name, stock: product.stock, threshold: product.reorderLevel }),
+                ? uiFormat(settings.language, '{name}: out of stock. Record stock-in or reorder from {supplier}.', { name: tx(product.name), supplier: tx(product.supplier) })
+                : uiFormat(settings.language, '{name}: {stock} units left, threshold {threshold}.', { name: tx(product.name), stock: product.stock, threshold: product.reorderLevel }),
           }))
       : [];
 

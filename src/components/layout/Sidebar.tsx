@@ -68,7 +68,7 @@ export function Sidebar() {
             width: 32,
             height: 32,
             borderRadius: 8,
-            background: 'linear-gradient(135deg, #6366f1, #22d3ee)',
+            background: 'linear-gradient(135deg, #7c3aed, #d946ef)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

@@ -1,10 +1,12 @@
 'use client';
+import { useState } from 'react';
 import { Check, CreditCard, Download, Sparkles } from 'lucide-react';
 import { Badge, Button, Panel, PanelHeader, ProgressBar, StatTile } from '@/components/ui/Primitives';
 import { uiFormat, uiText } from '@/lib/i18n';
 import { planLimits } from '@/lib/domain';
 import { useAppStore } from '@/lib/store';
 import { downloadCsv, formatCurrency } from '@/lib/utils';
+import { initiatePaymentInBackend } from '@/lib/api';
 
 const proFeatures = [
   'Unlimited sales, customers, and inventory products',
@@ -26,8 +28,58 @@ export function BillingPage() {
     settings,
     upgradePlan,
     downgradePlan,
+    session,
   } = useAppStore();
   const tx = (value: string) => uiText(settings.language, value);
+
+  const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
+
+  const handlePayment = async (gateway: string, cycle: string) => {
+    if (!session?.accessToken) return;
+    setPaymentLoading(gateway);
+    try {
+      if (gateway === 'Stripe') {
+        upgradePlan('Stripe', cycle as 'monthly' | 'annual');
+        return;
+      }
+      const amount = cycle === 'annual' ? 14990 : 1499;
+      const data = await initiatePaymentInBackend({
+        gateway: gateway.toLowerCase() as 'esewa' | 'khalti',
+        amount,
+        plan: 'pro',
+        billingCycle: cycle as 'monthly' | 'annual',
+      });
+      const payment = data.payment;
+
+      if (payment?.gateway === 'esewa' && payment?.form_url) {
+        // Create and submit eSewa form (POST redirect)
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = payment.form_url;
+        Object.entries(payment.fields as Record<string, string>).forEach(([key, val]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = val;
+          form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        form.submit();
+      } else if ((payment?.gateway === 'khalti' || payment?.gateway === 'esewa') && payment?.payment_url) {
+        window.location.href = payment.payment_url;
+      } else if (payment?.error) {
+        alert(`Payment error: ${payment.error}`);
+      } else {
+        // Fallback: optimistic local upgrade so UI reflects change
+        upgradePlan(gateway as 'Stripe' | 'eSewa' | 'Khalti', cycle as 'monthly' | 'annual');
+      }
+    } catch (err) {
+      console.error('Payment initiation failed:', err);
+      alert('Payment service unavailable. Please try again.');
+    } finally {
+      setPaymentLoading(null);
+    }
+  };
 
   const month = new Date().toISOString().slice(0, 7);
   const salesUsage = sales.filter((sale) => !sale.deletedAt && sale.date.startsWith(month)).length;
@@ -92,11 +144,27 @@ export function BillingPage() {
               ))}
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Button onClick={() => upgradePlan('Stripe', 'monthly')}>
-                <CreditCard size={14} /> Stripe Monthly
+              <Button
+                onClick={() => handlePayment('eSewa', 'monthly')}
+                disabled={paymentLoading === 'eSewa'}
+              >
+                {paymentLoading === 'eSewa' ? 'Redirecting...' : 'Pay with eSewa'}
               </Button>
-              <Button variant="secondary" onClick={() => upgradePlan('eSewa', 'monthly')}>eSewa</Button>
-              <Button variant="secondary" onClick={() => upgradePlan('Khalti', 'annual')}>Khalti Annual</Button>
+              <Button
+                variant="secondary"
+                onClick={() => handlePayment('Khalti', 'monthly')}
+                disabled={paymentLoading === 'Khalti'}
+              >
+                {paymentLoading === 'Khalti' ? 'Redirecting...' : 'Pay with Khalti'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => handlePayment('Stripe', 'annual')}
+                disabled={paymentLoading === 'Stripe'}
+              >
+                <CreditCard size={14} />
+                {paymentLoading === 'Stripe' ? 'Processing...' : 'Card (Annual)'}
+              </Button>
             </div>
           </div>
         </Panel>

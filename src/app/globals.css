@@ -14,9 +14,9 @@
     --text-primary: #f0f0ff;
     --text-secondary: #8888aa;
     --text-muted: #555577;
-    --accent: #6366f1;
-    --accent-glow: rgba(99, 102, 241, 0.15);
-    --accent-cyan: #22d3ee;
+    --accent: #7c3aed;
+    --accent-glow: rgba(124, 58, 237, 0.16);
+    --accent-cyan: #d946ef;
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
@@ -28,7 +28,7 @@
     --surface-sidebar-hover: oklch(30% 0.04 224);
     --border-strong: oklch(76% 0.024 82);
     --text-on-image: oklch(96% 0.01 82);
-    --accent-strong: oklch(37% 0.12 184);
+    --accent-strong: #5b21b6;
     --accent-contrast: oklch(98% 0.006 82);
     --accent-warm: oklch(83% 0.12 78);
     --success-bg: oklch(92% 0.048 158);
@@ -52,9 +52,9 @@
     --text-primary: #0a0a1a;
     --text-secondary: #555577;
     --text-muted: #9999bb;
-    --accent: #6366f1;
-    --accent-glow: rgba(99, 102, 241, 0.08);
-    --accent-cyan: #0891b2;
+    --accent: #7c3aed;
+    --accent-glow: rgba(124, 58, 237, 0.09);
+    --accent-cyan: #d946ef;
     --success: #059669;
     --warning: #d97706;
     --danger: #dc2626;
@@ -156,7 +156,7 @@
   }
 
   .accent-glow {
-    box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(99, 102, 241, 0.05);
+    box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(124, 58, 237, 0.06);
   }
 
   .card-hover {
@@ -208,7 +208,7 @@
 
   .btn-primary:hover {
     background: var(--accent-strong);
-    box-shadow: 0 10px 24px oklch(44% 0.11 184 / 0.18);
+    box-shadow: 0 10px 24px rgba(124, 58, 237, 0.18);
     transform: translateY(-1px);
   }
 
@@ -227,8 +227,8 @@
     --text-secondary: oklch(44% 0.03 224);
     --text-muted: oklch(58% 0.025 224);
     --border-subtle: oklch(86% 0.018 82);
-    --accent: oklch(44% 0.11 184);
-    --accent-strong: oklch(37% 0.12 184);
+    --accent: #7c3aed;
+    --accent-strong: #5b21b6;
     --surface-page: oklch(97.6% 0.006 82);
     --surface-raised: oklch(99.1% 0.006 82);
     --surface-muted: oklch(94.7% 0.012 82);
@@ -319,8 +319,8 @@
     display: grid;
     place-items: center;
     color: #fff;
-    background: linear-gradient(135deg, #6366f1, #22d3ee);
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+    background: linear-gradient(135deg, #7c3aed, #d946ef);
+    box-shadow: 0 0 12px rgba(124, 58, 237, 0.4);
     flex: 0 0 auto;
   }
 

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { ArrowLeft, Building2, CreditCard, Download, FileText, Package, Printer, ReceiptText, ShoppingCart, Users, WalletCards } from 'lucide-react';
 import { Badge, Panel, PanelHeader, StatTile } from '@/components/ui/Primitives';
-import { uiText } from '@/lib/i18n';
+import { uiProductList, uiRecordText, uiText } from '@/lib/i18n';
 import { getStockStatus, useAppStore } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
 
@@ -99,10 +99,16 @@ const buttonLinkStyle = {
   textDecoration: 'none',
 } as const;
 
+function detailValue(language: Parameters<typeof uiText>[0], value: ReactNode): ReactNode {
+  if (typeof value !== 'string') return value;
+  return /\s+x\s+/.test(value) ? uiProductList(language, value) : uiRecordText(language, value);
+}
+
 export function EntityDetailPage() {
   const params = useParams<{ entity: string; id: string }>();
   const state = useAppStore();
   const tx = (value: string) => uiText(state.settings.language, value);
+  const tv = (value: ReactNode) => detailValue(state.settings.language, value);
   const entity = normalizeEntity(slugParam(params.entity));
   const id = decodeURIComponent(slugParam(params.id));
   const detail = buildDetailModel(state, entity, id);
@@ -151,8 +157,8 @@ export function EntityDetailPage() {
               {detail.icon}
             </span>
             <div style={{ minWidth: 0 }}>
-              <p style={{ color: 'var(--text-primary)', fontSize: 22, lineHeight: 1.15, fontWeight: 900 }}>{detail.title}</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>{detail.subtitle}</p>
+              <p style={{ color: 'var(--text-primary)', fontSize: 22, lineHeight: 1.15, fontWeight: 900 }}>{tv(detail.title)}</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>{tv(detail.subtitle)}</p>
             </div>
           </div>
         </div>
@@ -160,7 +166,7 @@ export function EntityDetailPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
         {detail.stats.map((stat) => (
-          <StatTile key={stat.label} label={stat.label} value={stat.value} detail={stat.detail} tone={stat.tone} />
+          <StatTile key={stat.label} label={stat.label} value={tv(stat.value)} detail={stat.detail ? String(tv(stat.detail)) : undefined} tone={stat.tone} />
         ))}
       </div>
 
@@ -169,13 +175,13 @@ export function EntityDetailPage() {
           {detail.document && <DocumentPreview document={detail.document} />}
           {detail.sections.map((section) => (
             <Panel key={section.title}>
-              <PanelHeader title={section.title} />
+              <PanelHeader title={tx(section.title)} />
               <KeyValueGrid rows={section.rows} />
             </Panel>
           ))}
           {detail.tables?.map((table) => (
             <Panel key={table.title}>
-              <PanelHeader title={table.title} />
+              <PanelHeader title={tx(table.title)} />
               <div style={{ overflowX: 'auto' }}>
                 <table className="responsive-card-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
@@ -197,7 +203,7 @@ export function EntityDetailPage() {
                             data-card-primary={cellIndex === 0 ? 'true' : undefined}
                             style={{ padding: '11px 14px', color: cellIndex === 0 ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: 13, fontWeight: cellIndex === 0 ? 750 : 500 }}
                           >
-                            {cell}
+                            {tv(cell)}
                           </td>
                         ))}
                       </tr>
@@ -210,15 +216,15 @@ export function EntityDetailPage() {
         </div>
 
         <Panel>
-          <PanelHeader title={detail.timelineTitle ?? 'Activity'} subtitle="Recent linked records" />
+          <PanelHeader title={tx(detail.timelineTitle ?? 'Activity')} subtitle={tx('Recent linked records')} />
           <div style={{ padding: 16, display: 'grid', gap: 12 }}>
             {detail.timeline?.length ? detail.timeline.map((item) => (
               <div key={item.id} style={{ borderLeft: `2px solid ${timelineColor(item.tone)}`, paddingLeft: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                  <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 800 }}>{item.title}</p>
+                  <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 800 }}>{tv(item.title)}</p>
                   {item.amount && <strong style={{ color: timelineColor(item.tone), fontSize: 13, whiteSpace: 'nowrap' }}>{item.amount}</strong>}
                 </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{item.meta}</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{tv(item.meta)}</p>
               </div>
             )) : (
               <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{tx('No linked activity yet.')}</p>
@@ -231,12 +237,14 @@ export function EntityDetailPage() {
 }
 
 function KeyValueGrid({ rows }: { rows: DetailRow[] }) {
+  const language = useAppStore((state) => state.settings.language);
+  const tx = (value: string) => uiText(language, value);
   return (
     <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
       {rows.map((row) => (
         <div key={row.label} style={{ minWidth: 0 }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', fontWeight: 800 }}>{row.label}</p>
-          <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 650, marginTop: 3, overflowWrap: 'anywhere' }}>{row.value}</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', fontWeight: 800 }}>{tx(row.label)}</p>
+          <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 650, marginTop: 3, overflowWrap: 'anywhere' }}>{detailValue(language, row.value)}</p>
         </div>
       ))}
     </div>
@@ -256,14 +264,14 @@ function DocumentPreview({ document }: { document: DetailDocument }) {
   const printDocument = () => {
     const popup = window.open('', '_blank', 'width=900,height=720');
     if (!popup) return;
-    popup.document.write(makeDocumentHtml(document, template));
+    popup.document.write(makeDocumentHtml(document, template, language));
     popup.document.close();
     popup.focus();
     popup.print();
   };
 
   const downloadDocument = () => {
-    const blob = new Blob([makeDocumentHtml(document, template)], { type: 'text/html;charset=utf-8' });
+    const blob = new Blob([makeDocumentHtml(document, template, language)], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = window.document.createElement('a');
     anchor.href = url;
@@ -279,8 +287,8 @@ function DocumentPreview({ document }: { document: DetailDocument }) {
   return (
     <Panel>
       <PanelHeader
-        title="Bill template"
-        subtitle="Preview the record as a structured bill, receipt, or voucher."
+        title={tx('Bill template')}
+        subtitle={tx('Preview the record as a structured bill, receipt, or voucher.')}
         action={
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <button type="button" onClick={printDocument} style={documentActionStyle}>
@@ -382,8 +390,8 @@ function ProfessionalDocumentPaper({
             </div>
             <div style={{ minWidth: 0 }}>
               <p style={{ color: '#64748b', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0 }}>{tx(templateLabel)}</p>
-              <p style={{ fontSize: compact ? 19 : 28, fontWeight: 900, lineHeight: 1.08, color: '#0f172a', marginTop: 4 }}>{document.title}</p>
-              <p style={{ fontSize: 12, color: '#475569', marginTop: 7, lineHeight: 1.45 }}>{document.subtitle}</p>
+              <p style={{ fontSize: compact ? 19 : 28, fontWeight: 900, lineHeight: 1.08, color: '#0f172a', marginTop: 4 }}>{tx(document.title)}</p>
+              <p style={{ fontSize: 12, color: '#475569', marginTop: 7, lineHeight: 1.45 }}>{tx(document.subtitle)}</p>
             </div>
           </div>
           <div
@@ -426,8 +434,8 @@ function ProfessionalDocumentPaper({
             <tbody>
               {document.lines.map((line, index) => (
                 <tr key={`${line.description}-${index}`} style={{ background: index % 2 ? '#f8fafc' : '#fbfcfe' }}>
-                  <td style={{ padding: compact ? 9 : 12, color: '#0f172a', fontWeight: 800, borderTop: index ? '1px solid #e7edf4' : 'none' }}>{line.description}</td>
-                  <td style={{ padding: compact ? 9 : 12, color: '#334155', textAlign: 'right', borderTop: index ? '1px solid #e7edf4' : 'none' }}>{line.quantity}</td>
+                  <td style={{ padding: compact ? 9 : 12, color: '#0f172a', fontWeight: 800, borderTop: index ? '1px solid #e7edf4' : 'none' }}>{detailValue(language, line.description)}</td>
+                  <td style={{ padding: compact ? 9 : 12, color: '#334155', textAlign: 'right', borderTop: index ? '1px solid #e7edf4' : 'none' }}>{detailValue(language, line.quantity)}</td>
                   <td style={{ padding: compact ? 9 : 12, color: '#334155', textAlign: 'right', borderTop: index ? '1px solid #e7edf4' : 'none' }}>{line.rate}</td>
                   <td style={{ padding: compact ? 9 : 12, color: '#0f172a', textAlign: 'right', fontWeight: 900, borderTop: index ? '1px solid #e7edf4' : 'none' }}>{line.amount}</td>
                 </tr>
@@ -440,7 +448,7 @@ function ProfessionalDocumentPaper({
           <div style={{ color: '#475569', fontSize: 12, lineHeight: 1.55, borderTop: compact ? '1px solid #e2e8f0' : 'none', paddingTop: compact ? 12 : 0 }}>
             <p style={{ color: '#0f172a', fontWeight: 900, marginBottom: 5 }}>{tx(isVoucher ? 'Narration' : 'Notes')}</p>
             {(document.notes?.length ? document.notes : ['Thank you.']).map((note) => (
-              <p key={note}>{note}</p>
+              <p key={note}>{detailValue(language, note)}</p>
             ))}
           </div>
           <div style={{ border: '1px solid #d8e0ea', borderRadius: 10, overflow: 'hidden', background: '#f8fafc' }}>
@@ -485,7 +493,7 @@ function DocumentPartyBlock({ title, fields }: { title: string; fields: Document
       <div style={{ display: 'grid', gap: 5 }}>
         {fields.map((field) => (
           <p key={`${title}-${field.label}`} style={{ color: '#334155', fontSize: 12, lineHeight: 1.35 }}>
-            <strong style={{ color: '#111827' }}>{field.label}:</strong> {field.value}
+            <strong style={{ color: '#111827' }}>{uiText(language, field.label)}:</strong> {detailValue(language, field.value)}
           </p>
         ))}
       </div>
@@ -532,37 +540,38 @@ function formatDocumentDate(value: string) {
   return value;
 }
 
-function makeDocumentHtml(document: DetailDocument, template: 'a4' | 'thermal' | 'voucher') {
+function makeDocumentHtml(document: DetailDocument, template: 'a4' | 'thermal' | 'voucher', language: Parameters<typeof uiText>[0]) {
+  const tt = (value: string) => String(detailValue(language, value));
   const compact = template === 'thermal';
   const isVoucher = template === 'voucher';
   const pageWidth = compact ? '80mm' : '210mm';
   const label = template === 'thermal' ? 'Thermal Receipt' : template === 'voucher' ? 'Ledger Voucher' : 'A4 Bill';
   const displayDate = formatDocumentDate(document.date);
   const mark = documentInitials(document);
-  const from = renderHtmlFields(document.from);
-  const to = document.to ? renderHtmlFields(document.to) : '';
+  const from = renderHtmlFields(document.from, language);
+  const to = document.to ? renderHtmlFields(document.to, language) : '';
   const lines = document.lines.map((line) => `
     <tr>
-      <td>${escapeHtml(line.description)}</td>
-      <td class="right">${escapeHtml(line.quantity)}</td>
+      <td>${escapeHtml(tt(line.description))}</td>
+      <td class="right">${escapeHtml(tt(line.quantity))}</td>
       <td class="right">${escapeHtml(line.rate)}</td>
       <td class="right strong">${escapeHtml(line.amount)}</td>
     </tr>
   `).join('');
   const totals = document.totals.map((total) => `
     <div class="total ${total.strong ? 'grand' : ''}">
-      <span>${escapeHtml(total.label)}</span>
+      <span>${escapeHtml(uiText(language, total.label))}</span>
       <strong>${escapeHtml(total.value)}</strong>
     </div>
   `).join('');
-  const notes = (document.notes?.length ? document.notes : ['Thank you.']).map((note) => `<p>${escapeHtml(note)}</p>`).join('');
+  const notes = (document.notes?.length ? document.notes : ['Thank you.']).map((note) => `<p>${escapeHtml(tt(note))}</p>`).join('');
 
   return `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${escapeHtml(document.title)} - ${escapeHtml(document.documentNo)}</title>
+    <title>${escapeHtml(uiText(language, document.title))} - ${escapeHtml(document.documentNo)}</title>
     <style>
       * { box-sizing: border-box; }
       @page { size: ${compact ? '80mm auto' : 'A4'}; margin: ${compact ? '4mm' : '12mm'}; }
@@ -778,37 +787,37 @@ function makeDocumentHtml(document: DetailDocument, template: 'a4' | 'thermal' |
           <div class="brand">
             <div class="mark">${escapeHtml(mark)}</div>
             <div>
-              <p class="eyebrow">${escapeHtml(label)}</p>
-              <h1>${escapeHtml(document.title)}</h1>
-              <p class="subtitle">${escapeHtml(document.subtitle)}</p>
+              <p class="eyebrow">${escapeHtml(uiText(language, label))}</p>
+              <h1>${escapeHtml(uiText(language, document.title))}</h1>
+              <p class="subtitle">${escapeHtml(uiText(language, document.subtitle))}</p>
             </div>
           </div>
           <div class="doc-meta">
-            <div class="doc-meta-row"><span>Document No.</span><strong>${escapeHtml(document.documentNo)}</strong></div>
-            <div class="doc-meta-row"><span>Date</span><strong>${escapeHtml(displayDate)}</strong></div>
-            <div class="doc-meta-row"><span>Format</span><strong>${escapeHtml(label)}</strong></div>
+            <div class="doc-meta-row"><span>${escapeHtml(uiText(language, 'Document No.'))}</span><strong>${escapeHtml(document.documentNo)}</strong></div>
+            <div class="doc-meta-row"><span>${escapeHtml(uiText(language, 'Date'))}</span><strong>${escapeHtml(displayDate)}</strong></div>
+            <div class="doc-meta-row"><span>${escapeHtml(uiText(language, 'Format'))}</span><strong>${escapeHtml(uiText(language, label))}</strong></div>
           </div>
         </section>
         <section class="parties">
-          <div class="box"><p class="box-title">From</p>${from}</div>
-          ${to ? `<div class="box"><p class="box-title">To</p>${to}</div>` : ''}
+          <div class="box"><p class="box-title">${escapeHtml(uiText(language, 'From'))}</p>${from}</div>
+          ${to ? `<div class="box"><p class="box-title">${escapeHtml(uiText(language, 'To'))}</p>${to}</div>` : ''}
         </section>
         <section class="items">
           <table>
-            <thead><tr><th>Description</th><th class="right">Qty</th><th class="right">Rate</th><th class="right">Amount</th></tr></thead>
+            <thead><tr><th>${escapeHtml(uiText(language, 'Description'))}</th><th class="right">${escapeHtml(uiText(language, 'Qty'))}</th><th class="right">${escapeHtml(uiText(language, 'Rate'))}</th><th class="right">${escapeHtml(uiText(language, 'Amount'))}</th></tr></thead>
             <tbody>${lines}</tbody>
           </table>
         </section>
         <section class="settlement">
           <div class="notes">
-            <p class="notes-title">${isVoucher ? 'Narration' : 'Notes'}</p>
+            <p class="notes-title">${escapeHtml(uiText(language, isVoucher ? 'Narration' : 'Notes'))}</p>
             ${notes}
           </div>
           <div class="totals">${totals}</div>
         </section>
         <section class="signatures">
-          <div class="signature">Prepared by</div>
-          <div class="signature">${isVoucher ? 'Approved by' : 'Received by'}</div>
+          <div class="signature">${escapeHtml(uiText(language, 'Prepared by'))}</div>
+          <div class="signature">${escapeHtml(uiText(language, isVoucher ? 'Approved by' : 'Received by'))}</div>
         </section>
       </div>
     </main>
@@ -816,11 +825,12 @@ function makeDocumentHtml(document: DetailDocument, template: 'a4' | 'thermal' |
 </html>`;
 }
 
-function renderHtmlFields(fields: DocumentField[]) {
+function renderHtmlFields(fields: DocumentField[], language: Parameters<typeof uiText>[0]) {
+  const tt = (value: string) => String(detailValue(language, value));
   return fields.map((field) => `
     <div class="field">
-      <span class="field-label">${escapeHtml(field.label)}</span>
-      <span class="field-value">${escapeHtml(field.value)}</span>
+      <span class="field-label">${escapeHtml(uiText(language, field.label))}</span>
+      <span class="field-value">${escapeHtml(tt(field.value))}</span>
     </div>
   `).join('');
 }

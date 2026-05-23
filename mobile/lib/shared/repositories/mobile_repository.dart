@@ -72,6 +72,18 @@ class MobileRepository {
     return mobileBootstrap();
   }
 
+  Future<BootstrapData> updateInventoryCategory(String oldName, String newName) async {
+    final safeName = Uri.encodeComponent(oldName);
+    await _api.patch('/mobile/inventory/categories/$safeName', data: {'name': newName});
+    return mobileBootstrap();
+  }
+
+  Future<BootstrapData> deleteInventoryCategory(String name) async {
+    final safeName = Uri.encodeComponent(name);
+    await _api.delete('/mobile/inventory/categories/$safeName');
+    return mobileBootstrap();
+  }
+
   Future<BootstrapData> recordStockMovement(
       Map<String, dynamic> movement) async {
     final data = await _api.post('/mobile/inventory/movements', data: movement);

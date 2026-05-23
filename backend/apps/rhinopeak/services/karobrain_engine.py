@@ -317,17 +317,20 @@ def _clean_tesseract_output(text: str) -> str:
 # ─────────────────────────────────────────────────────────
 
 _GEMINI_PROMPT = """\
-You are KaroBrain™, an expert OCR system built for Nepali and English business bills.
-Extract ALL text from this bill/receipt image exactly as written.
+You are KaroBrain™, an expert OCR system for Nepali and English business bills and receipts.
+Extract ALL visible text from this bill/receipt image EXACTLY as written.
 
-IMPORTANT rules:
+CRITICAL rules:
+- Extract EVERY line of text visible in the image
 - Preserve Nepali (Devanagari) script exactly as printed
-- Extract ALL numbers, dates, amounts accurately
-- For jeweller bills: extract item name, weight (tola/gram/aana), rate per tola, total amount (रकम)
-- For Bikram Sambat dates (e.g. 2081/8/6): extract as-is
-- For bill number (बिल नं): extract the number
-- For advance paid (पेस्की): extract the amount
-- Output ONLY the raw extracted text. No commentary. No markdown. No headings.
+- Extract ALL numbers, dates, amounts, and product names ACCURATELY
+- For jeweller/gold shop bills: extract item name, weight (tola/gram/aana/रती), rate per unit, total amount (रकम/जम्मा)
+- For Bikram Sambat dates (e.g. 2081/8/6 or २०८१): extract as-is  
+- For bill number (बिल नं / Invoice No / Receipt No): extract the number
+- For advance paid (पेस्की / Advance): extract the amount
+- For store name, VAT/PAN number: extract exactly
+- For each line item: extract name, quantity, unit price, and total
+- Output ONLY the raw extracted text, preserving line structure. No commentary. No markdown.
 """
 
 
@@ -355,7 +358,7 @@ def _gemini_ocr(image_bytes: bytes, mime_type: str = "image/jpeg") -> str:
         }).encode("utf-8")
 
         req = urllib.request.Request(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
             data=payload,
             headers={"Content-Type": "application/json"},
             method="POST",
@@ -382,30 +385,45 @@ def _score_ocr_output(text: str) -> float:
     - Numeric content (bills have lots of numbers)
     - Devanagari presence (for Nepali bills)
     - Bill structure keywords present
+    - Line count (multi-line = structured bill)
     """
-    if not text or len(text) < 20:
+    if not text or len(text) < 10:
         return 0.0
 
     words = text.split()
     word_count = len(words)
+    line_count = len([l for l in text.split('\n') if l.strip()])
     has_numbers = bool(re.search(r"\d{2,}", text))
     has_devanagari = bool(re.search(r"[\u0900-\u097F]{3,}", text))
-    has_date = bool(re.search(r"\d{4}[/-]\d{1,2}[/-]\d{1,2}", text))
+    has_date = bool(re.search(r"\d{4}[/-]\d{1,2}[/-]\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{4}", text))
     has_amount = bool(re.search(r"\d{3,}(?:\.\d{2})?", text))
+    has_bill_keywords = bool(re.search(
+        r"(total|amount|invoice|receipt|bill|subtotal|tax|vat|pan|रकम|जम्मा|बिल|कुल|भ्याट)",
+        text, re.IGNORECASE
+    ))
+    has_items = bool(re.search(r"x\s*\d|\d+\s*pcs|qty|quantity", text, re.IGNORECASE))
 
     score = 0.0
-    if word_count >= 5:
-        score += 0.2
-    if word_count >= 15:
-        score += 0.2
-    if has_numbers:
-        score += 0.2
-    if has_devanagari:
+    if word_count >= 3:
+        score += 0.1
+    if word_count >= 10:
         score += 0.15
+    if word_count >= 20:
+        score += 0.1
+    if line_count >= 4:
+        score += 0.1
+    if has_numbers:
+        score += 0.15
+    if has_devanagari:
+        score += 0.1
     if has_date:
         score += 0.1
     if has_amount:
-        score += 0.15
+        score += 0.1
+    if has_bill_keywords:
+        score += 0.1
+    if has_items:
+        score += 0.05
 
     return min(score, 1.0)
 
@@ -466,8 +484,19 @@ def karobrain_extract(image_data_url: str) -> str:
 
     print(f"[KaroBrain™] Local OCR score: {combined_score:.2f} (tesseract={local_conf:.2f}, content={content_score:.2f})")
 
+    # If Tesseract is not installed (local_conf=0), immediately use Gemini if available
+    if local_conf == 0.0 and not local_text and GEMINI_API_KEY:
+        print(f"[KaroBrain™] Tesseract unavailable. Using Gemini Vision directly...")
+        gemini_text = _gemini_ocr(image_bytes, mime_type)
+        if gemini_text:
+            gemini_score = _score_ocr_output(gemini_text)
+            print(f"[KaroBrain™] Gemini Vision extraction successful (score={gemini_score:.2f}).")
+            return gemini_text
+        print("[KaroBrain™] Gemini also failed. Returning empty.")
+        return ""
+
     # If local OCR is good enough, use it (saves API calls)
-    if combined_score >= MIN_CONFIDENCE and local_text:
+    if combined_score >= MIN_CONFIDENCE and local_text and len(local_text.strip()) > 30:
         print("[KaroBrain™] Local OCR quality sufficient. Skipping cloud API.")
         return local_text
 
@@ -476,9 +505,12 @@ def karobrain_extract(image_data_url: str) -> str:
         print(f"[KaroBrain™] Low confidence ({combined_score:.2f}). Escalating to Gemini Vision...")
         gemini_text = _gemini_ocr(image_bytes, mime_type)
         if gemini_text:
-            print("[KaroBrain™] Gemini Vision extraction successful.")
-            return gemini_text
-        print("[KaroBrain™] Gemini failed. Falling back to local OCR result.")
+            gemini_score = _score_ocr_output(gemini_text)
+            print(f"[KaroBrain™] Gemini Vision extraction successful (score={gemini_score:.2f}).")
+            # Use Gemini if it scored better
+            if gemini_score >= content_score or not local_text:
+                return gemini_text
+        print("[KaroBrain™] Gemini failed or local OCR was better. Using local result.")
 
     # Return local result even if low confidence (better than nothing)
     return local_text

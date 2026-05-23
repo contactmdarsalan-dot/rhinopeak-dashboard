@@ -69,9 +69,41 @@ class ApiClient {
         }
       }
       final responseData = error.response?.data;
-      final message = responseData is Map<String, dynamic>
-          ? responseData['error']?.toString() ?? 'Request failed.'
-          : error.message ?? 'Request failed.';
+      String message = 'Request failed.';
+      if (responseData is Map) {
+        if (responseData.containsKey('error')) {
+          message = responseData['error']?.toString() ?? 'Request failed.';
+        } else if (responseData.containsKey('detail')) {
+          message = responseData['detail']?.toString() ?? 'Request failed.';
+        } else if (responseData.containsKey('message')) {
+          message = responseData['message']?.toString() ?? 'Request failed.';
+        } else {
+          final parts = <String>[];
+          responseData.forEach((key, val) {
+            if (val is List) {
+              parts.add('$key: ${val.join(", ")}');
+            } else if (val != null) {
+              parts.add('$key: $val');
+            }
+          });
+          if (parts.isNotEmpty) {
+            message = parts.join('\n');
+          } else {
+            message = 'Request failed.';
+          }
+        }
+      } else if (responseData is String) {
+        final trimmed = responseData.trim();
+        if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
+          message = error.response?.statusMessage ?? error.message ?? 'Request failed.';
+        } else if (trimmed.isNotEmpty) {
+          message = trimmed;
+        } else {
+          message = error.message ?? 'Request failed.';
+        }
+      } else {
+        message = error.message ?? 'Request failed.';
+      }
       throw ApiException(message, statusCode: error.response?.statusCode);
     }
   }

@@ -160,7 +160,7 @@ class _SaleCard extends ConsumerWidget {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => ApiDetailScreen(
-              title: sale.customer,
+              title: trValue(ref, sale.customer),
               entity: 'sales',
               id: sale.id,
             ),
@@ -192,7 +192,7 @@ class _SaleCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      sale.customer,
+                      trValue(ref, sale.customer),
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
@@ -200,7 +200,7 @@ class _SaleCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      sale.products,
+                      trProductList(ref, sale.products),
                       style: TextStyle(
                         fontSize: 12.5,
                         color:
@@ -230,7 +230,7 @@ class _SaleCard extends ConsumerWidget {
                       context,
                       ref,
                       entity: 'sales',
-                      title: sale.customer,
+                      title: trValue(ref, sale.customer),
                       initial: _saleRecord(sale),
                     );
                   }
@@ -268,9 +268,9 @@ class _SaleCard extends ConsumerWidget {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _StatusTag(label: sale.payment, type: _TagType.payment),
+              _StatusTag(label: trValue(ref, sale.payment), type: _TagType.payment),
               _StatusTag(
-                label: sale.status,
+                label: trValue(ref, sale.status),
                 type: sale.status == 'Completed'
                     ? _TagType.success
                     : _TagType.danger,
@@ -400,7 +400,7 @@ Future<void> _confirmDeleteSale(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('Delete sale?'),
-      content: Text('Delete sale for "${sale.customer}"? Stock will be adjusted by the backend.'),
+      content: Text('${tr(ref, 'deleteRecordBody')}\n\n${trValue(ref, sale.customer)}'),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),

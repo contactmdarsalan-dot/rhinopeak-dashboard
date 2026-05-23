@@ -9,7 +9,7 @@ import { translateCustomerSegment, uiText } from '@/lib/i18n';
 import { useAppStore } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
 
-const pieColors = ['#6366f1', '#22d3ee', '#10b981', '#f59e0b', '#ef4444'];
+const pieColors = ['#7c3aed', '#d946ef', '#22d3ee', '#10b981', '#f59e0b'];
 
 export function AnalyticsPage() {
   const { sales, customers, inventory, plan, settings, setActivePage } = useAppStore();
@@ -138,7 +138,7 @@ export function AnalyticsPage() {
           <option value="90">{tx('Last 90 days')}</option>
         </select>
         <select value={category} onChange={(event) => setCategory(event.target.value)} style={{ ...controlStyle, width: 170 }}>
-          {categories.map((item) => <option key={item} value={item}>{item === 'All' ? tx('All') : item}</option>)}
+          {categories.map((item) => <option key={item} value={item}>{item === 'All' ? tx('All') : tx(item)}</option>)}
         </select>
         <select value={segment} onChange={(event) => setSegment(event.target.value)} style={{ ...controlStyle, width: 170 }}>
           {segments.map((item) => <option key={item} value={item}>{translateCustomerSegment(settings.language, item)}</option>)}
@@ -171,7 +171,7 @@ export function AnalyticsPage() {
                 {productRows.map((product, index) => (
                   <tr key={product.name} style={{ borderBottom: index < productRows.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
                     <td data-label={tx('Rank')} data-card-primary="true" style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12 }}>#{index + 1}</td>
-                    <td data-label={tx('Product')} style={{ padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{product.name}</td>
+                    <td data-label={tx('Product')} style={{ padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{tx(product.name)}</td>
                     <td data-label={tx('Revenue')} style={{ padding: '10px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{formatCurrency(product.revenue)}</td>
                     <td data-label={tx('Units')} style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: 13 }}>{product.units}</td>
                     <td data-label={tx('Margin')} style={{ padding: '10px 14px' }}><Badge tone={product.margin > 35 ? 'success' : 'warning'}>{product.margin.toFixed(1)}%</Badge></td>

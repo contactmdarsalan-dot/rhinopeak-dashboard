@@ -180,7 +180,9 @@ class AppController extends StateNotifier<AppState> {
         language: bootstrap.settings.language,
         clearError: true,
       );
-    } catch (error) {
+    } catch (error, stackTrace) {
+      debugPrint('REFRESH BOOTSTRAP ERROR: $error');
+      debugPrint('STACK TRACE: $stackTrace');
       state = state.copyWith(initializing: false, error: error.toString());
     }
   }
@@ -273,6 +275,28 @@ class AppController extends StateNotifier<AppState> {
   Future<void> createInventoryCategory(String name) {
     return _withLoading(() async {
       final next = await _mobileRepository.createInventoryCategory(name);
+      await _saveBootstrap(next);
+      state = state.copyWith(
+          bootstrap: next,
+          notice: AppStrings.tr(state.language, 'saved'),
+          clearError: true);
+    });
+  }
+
+  Future<void> updateInventoryCategory(String oldName, String newName) {
+    return _withLoading(() async {
+      final next = await _mobileRepository.updateInventoryCategory(oldName, newName);
+      await _saveBootstrap(next);
+      state = state.copyWith(
+          bootstrap: next,
+          notice: AppStrings.tr(state.language, 'saved'),
+          clearError: true);
+    });
+  }
+
+  Future<void> deleteInventoryCategory(String name) {
+    return _withLoading(() async {
+      final next = await _mobileRepository.deleteInventoryCategory(name);
       await _saveBootstrap(next);
       state = state.copyWith(
           bootstrap: next,
@@ -417,7 +441,9 @@ class AppController extends StateNotifier<AppState> {
     state = state.copyWith(loading: true, clearError: true, clearNotice: true);
     try {
       await action();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      debugPrint('WITH LOADING ERROR: $error');
+      debugPrint('STACK TRACE: $stackTrace');
       state = state.copyWith(error: error.toString());
     } finally {
       state = state.copyWith(loading: false);

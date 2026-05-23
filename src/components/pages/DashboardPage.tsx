@@ -1,11 +1,12 @@
 'use client';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DollarSign, ShoppingBag, TrendingUp, UserPlus, BrainCircuit } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { RevenueChart, TopProductsChart, type RevenuePoint, type TopProductPoint } from '@/components/ui/Charts';
 import { RecentSalesTable } from '@/components/ui/RecentSalesTable';
 import { AlertsPanel } from '@/components/ui/AlertsPanel';
+import { OnboardingWizard } from '@/components/ui/OnboardingWizard';
 import { Badge, Panel, PanelHeader, ProgressBar, StatTile } from '@/components/ui/Primitives';
 import { uiFormat, uiText } from '@/lib/i18n';
 import { planLimits } from '@/lib/domain';
@@ -26,6 +27,16 @@ export function DashboardPage() {
     setActivePage,
   } = useAppStore();
   const tx = (value: string) => uiText(settings.language, value);
+
+  // Show onboarding wizard once for brand-new workspaces (no data yet)
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  useEffect(() => {
+    const done = typeof window !== 'undefined' && localStorage.getItem('rhinopeak_onboarding_done');
+    if (!done && sales.length === 0 && inventory.length === 0) {
+      setShowOnboarding(true);
+    }
+  }, []); // intentionally run only once on mount
+
 
   const activeSales = useMemo(() => sales.filter((sale) => !sale.deletedAt), [sales]);
   const completedSales = useMemo(() => activeSales.filter((sale) => sale.status === 'Completed'), [activeSales]);
@@ -91,6 +102,14 @@ export function DashboardPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {showOnboarding && (
+        <OnboardingWizard
+          onClose={() => {
+            setShowOnboarding(false);
+            localStorage.setItem('rhinopeak_onboarding_done', '1');
+          }}
+        />
+      )}
       <div
         style={{
           display: 'grid',
@@ -114,11 +133,9 @@ export function DashboardPage() {
       {/* Quick Action: AI Bill Scanner Shortcut */}
       <Panel style={{
         padding: 16,
-        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(34, 211, 238, 0.08) 100%)',
-        border: '1px solid rgba(15, 118, 110, 0.25)',
-        boxShadow: '0 8px 32px 0 rgba(15, 118, 110, 0.08)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: 14,
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        borderRadius: 10,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -126,13 +143,12 @@ export function DashboardPage() {
               width: 40,
               height: 40,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #0f766e, #2dd4bf)',
+              background: 'var(--accent-glow)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(45, 212, 191, 0.3)',
             }}>
-              <BrainCircuit size={20} color="#fff" />
+              <BrainCircuit size={20} color="var(--accent)" />
             </div>
             <div>
               <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 15, margin: 0 }}>
@@ -148,13 +164,12 @@ export function DashboardPage() {
             style={{
               border: 'none',
               borderRadius: 8,
-              background: 'linear-gradient(90deg, #0f766e, #14b8a6)',
-              color: '#fff',
+              background: 'var(--accent)',
+              color: 'var(--accent-contrast)',
               padding: '10px 18px',
               fontSize: 13,
               fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(15, 118, 110, 0.25)',
               display: 'flex',
               alignItems: 'center',
               gap: 6,

@@ -6,6 +6,8 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/rhino_models.dart';
 import '../../../shared/widgets/rp_widgets.dart';
+import '../../home/presentation/assistant_chat_sheet.dart';
+import '../../quick_add/presentation/scan_bill_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -36,6 +38,8 @@ class DashboardScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _WelcomeCard(bootstrap: bootstrap),
+          const SizedBox(height: 20),
+          const _DashboardActions(),
           const SizedBox(height: 20),
           _StatGrid(bootstrap: bootstrap),
           const SizedBox(height: 20),
@@ -153,6 +157,162 @@ class _WelcomeCard extends ConsumerWidget {
   }
 }
 
+class _DashboardActions extends ConsumerWidget {
+  const _DashboardActions();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return RpCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tr(ref, 'dailyOperations'),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _DashboardActionButton(
+                  icon: Icons.document_scanner_outlined,
+                  title: tr(ref, 'scanBill'),
+                  subtitle: tr(ref, 'scanBillDashboardHelp'),
+                  primary: true,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ScanBillScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DashboardActionButton(
+                  icon: Icons.auto_awesome_rounded,
+                  title: tr(ref, 'aiAssistant'),
+                  subtitle: tr(ref, 'aiAssistantHelp'),
+                  primary: false,
+                  onTap: () {
+                    showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      useSafeArea: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const AssistantChatSheet(),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: isDark ? 0.12 : 0.07),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: scheme.primary.withValues(alpha: isDark ? 0.22 : 0.14),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.verified_user_outlined, size: 16, color: scheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    tr(ref, 'reviewAndSave'),
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardActionButton extends StatelessWidget {
+  const _DashboardActionButton({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.primary,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool primary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final foreground = primary ? scheme.onPrimary : scheme.primary;
+    final background = primary ? scheme.primary : scheme.primary.withValues(alpha: 0.08);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        minHeight: 122,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: primary ? scheme.primary : scheme.primary.withValues(alpha: 0.18),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: foreground, size: 22),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: foreground,
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: foreground.withValues(alpha: primary ? 0.78 : 0.72),
+                height: 1.25,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StatGrid extends ConsumerWidget {
   const _StatGrid({required this.bootstrap});
 
@@ -241,7 +401,7 @@ class _RecentSales extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        sale.customer,
+                        trValue(ref, sale.customer),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -254,7 +414,7 @@ class _RecentSales extends ConsumerWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              sale.products,
+                              trProductList(ref, sale.products),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -266,7 +426,7 @@ class _RecentSales extends ConsumerWidget {
                           const SizedBox(width: 8),
                           // Payment capsule badge
                           RpTag(
-                            label: sale.payment,
+                            label: trValue(ref, sale.payment),
                             color: sale.payment == 'Cash'
                                 ? AppTheme.success
                                 : sale.payment == 'Credit'
@@ -337,7 +497,7 @@ class _LowStock extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        product.name,
+                        trValue(ref, product.name),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -347,7 +507,7 @@ class _LowStock extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${product.category} - ${product.supplier}',
+                        '${trValue(ref, product.category)} - ${trValue(ref, product.supplier)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -363,7 +523,7 @@ class _LowStock extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${compactNumber(product.stock)} ${product.unit}',
+                      trQuantity(ref, product.stock, product.unit),
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 15,
@@ -372,7 +532,7 @@ class _LowStock extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Limit: ${compactNumber(product.reorderLevel)}',
+                      '${tr(ref, 'limit')}: ${trQuantity(ref, product.reorderLevel, product.unit)}',
                       style: TextStyle(
                         fontSize: 10.5,
                         color: scheme.onSurfaceVariant.withValues(alpha: 0.6),

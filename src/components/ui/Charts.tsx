@@ -17,8 +17,8 @@ import { useAppStore } from '@/lib/store';
 import { formatCompactCurrency, formatCurrency } from '@/lib/utils';
 import { Panel } from '@/components/ui/Primitives';
 
-const ACCENT = '#6366f1';
-const CYAN = '#22d3ee';
+const ACCENT = '#7c3aed';
+const CYAN = '#d946ef';
 const BORDER = '#232333';
 
 export interface RevenuePoint {
@@ -147,6 +147,10 @@ export function TopProductsChart({
 }) {
   const language = useAppStore((state) => state.settings.language);
   const tx = (value: string) => uiText(language, value);
+  const localizedData = data.map((item) => ({
+    ...item,
+    name: tx(item.name),
+  }));
 
   return (
     <Panel style={{ padding: '20px 24px', minHeight: 300 }}>
@@ -155,7 +159,7 @@ export function TopProductsChart({
         <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{tx(subtitle)}</p>
       </div>
       <ResponsiveContainer width="100%" height={218}>
-        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 10, bottom: 0 }}>
+        <BarChart data={localizedData} layout="vertical" margin={{ top: 0, right: 16, left: 10, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={BORDER} horizontal={false} />
           <XAxis type="number" tick={{ fill: '#777794', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(value) => formatCompactCurrency(Number(value)).replace('NPR ', '')} />
           <YAxis dataKey="name" type="category" tick={{ fill: '#aaaac0', fontSize: 11 }} tickLine={false} axisLine={false} width={122} />
@@ -171,8 +175,8 @@ export function TopProductsChart({
             itemStyle={{ color: ACCENT }}
           />
           <Bar dataKey="revenue" radius={[0, 4, 4, 0]} maxBarSize={18}>
-            {data.map((_, index) => (
-              <Cell key={index} fill={`rgba(99,102,241,${Math.max(0.25, 1 - index * 0.13)})`} />
+            {localizedData.map((_, index) => (
+              <Cell key={index} fill={`rgba(124,58,237,${Math.max(0.25, 1 - index * 0.13)})`} />
             ))}
           </Bar>
         </BarChart>
