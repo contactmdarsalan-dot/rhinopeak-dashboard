@@ -1,10 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SessionTokens {
-  const SessionTokens({
-    required this.accessToken,
-    required this.refreshToken,
-  });
+  const SessionTokens({required this.accessToken, required this.refreshToken});
 
   final String accessToken;
   final String refreshToken;
@@ -21,7 +18,7 @@ class SessionTokens {
 
 class TokenStore {
   TokenStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 

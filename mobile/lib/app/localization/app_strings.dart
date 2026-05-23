@@ -19,7 +19,8 @@ class AppStrings {
     final direct = tr(language, trimmed);
     if (direct != trimmed) return direct;
     final lower = trimmed.toLowerCase();
-    final lowerValue = _strings[language.code]?[lower] ?? _strings['en']?[lower];
+    final lowerValue =
+        _strings[language.code]?[lower] ?? _strings['en']?[lower];
     return lowerValue ?? value;
   }
 
@@ -84,7 +85,8 @@ class AppStrings {
       'confirmNewProduct': 'Confirm new product',
       'confirmAndSave': 'Confirm & save',
       'initialStock': 'Initial stock',
-      'scanBillDashboardHelp': 'Capture supplier bills, VAT invoices, or receipts and save them after review.',
+      'scanBillDashboardHelp':
+          'Capture supplier bills, VAT invoices, or receipts and save them after review.',
       'openAssistant': 'Open assistant',
       'reviewAndSave': 'Review and save',
       'customers': 'Customers',
@@ -113,9 +115,11 @@ class AppStrings {
       'runningOcr': 'Running character OCR extraction',
       'llmStructuring': 'LLM Structuring (Custom PyTorch GPT)',
       'validatingRules': 'Applying mathematical validation rules',
-      'selectTemplateToSimulate': 'Select a receipt template to simulate mobile capture',
+      'selectTemplateToSimulate':
+          'Select a receipt template to simulate mobile capture',
       'simulatedView': 'Simulated Camera Viewfinder',
-      'customGptNotes': 'Parsed & structured by custom character-level GPT model.',
+      'customGptNotes':
+          'Parsed & structured by custom character-level GPT model.',
       'addProduct': 'Add product',
       'addCategory': 'Add Category',
       'customerName': 'Customer name',
@@ -402,7 +406,8 @@ class AppStrings {
       'limit': 'सीमा',
       'assistant': 'सहायक',
       'aiAssistant': 'AI सहायक',
-      'aiAssistantHelp': 'व्यवसायका प्रश्न सोध्नुहोस् वा सुरक्षित ड्राफ्ट काम बनाउनुहोस्।',
+      'aiAssistantHelp':
+          'व्यवसायका प्रश्न सोध्नुहोस् वा सुरक्षित ड्राफ्ट काम बनाउनुहोस्।',
       'assistantWelcome':
           'नमस्ते! म तपाईंको RhinoPeak AI सहायक हुँ। बिक्री, खर्च, स्टक, ग्राहक बाँकी सोध्नुहोस् वा सुरक्षित ड्राफ्ट काम बनाउनुहोस्।',
       'assistantInputHint': 'प्रश्न वा काम लेख्नुहोस्...',
@@ -429,7 +434,8 @@ class AppStrings {
       'confirmNewProduct': 'नयाँ सामान पुष्टि',
       'confirmAndSave': 'पुष्टि गरी सेभ',
       'initialStock': 'सुरुको स्टक',
-      'scanBillDashboardHelp': 'सप्लायर बिल, VAT इनभ्वाइस वा रसिद स्क्यान गरेर जाँचपछि सेभ गर्नुहोस्।',
+      'scanBillDashboardHelp':
+          'सप्लायर बिल, VAT इनभ्वाइस वा रसिद स्क्यान गरेर जाँचपछि सेभ गर्नुहोस्।',
       'openAssistant': 'सहायक खोल्नुहोस्',
       'reviewAndSave': 'जाँच गरी सेभ',
       'customers': 'ग्राहक',
@@ -438,7 +444,8 @@ class AppStrings {
       'addExpense': 'खर्च थप्नुहोस्',
       'addStock': 'स्टक थप्नुहोस्',
       'scanBill': 'बिल स्क्यान',
-      'scanBillHelp': 'बिलको टेक्स्ट राख्नुहोस्, विवरण जाँच गर्नुहोस्, अनि रेकर्डमा सेभ गर्नुहोस्।',
+      'scanBillHelp':
+          'बिलको टेक्स्ट राख्नुहोस्, विवरण जाँच गर्नुहोस्, अनि रेकर्डमा सेभ गर्नुहोस्।',
       'ocrText': 'बिल टेक्स्ट',
       'parseBill': 'बिल पढ्नुहोस्',
       'reviewBill': 'बिल जाँच',
@@ -458,7 +465,8 @@ class AppStrings {
       'runningOcr': 'अक्षरहरू (OCR) निकाल्ने काम हुँदैछ',
       'llmStructuring': 'LLM संरचना (कस्टम PyTorch GPT)',
       'validatingRules': 'गणितीय प्रमाणीकरण नियमहरू लागू गरिँदैछ',
-      'selectTemplateToSimulate': 'मोबाइल स्क्यान सिमुलेट गर्न रसिद नमुना छान्नुहोस्',
+      'selectTemplateToSimulate':
+          'मोबाइल स्क्यान सिमुलेट गर्न रसिद नमुना छान्नुहोस्',
       'simulatedView': 'सिमुलेटेड क्यामेरा भ्युफाइन्डर',
       'customGptNotes': 'कस्टम क्यारेक्टर-स्तर GPT मोडेल द्वारा संरचित।',
       'addProduct': 'सामान थप्नुहोस्',

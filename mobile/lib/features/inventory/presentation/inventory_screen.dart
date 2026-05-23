@@ -26,10 +26,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     final products = _search.isEmpty
         ? allProducts
         : allProducts
-            .where((p) =>
-                p.name.toLowerCase().contains(_search.toLowerCase()) ||
-                p.category.toLowerCase().contains(_search.toLowerCase()))
-            .toList();
+              .where(
+                (p) =>
+                    p.name.toLowerCase().contains(_search.toLowerCase()) ||
+                    p.category.toLowerCase().contains(_search.toLowerCase()),
+              )
+              .toList();
 
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -74,8 +76,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               color: colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: colorScheme.outlineVariant
-                    .withValues(alpha: isDark ? 0.2 : 0.45),
+                color: colorScheme.outlineVariant.withValues(
+                  alpha: isDark ? 0.2 : 0.45,
+                ),
                 width: 1,
               ),
             ),
@@ -83,22 +86,29 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               onChanged: (v) => setState(() => _search = v),
               decoration: InputDecoration(
                 hintText: '${tr(ref, 'inventory')}...',
-                prefixIcon: Icon(Icons.search_rounded,
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                ),
                 suffixIcon: _search.isNotEmpty
                     ? IconButton(
                         onPressed: () => setState(() => _search = ''),
-                        icon: Icon(Icons.close_rounded,
-                            size: 18,
-                            color: colorScheme.onSurfaceVariant
-                                .withValues(alpha: 0.6)),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
                       )
                     : null,
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
               ),
             ),
           ),
@@ -144,12 +154,14 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: colorScheme.primary
-                                  .withValues(alpha: isDark ? 0.12 : 0.08),
+                              color: colorScheme.primary.withValues(
+                                alpha: isDark ? 0.12 : 0.08,
+                              ),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                color: colorScheme.primary
-                                    .withValues(alpha: isDark ? 0.22 : 0.15),
+                                color: colorScheme.primary.withValues(
+                                  alpha: isDark ? 0.22 : 0.15,
+                                ),
                                 width: 1,
                               ),
                             ),
@@ -191,10 +203,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       // Metrics Row
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest
-                              .withValues(alpha: isDark ? 0.25 : 0.4),
+                          color: colorScheme.surfaceContainerHighest.withValues(
+                            alpha: isDark ? 0.25 : 0.4,
+                          ),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
@@ -202,7 +217,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                             Expanded(
                               child: _MiniMetric(
                                 label: tr(ref, 'stock'),
-                                value: trQuantity(ref, product.stock, product.unit),
+                                value: trQuantity(
+                                  ref,
+                                  product.stock,
+                                  product.unit,
+                                ),
                                 icon: Icons.layers_outlined,
                               ),
                             ),
@@ -219,7 +238,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                               child: _MiniMetric(
                                 label: tr(ref, 'reorder'),
                                 value: trQuantity(
-                                    ref, product.reorderLevel, product.unit),
+                                  ref,
+                                  product.reorderLevel,
+                                  product.unit,
+                                ),
                                 icon: Icons.warning_amber_rounded,
                                 highlight:
                                     product.stock <= product.reorderLevel,
@@ -231,8 +253,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       const SizedBox(height: 12),
                       Divider(
                         height: 1,
-                        color: colorScheme.outlineVariant
-                            .withValues(alpha: isDark ? 0.18 : 0.45),
+                        color: colorScheme.outlineVariant.withValues(
+                          alpha: isDark ? 0.18 : 0.45,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -250,8 +273,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                   ),
                                 );
                               },
-                              icon: const Icon(Icons.visibility_outlined,
-                                  size: 18),
+                              icon: const Icon(
+                                Icons.visibility_outlined,
+                                size: 18,
+                              ),
                               label: Text(tr(ref, 'view')),
                             ),
                           ),
@@ -280,8 +305,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                               style: IconButton.styleFrom(
                                 foregroundColor: colorScheme.error,
                                 side: BorderSide(
-                                  color:
-                                      colorScheme.error.withValues(alpha: 0.42),
+                                  color: colorScheme.error.withValues(
+                                    alpha: 0.42,
+                                  ),
                                 ),
                               ),
                             ),
@@ -335,8 +361,9 @@ class _BottomSheetWrapper extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
           top: BorderSide(
-            color: colorScheme.outlineVariant
-                .withValues(alpha: isDark ? 0.15 : 0.3),
+            color: colorScheme.outlineVariant.withValues(
+              alpha: isDark ? 0.15 : 0.3,
+            ),
             width: 1,
           ),
         ),
@@ -368,8 +395,9 @@ class _ActionButton extends StatelessWidget {
         label: Text(label, overflow: TextOverflow.ellipsis),
         style: FilledButton.styleFrom(
           minimumSize: const Size(0, 50),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       );
     }
@@ -479,8 +507,9 @@ class _VerticalDivider extends StatelessWidget {
       width: 1,
       height: 32,
       margin: const EdgeInsets.symmetric(horizontal: 8),
-      color:
-          Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+      color: Theme.of(
+        context,
+      ).colorScheme.outlineVariant.withValues(alpha: 0.4),
     );
   }
 }
@@ -492,8 +521,9 @@ class _StockBadge extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isLow = product.stock <= product.reorderLevel;
-    final color =
-        isLow ? const Color(0xFFEF4444) : Theme.of(context).colorScheme.primary;
+    final color = isLow
+        ? const Color(0xFFEF4444)
+        : Theme.of(context).colorScheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -543,8 +573,9 @@ class _MiniMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final valueColor =
-        highlight ? const Color(0xFFEF4444) : colorScheme.onSurface;
+    final valueColor = highlight
+        ? const Color(0xFFEF4444)
+        : colorScheme.onSurface;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -591,8 +622,9 @@ class _EmptyState extends StatelessWidget {
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: colorScheme.outlineVariant
-              .withValues(alpha: isDark ? 0.15 : 0.35),
+          color: colorScheme.outlineVariant.withValues(
+            alpha: isDark ? 0.15 : 0.35,
+          ),
           width: 1,
         ),
       ),
@@ -601,12 +633,16 @@ class _EmptyState extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color:
-                  colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.07),
+              color: colorScheme.primary.withValues(
+                alpha: isDark ? 0.12 : 0.07,
+              ),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon,
-                size: 32, color: colorScheme.primary.withValues(alpha: 0.6)),
+            child: Icon(
+              icon,
+              size: 32,
+              color: colorScheme.primary.withValues(alpha: 0.6),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -712,61 +748,85 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
                 subtitle: tr(ref, 'addProductHelp'),
               ),
               _Field(
-                  controller: _name,
-                  label: tr(ref, 'product'),
-                  icon: Icons.shopping_bag_outlined),
+                controller: _name,
+                label: tr(ref, 'product'),
+                icon: Icons.shopping_bag_outlined,
+              ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _category,
                 items: categories
-                    .map((item) =>
-                        DropdownMenuItem(value: item, child: Text(trValue(ref, item))))
+                    .map(
+                      (item) => DropdownMenuItem(
+                        value: item,
+                        child: Text(trValue(ref, item)),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) => setState(() => _category = value),
                 decoration: InputDecoration(
-                    labelText: tr(ref, 'category'),
-                    prefixIcon: const Icon(Icons.category_outlined)),
+                  labelText: tr(ref, 'category'),
+                  prefixIcon: const Icon(Icons.category_outlined),
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _unit,
                 items: const ['pcs', 'kg', 'liter', 'meter', 'box', 'service']
-                    .map((item) =>
-                        DropdownMenuItem(value: item, child: Text(trValue(ref, item))))
+                    .map(
+                      (item) => DropdownMenuItem(
+                        value: item,
+                        child: Text(trValue(ref, item)),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) => setState(() => _unit = value ?? 'pcs'),
                 decoration: InputDecoration(
-                    labelText: tr(ref, 'unit'),
-                    prefixIcon: const Icon(Icons.straighten_outlined)),
+                  labelText: tr(ref, 'unit'),
+                  prefixIcon: const Icon(Icons.straighten_outlined),
+                ),
               ),
               const SizedBox(height: 12),
               _Field(
-                  controller: _supplier,
-                  label: tr(ref, 'supplier'),
-                  icon: Icons.local_shipping_outlined,
-                  requiredField: false),
+                controller: _supplier,
+                label: tr(ref, 'supplier'),
+                icon: Icons.local_shipping_outlined,
+                requiredField: false,
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
-                      child: _NumberField(
-                          controller: _stock, label: tr(ref, 'stock'))),
+                    child: _NumberField(
+                      controller: _stock,
+                      label: tr(ref, 'stock'),
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
-                      child: _NumberField(
-                          controller: _reorder, label: tr(ref, 'reorder'))),
+                    child: _NumberField(
+                      controller: _reorder,
+                      label: tr(ref, 'reorder'),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
-                      child: _NumberField(
-                          controller: _price, label: tr(ref, 'price'))),
+                    child: _NumberField(
+                      controller: _price,
+                      label: tr(ref, 'price'),
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
-                      child: _NumberField(
-                          controller: _cost, label: tr(ref, 'cost'))),
+                    child: _NumberField(
+                      controller: _cost,
+                      label: tr(ref, 'cost'),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -776,7 +836,10 @@ class _ProductSheetState extends ConsumerState<_ProductSheet> {
                     ? const SizedBox.square(
                         dimension: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : Text(tr(ref, 'save')),
               ),
             ],
@@ -820,9 +883,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
         title: const Text('Rename Category'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'New Category Name',
-          ),
+          decoration: const InputDecoration(labelText: 'New Category Name'),
         ),
         actions: [
           TextButton(
@@ -849,7 +910,9 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Category'),
-        content: Text('${tr(ref, 'deleteRecordBody')}\n\n${trValue(ref, category)}'),
+        content: Text(
+          '${tr(ref, 'deleteRecordBody')}\n\n${trValue(ref, category)}',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -902,7 +965,9 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
             ),
           ),
           _SheetHeader(
-              title: tr(ref, 'category'), subtitle: tr(ref, 'categoryHelp')),
+            title: tr(ref, 'category'),
+            subtitle: tr(ref, 'categoryHelp'),
+          ),
           Row(
             children: [
               Expanded(
@@ -920,7 +985,8 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
                 icon: const Icon(Icons.add_rounded),
                 style: IconButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   minimumSize: const Size(52, 52),
                 ),
               ),
@@ -942,7 +1008,10 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
                 final category = categories[index];
                 final isGeneral = category.toLowerCase() == 'general';
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: colorScheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(16),
@@ -953,12 +1022,19 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.label_rounded, color: colorScheme.primary, size: 18),
+                      Icon(
+                        Icons.label_rounded,
+                        color: colorScheme.primary,
+                        size: 18,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           trValue(ref, category),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                       if (!isGeneral) ...[
@@ -968,7 +1044,11 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
                           tooltip: tr(ref, 'edit'),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            size: 18,
+                            color: Colors.red,
+                          ),
                           onPressed: () => _deleteCategory(category),
                           tooltip: tr(ref, 'delete'),
                         ),
@@ -979,7 +1059,9 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
                             tr(ref, 'settings'),
                             style: TextStyle(
                               fontSize: 11,
-                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.5,
+                              ),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1015,19 +1097,18 @@ class _SheetHeader extends StatelessWidget {
         children: [
           Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 0),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
             style: TextStyle(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurfaceVariant
-                  .withValues(alpha: 0.8),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
               fontSize: 13,
             ),
           ),
@@ -1055,8 +1136,9 @@ class _Field extends ConsumerWidget {
     return TextFormField(
       controller: controller,
       validator: requiredField
-          ? (value) =>
-              value == null || value.trim().isEmpty ? tr(ref, 'required') : null
+          ? (value) => value == null || value.trim().isEmpty
+                ? tr(ref, 'required')
+                : null
           : null,
       decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
     );
@@ -1117,7 +1199,9 @@ Future<void> _confirmDeleteProduct(
     context: context,
     builder: (context) => AlertDialog(
       title: Text(tr(ref, 'deleteRecordTitle')),
-      content: Text('${tr(ref, 'deleteRecordBody')}\n\n${trValue(ref, product.name)}'),
+      content: Text(
+        '${tr(ref, 'deleteRecordBody')}\n\n${trValue(ref, product.name)}',
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),

@@ -44,7 +44,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       return;
     }
     await controller.login(
-        _emailController.text.trim(), _passwordController.text);
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
   }
 
   Future<void> _resetPassword() async {
@@ -106,7 +108,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             child: Center(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 440),
                   child: Column(
@@ -119,10 +124,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: scheme.primary.withValues(alpha: isDark ? 0.15 : 0.08),
+                              color: scheme.primary.withValues(
+                                alpha: isDark ? 0.15 : 0.08,
+                              ),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: scheme.primary.withValues(alpha: isDark ? 0.3 : 0.2),
+                                color: scheme.primary.withValues(
+                                  alpha: isDark ? 0.3 : 0.2,
+                                ),
                                 width: 1.5,
                               ),
                             ),
@@ -136,9 +145,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           Expanded(
                             child: Text(
                               tr(ref, 'appName'),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: -0.3,
@@ -148,7 +155,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           IconButton.filledTonal(
                             onPressed: state.loading ? null : _toggleLanguage,
                             icon: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
                               child: Text(
                                 state.language == AppLanguage.en ? 'NE' : 'EN',
                                 style: const TextStyle(
@@ -171,9 +180,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               _registerMode
                                   ? tr(ref, 'registerTitle')
                                   : tr(ref, 'loginTitle'),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
+                              style: Theme.of(context).textTheme.headlineSmall
                                   ?.copyWith(
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: -0.5,
@@ -187,7 +194,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   : tr(ref, 'loginSubtitle'),
                               style: TextStyle(
                                 fontSize: 13.5,
-                                color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                color: scheme.onSurfaceVariant.withValues(
+                                  alpha: 0.8,
+                                ),
                                 height: 1.35,
                               ),
                             ),
@@ -226,18 +235,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   TextFormField(
                                     controller: _passwordController,
                                     obscureText: _hidePassword,
-                                    validator: (value) => value == null || value.length < 6
+                                    validator: (value) =>
+                                        value == null || value.length < 6
                                         ? tr(ref, 'required')
                                         : null,
                                     decoration: InputDecoration(
                                       labelText: tr(ref, 'password'),
-                                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                      prefixIcon: const Icon(
+                                        Icons.lock_outline_rounded,
+                                      ),
                                       suffixIcon: IconButton(
-                                        onPressed: () =>
-                                            setState(() => _hidePassword = !_hidePassword),
-                                        icon: Icon(_hidePassword
-                                            ? Icons.visibility_outlined
-                                            : Icons.visibility_off_outlined),
+                                        onPressed: () => setState(
+                                          () => _hidePassword = !_hidePassword,
+                                        ),
+                                        icon: Icon(
+                                          _hidePassword
+                                              ? Icons.visibility_outlined
+                                              : Icons.visibility_off_outlined,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -247,14 +262,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       child: Padding(
                                         padding: const EdgeInsets.only(top: 4),
                                         child: TextButton(
-                                          onPressed: state.loading ? null : _resetPassword,
+                                          onPressed: state.loading
+                                              ? null
+                                              : _resetPassword,
                                           style: TextButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
                                           ),
                                           child: Text(
                                             tr(ref, 'forgotPassword'),
-                                            style: const TextStyle(fontWeight: FontWeight.w700),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -280,7 +303,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   OutlinedButton(
                                     onPressed: state.loading
                                         ? null
-                                        : () => setState(() => _registerMode = !_registerMode),
+                                        : () => setState(
+                                            () =>
+                                                _registerMode = !_registerMode,
+                                          ),
                                     child: Text(
                                       _registerMode
                                           ? tr(ref, 'switchToLogin')
@@ -326,10 +352,7 @@ class _TextInput extends ConsumerWidget {
       textInputAction: TextInputAction.next,
       validator: (value) =>
           value == null || value.trim().isEmpty ? tr(ref, 'required') : null,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-      ),
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
     );
   }
 }
@@ -355,7 +378,11 @@ class _NoticeBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline_rounded, color: scheme.onPrimaryContainer, size: 20),
+          Icon(
+            Icons.info_outline_rounded,
+            color: scheme.onPrimaryContainer,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

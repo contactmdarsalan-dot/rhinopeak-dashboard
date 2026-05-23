@@ -18,11 +18,7 @@ class DashboardScreen extends ConsumerWidget {
     final bootstrap = state.bootstrap;
 
     if (bootstrap == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return RpPage(
@@ -66,10 +62,7 @@ class _WelcomeCard extends ConsumerWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            scheme.primary,
-            scheme.secondary,
-          ],
+          colors: [scheme.primary, scheme.secondary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -129,7 +122,10 @@ class _WelcomeCard extends ConsumerWidget {
                         ),
                         const SizedBox(height: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(30),
@@ -172,9 +168,9 @@ class _DashboardActions extends ConsumerWidget {
           Text(
             tr(ref, 'dailyOperations'),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
@@ -224,7 +220,11 @@ class _DashboardActions extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.verified_user_outlined, size: 16, color: scheme.primary),
+                Icon(
+                  Icons.verified_user_outlined,
+                  size: 16,
+                  color: scheme.primary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -264,7 +264,9 @@ class _DashboardActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final foreground = primary ? scheme.onPrimary : scheme.primary;
-    final background = primary ? scheme.primary : scheme.primary.withValues(alpha: 0.08);
+    final background = primary
+        ? scheme.primary
+        : scheme.primary.withValues(alpha: 0.08);
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
@@ -276,7 +278,9 @@ class _DashboardActionButton extends StatelessWidget {
           color: background,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: primary ? scheme.primary : scheme.primary.withValues(alpha: 0.18),
+            color: primary
+                ? scheme.primary
+                : scheme.primary.withValues(alpha: 0.18),
           ),
         ),
         child: Column(
@@ -418,7 +422,9 @@ class _RecentSales extends ConsumerWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                color: scheme.onSurfaceVariant.withValues(
+                                  alpha: 0.8,
+                                ),
                                 fontSize: 12,
                               ),
                             ),
@@ -430,8 +436,8 @@ class _RecentSales extends ConsumerWidget {
                             color: sale.payment == 'Cash'
                                 ? AppTheme.success
                                 : sale.payment == 'Credit'
-                                    ? AppTheme.warning
-                                    : AppTheme.primary,
+                                ? AppTheme.warning
+                                : AppTheme.primary,
                           ),
                         ],
                       ),
@@ -578,9 +584,9 @@ class _SectionCard extends StatelessWidget {
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.2,
-                    ),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.2,
+                ),
               ),
             ],
           ),
@@ -615,7 +621,9 @@ class _SectionCard extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               itemCount: children.length,
               separatorBuilder: (_, __) => Divider(
-                color: scheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
+                color: scheme.outlineVariant.withValues(
+                  alpha: isDark ? 0.15 : 0.3,
+                ),
                 height: 1,
               ),
               itemBuilder: (_, index) => children[index],

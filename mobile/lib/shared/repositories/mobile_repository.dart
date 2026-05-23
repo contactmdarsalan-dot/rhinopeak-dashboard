@@ -33,16 +33,26 @@ class MobileRepository {
   }
 
   Future<BootstrapData> createRecord(
-      String entity, Map<String, dynamic> record) async {
-    final data = await _api.post('/mobile/${_createPath(entity)}', data: record);
+    String entity,
+    Map<String, dynamic> record,
+  ) async {
+    final data = await _api.post(
+      '/mobile/${_createPath(entity)}',
+      data: record,
+    );
     return _bootstrapOrRefresh(data);
   }
 
   Future<BootstrapData> updateRecord(
-      String entity, String id, Map<String, dynamic> patch) async {
+    String entity,
+    String id,
+    Map<String, dynamic> patch,
+  ) async {
     final safeId = Uri.encodeComponent(id);
-    final data = await _api.patch('/mobile/${_entityPath(entity)}/$safeId',
-        data: patch);
+    final data = await _api.patch(
+      '/mobile/${_entityPath(entity)}/$safeId',
+      data: patch,
+    );
     return _bootstrapOrRefresh(data);
   }
 
@@ -72,9 +82,15 @@ class MobileRepository {
     return mobileBootstrap();
   }
 
-  Future<BootstrapData> updateInventoryCategory(String oldName, String newName) async {
+  Future<BootstrapData> updateInventoryCategory(
+    String oldName,
+    String newName,
+  ) async {
     final safeName = Uri.encodeComponent(oldName);
-    await _api.patch('/mobile/inventory/categories/$safeName', data: {'name': newName});
+    await _api.patch(
+      '/mobile/inventory/categories/$safeName',
+      data: {'name': newName},
+    );
     return mobileBootstrap();
   }
 
@@ -85,21 +101,28 @@ class MobileRepository {
   }
 
   Future<BootstrapData> recordStockMovement(
-      Map<String, dynamic> movement) async {
+    Map<String, dynamic> movement,
+  ) async {
     final data = await _api.post('/mobile/inventory/movements', data: movement);
     return _bootstrapFromResponse(data);
   }
 
-  Future<Map<String, dynamic>> uploadBillScan(Map<String, dynamic> input) async {
+  Future<Map<String, dynamic>> uploadBillScan(
+    Map<String, dynamic> input,
+  ) async {
     final data = await _api.post('/mobile/bill-scans/upload', data: input);
     return Map<String, dynamic>.from(data['billScan'] as Map);
   }
 
   Future<Map<String, dynamic>> parseBillScan(
-      String scanId, String rawText) async {
+    String scanId,
+    String rawText,
+  ) async {
     final safeId = Uri.encodeComponent(scanId);
-    final data = await _api.post('/mobile/bill-scans/$safeId/parse',
-        data: {'rawText': rawText});
+    final data = await _api.post(
+      '/mobile/bill-scans/$safeId/parse',
+      data: {'rawText': rawText},
+    );
     return {
       'billScan': Map<String, dynamic>.from(data['billScan'] as Map),
       'parsed': Map<String, dynamic>.from(data['parsed'] as Map),
@@ -112,10 +135,10 @@ class MobileRepository {
     required Map<String, dynamic> approved,
   }) async {
     final safeId = Uri.encodeComponent(scanId);
-    final data = await _api.post('/mobile/bill-scans/$safeId/approve', data: {
-      'targetRecordType': targetRecordType,
-      'approved': approved,
-    });
+    final data = await _api.post(
+      '/mobile/bill-scans/$safeId/approve',
+      data: {'targetRecordType': targetRecordType, 'approved': approved},
+    );
     return _bootstrapFromResponse(data);
   }
 

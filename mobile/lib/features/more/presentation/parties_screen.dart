@@ -42,9 +42,7 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     if (bootstrap == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final parties = bootstrap.parties;
@@ -67,9 +65,10 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
       final name = (p['name']?.toString() ?? '').toLowerCase();
       final phone = (p['phone']?.toString() ?? '').toLowerCase();
       final type = p['type']?.toString() ?? '';
-      
-      final matchesSearch = name.contains(_searchQuery) || phone.contains(_searchQuery);
-      
+
+      final matchesSearch =
+          name.contains(_searchQuery) || phone.contains(_searchQuery);
+
       if (_filterType == 'All') {
         return matchesSearch;
       } else if (_filterType == 'Customer') {
@@ -85,7 +84,8 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(appControllerProvider.notifier).refreshBootstrap(),
+            onPressed: () =>
+                ref.read(appControllerProvider.notifier).refreshBootstrap(),
           ),
         ],
       ),
@@ -98,11 +98,16 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
               gradient: LinearGradient(
                 colors: isDark
                     ? [const Color(0xFF1E1B4B), const Color(0xFF311042)]
-                    : [colorScheme.primary.withOpacity(0.06), colorScheme.secondary.withOpacity(0.04)],
+                    : [
+                        colorScheme.primary.withOpacity(0.06),
+                        colorScheme.secondary.withOpacity(0.04),
+                      ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(24),
+              ),
             ),
             child: Row(
               children: [
@@ -129,13 +134,18 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.arrow_downward, color: Colors.green, size: 16),
+                            const Icon(
+                              Icons.arrow_downward,
+                              color: Colors.green,
+                              size: 16,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               tr(ref, 'creditCustomers'),
                               style: TextStyle(
                                 fontSize: 11,
-                                color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                                color: theme.textTheme.bodySmall?.color
+                                    ?.withOpacity(0.7),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -178,13 +188,18 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.arrow_upward, color: Colors.red, size: 16),
+                            const Icon(
+                              Icons.arrow_upward,
+                              color: Colors.red,
+                              size: 16,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               tr(ref, 'suppliers'),
                               style: TextStyle(
                                 fontSize: 11,
-                                color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                                color: theme.textTheme.bodySmall?.color
+                                    ?.withOpacity(0.7),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -218,9 +233,14 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                     decoration: InputDecoration(
                       hintText: 'Search by name or phone...',
                       prefixIcon: const Icon(Icons.search, size: 20),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       filled: true,
-                      fillColor: isDark ? const Color(0xFF161622) : Colors.grey.withOpacity(0.05),
+                      fillColor: isDark
+                          ? const Color(0xFF161622)
+                          : Colors.grey.withOpacity(0.05),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
@@ -250,12 +270,20 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                     },
                     selectedColor: colorScheme.primary.withOpacity(0.15),
                     labelStyle: TextStyle(
-                      color: isSelected ? colorScheme.primary : theme.textTheme.bodyMedium?.color,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? colorScheme.primary
+                          : theme.textTheme.bodyMedium?.color,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
-                    backgroundColor: isDark ? const Color(0xFF1F1F2E) : Colors.grey.withOpacity(0.08),
+                    backgroundColor: isDark
+                        ? const Color(0xFF1F1F2E)
+                        : Colors.grey.withOpacity(0.08),
                     side: BorderSide(
-                      color: isSelected ? colorScheme.primary : Colors.transparent,
+                      color: isSelected
+                          ? colorScheme.primary
+                          : Colors.transparent,
                     ),
                   ),
                 );
@@ -270,7 +298,11 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.people_outline, size: 48, color: colorScheme.onSurfaceVariant.withOpacity(0.4)),
+                        Icon(
+                          Icons.people_outline,
+                          size: 48,
+                          color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'No parties found',
@@ -287,12 +319,16 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                       final name = party['name']?.toString() ?? 'Unnamed';
                       final type = party['type']?.toString() ?? 'Customer';
                       final phone = party['phone']?.toString() ?? '';
-                      final balance = double.tryParse(party['balance']?.toString() ?? '0') ?? 0;
+                      final balance =
+                          double.tryParse(
+                            party['balance']?.toString() ?? '0',
+                          ) ??
+                          0;
 
                       final isCustomer = type.toLowerCase() == 'customer';
                       Color balanceColor = Colors.green;
                       String balanceLabel = 'To Receive';
-                      
+
                       if (balance < 0) {
                         balanceColor = Colors.red;
                         balanceLabel = 'To Pay';
@@ -309,10 +345,14 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF161622) : Colors.white,
+                          color: isDark
+                              ? const Color(0xFF161622)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: colorScheme.outlineVariant.withOpacity(isDark ? 0.1 : 0.4),
+                            color: colorScheme.outlineVariant.withOpacity(
+                              isDark ? 0.1 : 0.4,
+                            ),
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -323,9 +363,14 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                           ],
                         ),
                         child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           leading: CircleAvatar(
-                            backgroundColor: colorScheme.primary.withOpacity(0.1),
+                            backgroundColor: colorScheme.primary.withOpacity(
+                              0.1,
+                            ),
                             child: Text(
                               name.isNotEmpty ? name[0].toUpperCase() : 'P',
                               style: TextStyle(
@@ -339,14 +384,24 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                               Expanded(
                                 child: Text(
                                   name,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: (isCustomer ? colorScheme.primary : colorScheme.secondary).withOpacity(0.1),
+                                  color:
+                                      (isCustomer
+                                              ? colorScheme.primary
+                                              : colorScheme.secondary)
+                                          .withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -354,7 +409,9 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                                   style: TextStyle(
                                     fontSize: 9,
                                     fontWeight: FontWeight.w900,
-                                    color: isCustomer ? colorScheme.primary : colorScheme.secondary,
+                                    color: isCustomer
+                                        ? colorScheme.primary
+                                        : colorScheme.secondary,
                                   ),
                                 ),
                               ),
@@ -365,11 +422,18 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.phone_outlined, size: 13, color: colorScheme.onSurfaceVariant),
+                                      Icon(
+                                        Icons.phone_outlined,
+                                        size: 13,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         phone,
-                                        style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -438,10 +502,12 @@ class _PartyLedgerDetailScreen extends ConsumerStatefulWidget {
   final String partyType;
 
   @override
-  ConsumerState<_PartyLedgerDetailScreen> createState() => _PartyLedgerDetailScreenState();
+  ConsumerState<_PartyLedgerDetailScreen> createState() =>
+      _PartyLedgerDetailScreenState();
 }
 
-class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScreen> {
+class _PartyLedgerDetailScreenState
+    extends ConsumerState<_PartyLedgerDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(appControllerProvider);
@@ -451,9 +517,7 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
     final isDark = theme.brightness == Brightness.dark;
 
     if (bootstrap == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // Filter party ledger entries
@@ -475,9 +539,9 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
     );
     final balance = double.tryParse(party['balance']?.toString() ?? '0') ?? 0;
     final isCustomer = widget.partyType.toLowerCase() == 'customer';
-    
+
     String balanceLabel = 'To Receive';
-    
+
     if (balance < 0) {
       balanceLabel = 'To Pay';
     } else if (balance == 0) {
@@ -489,9 +553,7 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.partyName),
-      ),
+      appBar: AppBar(title: Text(widget.partyName)),
       body: Column(
         children: [
           // Header Card
@@ -537,7 +599,8 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
                     color: Colors.white,
                   ),
                 ),
-                if (party['phone'] != null && party['phone'].toString().isNotEmpty) ...[
+                if (party['phone'] != null &&
+                    party['phone'].toString().isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -545,7 +608,10 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
                       const SizedBox(width: 6),
                       Text(
                         party['phone'].toString(),
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -570,7 +636,11 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: balance == 0 ? Colors.white70 : (balance > 0 ? Colors.greenAccent : Colors.redAccent),
+                            color: balance == 0
+                                ? Colors.white70
+                                : (balance > 0
+                                      ? Colors.greenAccent
+                                      : Colors.redAccent),
                           ),
                         ),
                       ],
@@ -614,7 +684,11 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.history, size: 40, color: colorScheme.onSurfaceVariant.withOpacity(0.4)),
+                        Icon(
+                          Icons.history,
+                          size: 40,
+                          color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'No transactions recorded',
@@ -629,7 +703,9 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
                     itemBuilder: (context, index) {
                       final entry = ledgerEntries[index];
                       final type = entry['type']?.toString() ?? 'Transaction';
-                      final amount = double.tryParse(entry['amount']?.toString() ?? '0') ?? 0;
+                      final amount =
+                          double.tryParse(entry['amount']?.toString() ?? '0') ??
+                          0;
                       final date = entry['date']?.toString() ?? '';
                       final note = entry['note']?.toString() ?? '';
                       final direction = entry['direction']?.toString() ?? '';
@@ -637,7 +713,9 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
                       Color entryColor = Colors.green;
                       IconData entryIcon = Icons.arrow_downward;
 
-                      if (type.contains('Sale') || type.contains('Debit') || direction == 'Receivable') {
+                      if (type.contains('Sale') ||
+                          type.contains('Debit') ||
+                          direction == 'Receivable') {
                         entryColor = Colors.green;
                         entryIcon = Icons.arrow_downward;
                       } else {
@@ -658,10 +736,14 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF161622) : Colors.white,
+                          color: isDark
+                              ? const Color(0xFF161622)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: colorScheme.outlineVariant.withOpacity(isDark ? 0.08 : 0.35),
+                            color: colorScheme.outlineVariant.withOpacity(
+                              isDark ? 0.08 : 0.35,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -672,7 +754,11 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
                                 color: entryColor.withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(entryIcon, color: entryColor, size: 16),
+                              child: Icon(
+                                entryIcon,
+                                color: entryColor,
+                                size: 16,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -681,14 +767,20 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
                                 children: [
                                   Text(
                                     type,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    note.isNotEmpty ? note : 'No notes provided',
+                                    note.isNotEmpty
+                                        ? note
+                                        : 'No notes provided',
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                                      color: colorScheme.onSurfaceVariant
+                                          .withOpacity(0.8),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -696,7 +788,8 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
                                     shortDate(date),
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                                      color: colorScheme.onSurfaceVariant
+                                          .withOpacity(0.5),
                                     ),
                                   ),
                                 ],
@@ -723,7 +816,9 @@ class _PartyLedgerDetailScreenState extends ConsumerState<_PartyLedgerDetailScre
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF101018) : Colors.white,
               border: Border(
-                top: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5)),
+                top: BorderSide(
+                  color: colorScheme.outlineVariant.withOpacity(0.5),
+                ),
               ),
             ),
             child: SafeArea(
@@ -765,14 +860,15 @@ class _SettlePaymentSheet extends ConsumerStatefulWidget {
   final String partyName;
 
   @override
-  ConsumerState<_SettlePaymentSheet> createState() => _SettlePaymentSheetState();
+  ConsumerState<_SettlePaymentSheet> createState() =>
+      _SettlePaymentSheetState();
 }
 
 class _SettlePaymentSheetState extends ConsumerState<_SettlePaymentSheet> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
-  
+
   DateTime _selectedDate = DateTime.now();
   late String _settlementType;
 
@@ -830,18 +926,22 @@ class _SettlePaymentSheetState extends ConsumerState<_SettlePaymentSheet> {
     };
 
     try {
-      await ref.read(appControllerProvider.notifier).createRecord('party-ledger', body);
+      await ref
+          .read(appControllerProvider.notifier)
+          .createRecord('party-ledger', body);
       if (mounted) {
         Navigator.of(context).pop(); // Close sheet
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment settlement recorded successfully')),
+          const SnackBar(
+            content: Text('Payment settlement recorded successfully'),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving payment: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving payment: $e')));
       }
     }
   }
@@ -857,7 +957,12 @@ class _SettlePaymentSheetState extends ConsumerState<_SettlePaymentSheet> {
         color: isDark ? const Color(0xFF1A1A26) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
       child: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -885,7 +990,10 @@ class _SettlePaymentSheetState extends ConsumerState<_SettlePaymentSheet> {
               const SizedBox(height: 8),
               Text(
                 'Settlement for ${widget.partyName}',
-                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 13,
+                ),
               ),
               const Divider(height: 24),
 
@@ -935,14 +1043,18 @@ class _SettlePaymentSheetState extends ConsumerState<_SettlePaymentSheet> {
               // Amount Field
               TextFormField(
                 controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Amount (NPR)',
                   prefixIcon: Icon(Icons.money),
                 ),
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty) return 'Amount is required';
-                  if (double.tryParse(val) == null) return 'Enter a valid number';
+                  if (val == null || val.trim().isEmpty)
+                    return 'Amount is required';
+                  if (double.tryParse(val) == null)
+                    return 'Enter a valid number';
                   return null;
                 },
               ),
@@ -952,9 +1064,14 @@ class _SettlePaymentSheetState extends ConsumerState<_SettlePaymentSheet> {
               GestureDetector(
                 onTap: () => _selectDate(context),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF111118) : Colors.grey.withOpacity(0.05),
+                    color: isDark
+                        ? const Color(0xFF111118)
+                        : Colors.grey.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
                       color: colorScheme.outlineVariant.withOpacity(0.5),
@@ -962,7 +1079,11 @@ class _SettlePaymentSheetState extends ConsumerState<_SettlePaymentSheet> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.calendar_today_outlined, size: 20, color: colorScheme.primary),
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 20,
+                        color: colorScheme.primary,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -972,19 +1093,27 @@ class _SettlePaymentSheetState extends ConsumerState<_SettlePaymentSheet> {
                               'Payment Date',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                color: colorScheme.onSurfaceVariant.withOpacity(
+                                  0.7,
+                                ),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               _selectedDate.toIso8601String().substring(0, 10),
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.chevron_right_rounded, color: colorScheme.onSurfaceVariant.withOpacity(0.6)),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                      ),
                     ],
                   ),
                 ),

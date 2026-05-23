@@ -51,8 +51,11 @@ class AuthRepository {
   }
 
   Future<void> requestPasswordReset(String email) async {
-    await _api
-        .post('/auth/password/request', auth: false, data: {'email': email});
+    await _api.post(
+      '/auth/password/request',
+      auth: false,
+      data: {'email': email},
+    );
   }
 
   Future<void> logout(String refreshToken) async {
@@ -65,10 +68,12 @@ class AuthRepository {
       Map<String, dynamic>.from(data['bootstrap'] as Map),
     );
     return AuthResult(
-      user:
-          CurrentUser.fromJson(Map<String, dynamic>.from(data['user'] as Map)),
+      user: CurrentUser.fromJson(
+        Map<String, dynamic>.from(data['user'] as Map),
+      ),
       tokens: SessionTokens.fromJson(
-          Map<String, dynamic>.from(data['session'] as Map)),
+        Map<String, dynamic>.from(data['session'] as Map),
+      ),
       bootstrap: bootstrap,
     );
   }

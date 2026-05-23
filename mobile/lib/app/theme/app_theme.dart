@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primary = Color(0xFF7C3AED);
-  static const Color primaryDark = Color(0xFF5B21B6);
-  static const Color accent = Color(0xFFD946EF);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color success = Color(0xFF10B981);
-  static const Color danger = Color(0xFFEF4444);
-  static const Color ink = Color(0xFF0A0A0F);
-  static const Color muted = Color(0xFF8888AA);
-  static const Color surface = Color(0xFFF4F4F8);
+  static const Color primary = Color(0xFF8A4FFF); // oklch(0.60 0.22 285) approx
+  static const Color primaryDark = Color(
+    0xFF6B31DF,
+  ); // oklch(0.50 0.20 285) approx
+  static const Color accent = Color(0xFFE25CF5); // oklch(0.65 0.18 310) approx
+  static const Color warning = Color(0xFFDB8014); // oklch(0.65 0.18 70) approx
+  static const Color success = Color(0xFF0FA871); // oklch(0.55 0.15 160) approx
+  static const Color danger = Color(0xFFD43C42); // oklch(0.55 0.20 25) approx
+  static const Color ink = Color(0xFF0F101A); // oklch(0.12 0.01 280) approx
+  static const Color muted = Color(0xFF757891); // oklch(0.55 0.03 280) approx
+  static const Color surface = Color(
+    0xFFF7F7FA,
+  ); // oklch(0.98 0.005 280) approx
 
   static ThemeData light() {
     final colorScheme = ColorScheme.fromSeed(
@@ -20,9 +24,7 @@ class AppTheme {
       error: danger,
       surface: Colors.white,
     );
-    return _base(colorScheme).copyWith(
-      scaffoldBackgroundColor: surface,
-    );
+    return _base(colorScheme).copyWith(scaffoldBackgroundColor: surface);
   }
 
   static ThemeData dark() {
@@ -32,10 +34,12 @@ class AppTheme {
       primary: primary,
       secondary: accent,
       error: danger,
-      surface: const Color(0xFF16161F),
+      surface: const Color(0xFF191A26), // oklch(0.16 0.02 280) approx
     );
     return _base(colorScheme).copyWith(
-      scaffoldBackgroundColor: const Color(0xFF0A0A0F),
+      scaffoldBackgroundColor: const Color(
+        0xFF0F101A,
+      ), // oklch(0.12 0.01 280) approx
     );
   }
 
@@ -44,7 +48,8 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      fontFamily: 'Roboto',
+      fontFamily:
+          'Inter', // Suggesting Inter as a geometric/neo-grotesque alternative to standard Roboto
       appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
@@ -54,7 +59,7 @@ class AppTheme {
         titleTextStyle: TextStyle(
           color: colorScheme.onSurface,
           fontSize: 20,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w800,
           letterSpacing: -0.5,
         ),
       ),
@@ -63,59 +68,74 @@ class AppTheme {
         color: colorScheme.surface,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(
+            16,
+          ), // Softer radius matching web App Panel
           side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.4),
-            width: 1,
+            color: colorScheme.outlineVariant.withValues(
+              alpha: isDark ? 0.25 : 0.15,
+            ),
+            width: 1, // Thinner border
           ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isDark
-            ? const Color(0xFF111118)
-            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            ? const Color(0xFF191A26)
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: colorScheme.primary, width: 2.0),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: colorScheme.primary,
+            width: 1.5,
+          ), // Subtle focus ring
         ),
         labelStyle: TextStyle(
           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
           fontWeight: FontWeight.w500,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ), // Tighter radius
           textStyle: const TextStyle(
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             fontSize: 16,
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(50),
-          side: BorderSide(color: colorScheme.primary, width: 1.5),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          textStyle: const TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 15,
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+            width: 1.0,
           ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
         ),
       ),
     );

@@ -20,7 +20,8 @@ class _RhinoPeakMobileAppState extends ConsumerState<RhinoPeakMobileApp> {
   void initState() {
     super.initState();
     Future.microtask(
-        () => ref.read(appControllerProvider.notifier).initialize());
+      () => ref.read(appControllerProvider.notifier).initialize(),
+    );
   }
 
   @override
@@ -46,8 +47,8 @@ class _RhinoPeakMobileAppState extends ConsumerState<RhinoPeakMobileApp> {
       home: state.initializing
           ? const _BootScreen()
           : state.authenticated
-              ? const AppShell()
-              : const AuthScreen(),
+          ? const AppShell()
+          : const AuthScreen(),
     );
   }
 }

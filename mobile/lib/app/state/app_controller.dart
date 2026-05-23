@@ -12,15 +12,19 @@ import '../localization/app_strings.dart';
 
 final tokenStoreProvider = Provider<TokenStore>((ref) => TokenStore());
 final cacheStoreProvider = Provider<CacheStore>((ref) => CacheStore());
-final apiClientProvider =
-    Provider<ApiClient>((ref) => ApiClient(ref.watch(tokenStoreProvider)));
+final apiClientProvider = Provider<ApiClient>(
+  (ref) => ApiClient(ref.watch(tokenStoreProvider)),
+);
 final authRepositoryProvider = Provider<AuthRepository>(
-    (ref) => AuthRepository(ref.watch(apiClientProvider)));
+  (ref) => AuthRepository(ref.watch(apiClientProvider)),
+);
 final mobileRepositoryProvider = Provider<MobileRepository>(
-    (ref) => MobileRepository(ref.watch(apiClientProvider)));
+  (ref) => MobileRepository(ref.watch(apiClientProvider)),
+);
 
-final appControllerProvider =
-    StateNotifierProvider<AppController, AppState>((ref) {
+final appControllerProvider = StateNotifierProvider<AppController, AppState>((
+  ref,
+) {
   return AppController(
     authRepository: ref.watch(authRepositoryProvider),
     mobileRepository: ref.watch(mobileRepositoryProvider),
@@ -42,14 +46,14 @@ class AppState {
   });
 
   const AppState.initial()
-      : initializing = true,
-        loading = false,
-        authenticated = false,
-        language = AppLanguage.en,
-        user = null,
-        bootstrap = null,
-        error = null,
-        notice = null;
+    : initializing = true,
+      loading = false,
+      authenticated = false,
+      language = AppLanguage.en,
+      user = null,
+      bootstrap = null,
+      error = null,
+      notice = null;
 
   final bool initializing;
   final bool loading;
@@ -91,11 +95,11 @@ class AppController extends StateNotifier<AppState> {
     required MobileRepository mobileRepository,
     required TokenStore tokenStore,
     required CacheStore cacheStore,
-  })  : _authRepository = authRepository,
-        _mobileRepository = mobileRepository,
-        _tokenStore = tokenStore,
-        _cacheStore = cacheStore,
-        super(const AppState.initial());
+  }) : _authRepository = authRepository,
+       _mobileRepository = mobileRepository,
+       _tokenStore = tokenStore,
+       _cacheStore = cacheStore,
+       super(const AppState.initial());
 
   final AuthRepository _authRepository;
   final MobileRepository _mobileRepository;
@@ -149,8 +153,9 @@ class AppController extends StateNotifier<AppState> {
     await _withLoading(() async {
       await _authRepository.requestPasswordReset(email);
       state = state.copyWith(
-          notice: AppStrings.tr(state.language, 'passwordResetSent'),
-          clearError: true);
+        notice: AppStrings.tr(state.language, 'passwordResetSent'),
+        clearError: true,
+      );
     });
   }
 
@@ -194,14 +199,16 @@ class AppController extends StateNotifier<AppState> {
       return;
     }
     await _withLoading(() async {
-      final next = await _mobileRepository
-          .patchSettings(bootstrap.settings.toPatch(nextLanguage: language));
+      final next = await _mobileRepository.patchSettings(
+        bootstrap.settings.toPatch(nextLanguage: language),
+      );
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          language: language,
-          notice: AppStrings.tr(language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        language: language,
+        notice: AppStrings.tr(language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
@@ -210,9 +217,10 @@ class AppController extends StateNotifier<AppState> {
       final next = await _mobileRepository.createSale(sale);
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
@@ -221,9 +229,10 @@ class AppController extends StateNotifier<AppState> {
       final next = await _mobileRepository.createExpense(expense);
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
@@ -232,21 +241,26 @@ class AppController extends StateNotifier<AppState> {
       final next = await _mobileRepository.createRecord(entity, record);
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
   Future<void> updateRecord(
-      String entity, String id, Map<String, dynamic> patch) {
+    String entity,
+    String id,
+    Map<String, dynamic> patch,
+  ) {
     return _withLoading(() async {
       final next = await _mobileRepository.updateRecord(entity, id, patch);
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
@@ -255,9 +269,10 @@ class AppController extends StateNotifier<AppState> {
       final next = await _mobileRepository.deleteRecord(entity, id);
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
@@ -266,9 +281,10 @@ class AppController extends StateNotifier<AppState> {
       final next = await _mobileRepository.createProduct(product);
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
@@ -277,20 +293,25 @@ class AppController extends StateNotifier<AppState> {
       final next = await _mobileRepository.createInventoryCategory(name);
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
   Future<void> updateInventoryCategory(String oldName, String newName) {
     return _withLoading(() async {
-      final next = await _mobileRepository.updateInventoryCategory(oldName, newName);
+      final next = await _mobileRepository.updateInventoryCategory(
+        oldName,
+        newName,
+      );
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
@@ -299,9 +320,10 @@ class AppController extends StateNotifier<AppState> {
       final next = await _mobileRepository.deleteInventoryCategory(name);
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
@@ -310,13 +332,16 @@ class AppController extends StateNotifier<AppState> {
       final next = await _mobileRepository.recordStockMovement(movement);
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
-  Future<Map<String, dynamic>?> uploadBillScan(Map<String, dynamic> input) async {
+  Future<Map<String, dynamic>?> uploadBillScan(
+    Map<String, dynamic> input,
+  ) async {
     state = state.copyWith(loading: true, clearError: true, clearNotice: true);
     try {
       final scan = await _mobileRepository.uploadBillScan(input);
@@ -331,7 +356,9 @@ class AppController extends StateNotifier<AppState> {
   }
 
   Future<Map<String, dynamic>?> parseBillScan(
-      String scanId, String rawText) async {
+    String scanId,
+    String rawText,
+  ) async {
     state = state.copyWith(loading: true, clearError: true, clearNotice: true);
     try {
       final result = await _mobileRepository.parseBillScan(scanId, rawText);
@@ -358,9 +385,10 @@ class AppController extends StateNotifier<AppState> {
       );
       await _saveBootstrap(next);
       state = state.copyWith(
-          bootstrap: next,
-          notice: AppStrings.tr(state.language, 'saved'),
-          clearError: true);
+        bootstrap: next,
+        notice: AppStrings.tr(state.language, 'saved'),
+        clearError: true,
+      );
     });
   }
 
@@ -387,32 +415,36 @@ class AppController extends StateNotifier<AppState> {
       'teamMembers': bootstrap.teamMembers,
       'roleDefinitions': bootstrap.roleDefinitions,
       'sales': bootstrap.sales
-          .map((sale) => {
-                'id': sale.id,
-                'customer': sale.customer,
-                'products': sale.products,
-                'amount': sale.amount,
-                'payment': sale.payment,
-                'status': sale.status,
-                'date': sale.date,
-              })
+          .map(
+            (sale) => {
+              'id': sale.id,
+              'customer': sale.customer,
+              'products': sale.products,
+              'amount': sale.amount,
+              'payment': sale.payment,
+              'status': sale.status,
+              'date': sale.date,
+            },
+          )
           .toList(),
       'parties': bootstrap.parties,
       'partyLedger': bootstrap.partyLedger,
       'purchases': bootstrap.purchases,
       'inventory': bootstrap.products
-          .map((product) => {
-                'id': product.id,
-                'name': product.name,
-                'category': product.category,
-                'unit': product.unit,
-                'stock': product.stock,
-                'reorderLevel': product.reorderLevel,
-                'price': product.price,
-                'costPrice': product.costPrice,
-                'supplier': product.supplier,
-                'status': product.status,
-              })
+          .map(
+            (product) => {
+              'id': product.id,
+              'name': product.name,
+              'category': product.category,
+              'unit': product.unit,
+              'stock': product.stock,
+              'reorderLevel': product.reorderLevel,
+              'price': product.price,
+              'costPrice': product.costPrice,
+              'supplier': product.supplier,
+              'status': product.status,
+            },
+          )
           .toList(),
       'customers': bootstrap.customers,
       'suppliers': bootstrap.suppliers,
