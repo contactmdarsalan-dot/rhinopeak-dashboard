@@ -1336,11 +1336,18 @@ def create_workspace_with_owner(owner_name: str, owner_email: str, password_salt
     return hydrate_user(user) or user
 
 
+from apps.rhinopeak.domain.security import generate_jwt_access_token, decode_jwt_access_token
+
 def create_session(user: dict[str, Any]) -> dict[str, str]:
-    access_token = new_token("rp_access")
+    import datetime as dt_module
+    now = datetime.now(dt_module.timezone.utc)
+    expires_datetime = now + timedelta(minutes=settings.SESSION_TTL_MINUTES)
+    expires_at = expires_datetime.isoformat(timespec="seconds").replace("+00:00", "Z")
+
+    access_token = generate_jwt_access_token({"sub": user["id"]}, expires_datetime)
     refresh_token = new_token("rp_refresh")
-    expires_at = future_iso(minutes=settings.SESSION_TTL_MINUTES)
     refresh_expires_at = future_iso(days=settings.REFRESH_TTL_DAYS)
+
     collection("sessions").insert_one(
         {
             "accessTokenHash": hash_token(access_token),
@@ -1360,14 +1367,21 @@ def create_session(user: dict[str, Any]) -> dict[str, str]:
 def authenticate_access_token(access_token: str | None) -> dict[str, Any]:
     if not access_token:
         raise AppError(401, "Missing access token.")
+
+    payload = decode_jwt_access_token(access_token)
+    if not payload or "sub" not in payload:
+        raise AppError(401, "Invalid or expired session.")
+
+    user_id = payload["sub"]
+
     session = collection("sessions").find_one({"accessTokenHash": hash_token(access_token)})
-    if session is None or session.get("revokedAt") is not None:
-        raise AppError(401, "Invalid session.")
-    if str(session.get("expiresAt", "")) <= iso_now():
-        raise AppError(401, "Session expired.")
-    user = hydrate_user(collection("users").find_one({"id": session["userId"]}))
-    if user is None:
-        raise AppError(401, "User not found.")
+    if session and session.get("revokedAt") is not None:
+        raise AppError(401, "Session revoked.")
+
+    user = hydrate_user(collection("users").find_one({"id": user_id}))
+    if user is None or user.get("status") != "Active":
+        raise AppError(401, "User not found or inactive.")
+
     user["lastActive"] = iso_now()
     collection("users").update_one({"id": user["id"]}, {"$set": {"lastActive": user["lastActive"], "updatedAt": user["lastActive"]}})
     return user
@@ -2670,8 +2684,13 @@ def platform_state() -> dict[str, Any]:
 
 
 def create_platform_session(admin: dict[str, Any]) -> dict[str, str]:
-    access_token = new_token("rp_platform")
-    expires_at = future_iso(minutes=settings.SESSION_TTL_MINUTES)
+    import datetime as dt_module
+    now = datetime.now(dt_module.timezone.utc)
+    expires_datetime = now + timedelta(minutes=settings.SESSION_TTL_MINUTES)
+    expires_at = expires_datetime.isoformat(timespec="seconds").replace("+00:00", "Z")
+
+    access_token = generate_jwt_access_token({"sub": admin["id"], "platform": True}, expires_datetime)
+
     collection("platform_sessions").insert_one(
         {
             "accessTokenHash": hash_token(access_token),
