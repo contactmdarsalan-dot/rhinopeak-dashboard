@@ -113,17 +113,19 @@ export function Topbar() {
       }}
     >
       <div className="topbar-title" style={{ flex: '1 1 180px', minWidth: 160 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+           <span style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 600 }}>RhinoPeak</span>
+           <span style={{ color: 'var(--border-strong)', fontSize: 10 }}>/</span>
+           <span style={{ color: 'var(--accent)', fontSize: 11, fontWeight: 700 }}>{activeBusiness.name}</span>
+        </div>
         <motion.h1 
           key={pathname}
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 16 }}
+          style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, letterSpacing: -0.3 }}
         >
           {getPageTitle(pathname, settings.language)}
         </motion.h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-          {new Date().toLocaleDateString(settings.language === 'ne' ? 'ne-NP' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
       </div>
 
       <label

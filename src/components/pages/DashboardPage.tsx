@@ -113,8 +113,8 @@ export function DashboardPage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-          gap: 14,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: 16,
         }}
       >
         <KpiCard label={tx("Today's Revenue")} value={metrics.todayRevenue} change={0} format="currency" icon={<DollarSign size={15} />} delay={0} />
@@ -123,11 +123,19 @@ export function DashboardPage() {
         <KpiCard label={tx('Total Orders')} value={metrics.totalOrders} change={0} format="number" icon={<ShoppingBag size={15} />} delay={240} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-        <StatTile label={tx('Year-to-date revenue')} value={formatCurrency(metrics.ytdRevenue)} detail={plan === 'pro' ? tx('Included in Pro KPI set') : tx('Preview from current data')} tone="accent" />
-        <StatTile label={tx('Average order value')} value={formatCurrency(metrics.averageOrderValue)} detail={tx('Completed sales only')} tone="success" />
-        <StatTile label={tx('Free plan usage')} value={`${Math.min(100, usage)}%`} detail={uiFormat(settings.language, '{count} sales this month', { count: activeMonthSales })} tone={usage >= 85 ? 'warning' : 'neutral'} />
-        <StatTile label={tx('Stock alerts')} value={lowStock.length} detail={tx('Products below threshold')} tone={lowStock.length ? 'danger' : 'success'} />
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.35fr) minmax(320px, 0.65fr)',
+          gap: 16,
+        }}
+      >
+        <RevenueChart data={revenueData} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <StatTile label={tx('Year-to-date revenue')} value={formatCurrency(metrics.ytdRevenue)} detail={plan === 'pro' ? tx('Included in Pro KPI set') : tx('Preview from current data')} tone="accent" />
+          <StatTile label={tx('Average order value')} value={formatCurrency(metrics.averageOrderValue)} detail={tx('Completed sales only')} tone="success" />
+          <StatTile label={tx('Stock alerts')} value={lowStock.length} detail={tx('Products below threshold')} tone={lowStock.length ? 'danger' : 'success'} />
+        </div>
       </div>
 
       {/* Quick Action: AI Bill Scanner Shortcut */}
@@ -208,14 +216,12 @@ export function DashboardPage() {
           gap: 16,
         }}
       >
-        <RevenueChart data={revenueData} />
+        <RecentSalesTable />
         <TopProductsChart
           data={topProducts}
           subtitle={plan === 'free' ? 'Top 3 on Free plan' : 'Top products by revenue'}
         />
       </div>
-
-      <RecentSalesTable />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16 }}>
         <AlertsPanel />
