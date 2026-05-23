@@ -346,31 +346,36 @@ export function SalesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <label style={{ flex: '1 1 240px', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}>
-          <Search size={14} color="var(--text-muted)" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={tx('Search orders, customers, products...')} style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, width: '100%' }} />
-        </label>
-        <select value={status} onChange={(event) => setStatus(event.target.value as 'All' | SaleStatus)} style={{ ...controlStyle, width: 150 }}>
-          <option value="All">{tx('All')}</option>
-          {saleStatuses.map((item) => <option key={item} value={item}>{translateSaleStatus(settings.language, item)}</option>)}
-        </select>
-        <select value={payment} onChange={(event) => setPayment(event.target.value)} style={{ ...controlStyle, width: 150 }}>
-          <option value="All">{tx('All')}</option>
-          {paymentMethods.map((item) => <option key={item} value={item}>{translatePaymentMethod(settings.language, item)}</option>)}
-        </select>
-        <Button variant="secondary" onClick={() => downloadCsv('rhinopeak-sales.csv', exportRows)}>
-          <Download size={14} /> {tx('Export')}
-        </Button>
-        <label style={{ cursor: canCreateSales ? 'pointer' : 'not-allowed', opacity: canCreateSales ? 1 : 0.55 }} title={canCreateSales ? tx('Import sales') : tx('Create sales permission required')}>
-          <input type="file" accept=".csv" onChange={handleImport} disabled={!canCreateSales} style={{ display: 'none' }} />
-          <span style={{ minHeight: 36, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 650 }}>
-            <Upload size={14} /> {tx('Import CSV')}
-          </span>
-        </label>
-        <Button disabled={!canCreateSales} onClick={() => setShowModal(true)} title={canCreateSales ? tx('Add sale') : tx('Create sales permission required')}>
-          <Plus size={14} /> {tx('Add Sale')}
-        </Button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flex: '1 1 auto' }}>
+          <label style={{ flex: '1 1 240px', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}>
+            <Search size={14} color="var(--text-muted)" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={tx('Search orders, customers, products...')} style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, width: '100%' }} />
+          </label>
+          <select value={status} onChange={(event) => setStatus(event.target.value as 'All' | SaleStatus)} style={{ ...controlStyle, width: 150 }}>
+            <option value="All">{tx('All')}</option>
+            {saleStatuses.map((item) => <option key={item} value={item}>{translateSaleStatus(settings.language, item)}</option>)}
+          </select>
+          <select value={payment} onChange={(event) => setPayment(event.target.value)} style={{ ...controlStyle, width: 150 }}>
+            <option value="All">{tx('All')}</option>
+            {paymentMethods.map((item) => <option key={item} value={item}>{translatePaymentMethod(settings.language, item)}</option>)}
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <Button variant="secondary" onClick={() => downloadCsv('rhinopeak-sales.csv', exportRows)}>
+            <Download size={14} /> {tx('Export')}
+          </Button>
+          <label style={{ cursor: canCreateSales ? 'pointer' : 'not-allowed', opacity: canCreateSales ? 1 : 0.55 }} title={canCreateSales ? tx('Import sales') : tx('Create sales permission required')}>
+            <input type="file" accept=".csv" onChange={handleImport} disabled={!canCreateSales} style={{ display: 'none' }} />
+            <span style={{ minHeight: 36, padding: '8px 16px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 650, transition: 'all 0.2s ease' }}>
+              <Upload size={14} /> {tx('Import')}
+            </span>
+          </label>
+          <Button disabled={!canCreateSales} onClick={() => setShowModal(true)} title={canCreateSales ? tx('Add sale') : tx('Create sales permission required')}>
+            <Plus size={14} /> {tx('New Sale')}
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>

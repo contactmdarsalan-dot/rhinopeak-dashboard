@@ -339,26 +339,31 @@ export function InventoryPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <label style={{ flex: '1 1 260px', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}>
-          <Search size={14} color="var(--text-muted)" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={tx('Search products, SKU, category, supplier...')} style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, width: '100%' }} />
-        </label>
-        <Button variant="secondary" onClick={() => downloadCsv('rhinopeak-inventory.csv', exportRows)}>
-          <Download size={14} /> {tx('Export')}
-        </Button>
-        <Button variant="secondary" disabled={!canManageInventory} onClick={() => setShowMovementModal(true)} title={canManageInventory ? tx('Record stock movement') : tx('Manage inventory permission required')}>
-          <History size={14} /> {tx('Stock Movement')}
-        </Button>
-        <Button variant="secondary" disabled={!canManageInventory} onClick={() => setShowCategoryModal(true)} title={canManageInventory ? tx('Manage categories') : tx('Manage inventory permission required')}>
-          <Tags size={14} /> {tx('Categories')}
-        </Button>
-        <Button variant="secondary" disabled={!canManageInventory} onClick={() => setShowSupplierModal(true)} title={canManageInventory ? tx('Manage suppliers') : tx('Manage inventory permission required')}>
-          <Truck size={14} /> {tx('Suppliers')}
-        </Button>
-        <Button disabled={!canManageInventory} onClick={() => openProductModal()} title={canManageInventory ? tx('Add product') : tx('Manage inventory permission required')}>
-          <Plus size={14} /> {tx('Add Product')}
-        </Button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flex: '1 1 auto' }}>
+          <label style={{ flex: '1 1 260px', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}>
+            <Search size={14} color="var(--text-muted)" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={tx('Search products, SKU, category, supplier...')} style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, width: '100%' }} />
+          </label>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <Button variant="secondary" onClick={() => downloadCsv('rhinopeak-inventory.csv', exportRows)}>
+            <Download size={14} /> {tx('Export')}
+          </Button>
+          <Button variant="secondary" disabled={!canManageInventory} onClick={() => setShowMovementModal(true)} title={canManageInventory ? tx('Record stock movement') : tx('Manage inventory permission required')}>
+            <History size={14} /> {tx('Stock Movement')}
+          </Button>
+          <Button variant="secondary" disabled={!canManageInventory} onClick={() => setShowCategoryModal(true)} title={canManageInventory ? tx('Manage categories') : tx('Manage inventory permission required')}>
+            <Tags size={14} /> {tx('Categories')}
+          </Button>
+          <Button variant="secondary" disabled={!canManageInventory} onClick={() => setShowSupplierModal(true)} title={canManageInventory ? tx('Manage suppliers') : tx('Manage inventory permission required')}>
+            <Truck size={14} /> {tx('Suppliers')}
+          </Button>
+          <Button disabled={!canManageInventory} onClick={() => openProductModal()} title={canManageInventory ? tx('Add product') : tx('Manage inventory permission required')}>
+            <Plus size={14} /> {tx('New Product')}
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
