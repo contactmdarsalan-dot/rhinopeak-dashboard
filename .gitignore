@@ -33,10 +33,19 @@
 .plyrium-forge/
 *.auth
 *.iml
-mobile/AGENTS.md
-mobile/CLAUDE.md
-mobile/GEMINI.md
-mobile/opencode.json
+
+# local AI agent instructions and tool configs
+AGENTS.md
+agents.md
+CLAUDE.md
+claude.md
+GEMINI.md
+gemini.md
+opencode.json
+.agents/
+.agent/
+.codex/
+.gemini/
 
 # debug
 *.log
