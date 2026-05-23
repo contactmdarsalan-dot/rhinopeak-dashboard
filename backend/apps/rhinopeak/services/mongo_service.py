@@ -533,6 +533,15 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
         record.setdefault("channel", "Portal")
         record.setdefault("lastUpdatedAt", now)
 
+    if kind == "learning_memory":
+        record.setdefault("sourceType", "assistant")
+        record.setdefault("inputHash", "")
+        record.setdefault("inputData", "")
+        record.setdefault("intent", "unknown")
+        record.setdefault("slots", {})
+        record.setdefault("confidence", 0.90)
+        record.setdefault("createdBy", "system")
+
     record.setdefault("createdAt", now)
     record["updatedAt"] = now if kind in {
         "sales",
@@ -587,6 +596,47 @@ def health_payload() -> dict[str, Any]:
         "counts": mongo_counts(),
     }
 
+
+def save_learning_memory(workspace_id: str, input_data: str, intent: str, slots: dict[str, Any], source_type: str = "assistant") -> dict[str, Any]:
+    import hashlib
+    input_hash = hashlib.md5(input_data.encode("utf-8")).hexdigest()
+
+    # Try to find an existing memory for this hash
+    existing = collection("records").find_one({
+        "workspaceId": workspace_id,
+        "kind": "learning_memory",
+        "payload.inputHash": input_hash,
+        "payload.sourceType": source_type
+    })
+
+    if existing:
+        return existing
+
+    return put_record(workspace_id, "learning_memory", {
+        "id": make_id("LRN"),
+        "sourceType": source_type,
+        "inputHash": input_hash,
+        "inputData": input_data,
+        "intent": intent,
+        "slots": slots,
+        "confidence": 0.95,
+        "createdBy": "gemini",
+    })
+
+def get_learning_memory(workspace_id: str, input_data: str, source_type: str = "assistant") -> dict[str, Any] | None:
+    import hashlib
+    input_hash = hashlib.md5(input_data.encode("utf-8")).hexdigest()
+
+    existing = collection("records").find_one({
+        "workspaceId": workspace_id,
+        "kind": "learning_memory",
+        "payload.inputHash": input_hash,
+        "payload.sourceType": source_type
+    })
+
+    if existing:
+        return dict(existing.get("payload", {}))
+    return None
 
 def table_counts() -> dict[str, int]:
     return mongo_counts()

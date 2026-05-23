@@ -645,7 +645,7 @@ def parse_bill_scan(user: dict[str, Any], scan_id: str, payload: dict[str, Any])
     clean_text = clean_bill_text(raw_text)
     from apps.rhinopeak.services.mongo_service import expense_category_names
     categories = expense_category_names(user["workspaceId"])
-    parsed = parse_bill_text(clean_text, categories)
+    parsed = parse_bill_text(clean_text, categories, user["workspaceId"])
     scan = patch_record(
         user["workspaceId"],
         "bill_scans",
@@ -764,9 +764,9 @@ def approve_bill_scan(user: dict[str, Any], scan_id: str, payload: dict[str, Any
     }
 
 
-def parse_bill_text(raw_text: str, categories: list[str] = None) -> dict[str, Any]:
+def parse_bill_text(raw_text: str, categories: list[str] = None, workspace_id: str = "system") -> dict[str, Any]:
     from apps.rhinopeak.services.gpt_model import structure_ocr_text
-    return structure_ocr_text(raw_text, categories)
+    return structure_ocr_text(raw_text, categories, workspace_id)
 
 
 def normalize_approved_payload(value: Any) -> dict[str, Any]:

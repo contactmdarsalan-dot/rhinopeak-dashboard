@@ -625,7 +625,7 @@ def _structure_ocr_text_offline(raw_text: str, categories: List[str] = None) -> 
     }
 
 
-def structure_ocr_text(raw_text: str, categories: List[str] = None) -> Dict[str, Any]:
+def structure_ocr_text(raw_text: str, categories: List[str] = None, workspace_id: str = "system") -> Dict[str, Any]:
     """
     Feed OCR text through the KaroBrain™ Transformer model for representation,
     then extract structured bill fields using a high-accuracy
@@ -648,6 +648,16 @@ def structure_ocr_text(raw_text: str, categories: List[str] = None) -> Dict[str,
     except Exception as e:
         print(f"[KaroBrain™] Forward pass failed: {e}")
 
+    # 1b. Check Learning Memory
+    try:
+        from apps.rhinopeak.services.mongo_service import get_learning_memory
+        memory_result = get_learning_memory(workspace_id, raw_text, source_type="bill_scan")
+        if memory_result and memory_result.get("slots"):
+            print("[KaroBrain™] Using structured extraction from Learning Memory.")
+            return memory_result["slots"]
+    except Exception as e:
+        print(f"[KaroBrain™] Failed to check learning memory: {e}")
+
     # 2. Run local offline parser first as primary
     offline_result = _structure_ocr_text_offline(raw_text, categories)
     
@@ -664,6 +674,15 @@ def structure_ocr_text(raw_text: str, categories: List[str] = None) -> Dict[str,
     gemini_result = _gemini_structure_text(raw_text, categories)
     if gemini_result:
         print("[KaroBrain™] Gemini structuring successful.")
+
+        # Save to learning memory
+        try:
+            from apps.rhinopeak.services.mongo_service import save_learning_memory
+            save_learning_memory(workspace_id, raw_text, "structure_bill", gemini_result, source_type="bill_scan")
+            print("[KaroBrain™] Saved Gemini fallback result to Learning Memory.")
+        except Exception as e:
+            print(f"[KaroBrain™] Failed to save to learning memory: {e}")
+
         return gemini_result
 
     print("[KaroBrain™] Gemini failed or not configured. Falling back to offline result.")

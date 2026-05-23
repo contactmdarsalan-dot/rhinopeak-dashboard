@@ -221,7 +221,75 @@ def parse_assistant_command(payload: dict[str, Any], user: dict[str, Any] | None
     detected_language = detect_language(transcript)
     language = detected_language if detected_language == "ne" else str(payload.get("language") or detected_language)
     normalized = normalize_command(transcript)
+
+    # 1. Look in learning memory first
+    if user:
+        from apps.rhinopeak.services.mongo_service import get_learning_memory
+        memory_result = get_learning_memory(user["workspaceId"], normalized)
+        if memory_result:
+            intent = memory_result.get("intent", "unknown")
+            slots = memory_result.get("slots", {})
+            warnings = validation_warnings(intent, slots)
+            confidence = 0.95
+            can_execute = intent in SAFE_EXECUTION_INTENTS and not warnings
+
+            return {
+                "id": make_id("ASST"),
+                "transcript": transcript,
+                "normalizedTranscript": normalized,
+                "language": language,
+                "intent": intent,
+                "confidence": confidence,
+                "requiresConfirmation": can_execute,
+                "canExecute": can_execute,
+                "route": INTENT_ROUTES.get(intent, "/dashboard"),
+                "slots": slots,
+                "warnings": warnings,
+                "reply": assistant_reply(intent, slots, warnings, can_execute) + " (From Memory)",
+                "safety": {
+                    "autoExecute": False,
+                    "reason": "Write actions must be reviewed and confirmed before saving business data.",
+                },
+                "executionStatus": "Draft",
+                "createdAt": iso_now(),
+            }
+
     intent = detect_intent(normalized)
+
+    if intent == "unknown":
+        gemini_result = _gemini_intent_fallback(transcript)
+        if gemini_result and gemini_result.get("intent") != "unknown":
+            intent = gemini_result["intent"]
+            slots = gemini_result.get("slots", {})
+            warnings = validation_warnings(intent, slots)
+            confidence = gemini_result.get("confidence", 0.85)
+            can_execute = intent in SAFE_EXECUTION_INTENTS and not warnings
+
+            if user:
+                from apps.rhinopeak.services.mongo_service import save_learning_memory
+                save_learning_memory(user["workspaceId"], normalized, intent, slots, "assistant")
+
+            return {
+                "id": make_id("ASST"),
+                "transcript": transcript,
+                "normalizedTranscript": normalized,
+                "language": language,
+                "intent": intent,
+                "confidence": confidence,
+                "requiresConfirmation": can_execute,
+                "canExecute": can_execute,
+                "route": INTENT_ROUTES.get(intent, "/dashboard"),
+                "slots": slots,
+                "warnings": warnings,
+                "reply": assistant_reply(intent, slots, warnings, can_execute) + " (Handled by Gemini AI)",
+                "safety": {
+                    "autoExecute": False,
+                    "reason": "Write actions must be reviewed and confirmed before saving business data.",
+                },
+                "executionStatus": "Draft",
+                "createdAt": iso_now(),
+            }
+
     if intent == "business_question":
         return business_question_command(transcript, normalized, language, user)
 
@@ -251,6 +319,65 @@ def parse_assistant_command(payload: dict[str, Any], user: dict[str, Any] | None
         "executionStatus": "Draft",
         "createdAt": iso_now(),
     }
+
+
+def _gemini_intent_fallback(transcript: str) -> dict[str, Any]:
+    import os
+    import json
+    import urllib.request
+
+    try:
+        from apps.rhinopeak.services.karobrain_engine import GEMINI_API_KEY
+    except ImportError:
+        GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+
+    if not GEMINI_API_KEY:
+        return None
+
+    allowed_intents = list(INTENT_ROUTES.keys())
+
+    prompt = f"""You are KaroBrain™, an intent router for a business application.
+The user sent the following command: "{transcript}"
+Determine the user's intent. It MUST be one of these: {allowed_intents}.
+If you can, also extract any slots (amount, name, phone, paymentMethod, category).
+
+Return the structured output as a JSON object matching this schema:
+{{
+  "intent": "one of the allowed intents",
+  "slots": {{
+    "amount": 0.0,
+    "name": "extracted name if any",
+    "phone": "extracted phone if any"
+  }},
+  "confidence": 0.90
+}}
+"""
+
+    payload = {
+        'contents': [{'parts': [{'text': prompt}]}],
+        'generationConfig': {
+            'temperature': 0.1,
+            'responseMimeType': 'application/json'
+        }
+    }
+
+    req = urllib.request.Request(
+        f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}',
+        data=json.dumps(payload).encode('utf-8'),
+        headers={'Content-Type': 'application/json'},
+        method='POST'
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=10) as res:
+            body = res.read().decode('utf-8')
+            result = json.loads(body)
+            text = result['candidates'][0]['content']['parts'][0]['text']
+            parsed = json.loads(text.strip())
+            return parsed
+    except Exception as e:
+        print(f"[Gemini Fallback] Error: {e}")
+        return None
 
 
 def business_question_command(
@@ -537,15 +664,15 @@ def detect_intent(text: str) -> str:
         return "add_customer"
     if has_any(text, ["add supplier", "new supplier", "create supplier", "supplier add", "सप्लायर थप", "आपूर्तिकर्ता थप"]):
         return "add_supplier"
-    if has_any(text, ["add product", "new product", "create product", "product add", "item add", "सामान थप", "प्रोडक्ट थप"]):
+    if has_any(text, ["add product", "new product", "create product", "product add", "item add", "सामान थप", "प्रोडक्ट थप", "नयाँ सामान"]):
         return "add_product"
     if has_any(text, ["add stock", "stock in", "stock update", "inventory update", "स्टक थप", "स्टक मिलाउ"]):
         return "stock_movement"
-    if has_any(text, ["record sale", "add sale", "new sale", "sold", "sale entry", "बिक्री", "बेचे", "बेचियो"]):
+    if has_any(text, ["record sale", "add sale", "new sale", "sold", "sale entry", "बिक्री", "बेचे", "बेचियो", "सेल्स", "सेल", "नयाँ सेल्स एड गर"]):
         return "record_sale"
-    if has_any(text, ["payment received", "clear credit", "credit paid", "उधार तिर", "भुक्तानी आयो"]):
+    if has_any(text, ["payment received", "clear credit", "credit paid", "उधार तिर", "भुक्तानी आयो", "पार्टी भुक्तानी", "payment"]):
         return "record_payment"
-    if has_any(text, ["expense", "spent", "paid", "खर्च", "तिरे", "भुक्तानी गरे"]):
+    if has_any(text, ["expense", "spent", "paid", "खर्च", "तिरे", "भुक्तानी गरे", "खर्चा"]):
         return "add_expense"
     if has_any(text, ["report", "download report", "summary", "रिपोर्ट", "सारांश"]):
         return "create_report"
@@ -858,7 +985,7 @@ def extract_name_after_entity(transcript: str, normalized: str, intent: str) -> 
     phrases = {
         "add_customer": ["add customer", "new customer", "create customer", "customer add", "ग्राहक थप", "नयाँ ग्राहक"],
         "add_supplier": ["add supplier", "new supplier", "create supplier", "supplier add", "सप्लायर थप", "आपूर्तिकर्ता थप"],
-        "add_product": ["add product", "new product", "create product", "product add", "item add", "सामान थप", "प्रोडक्ट थप"],
+        "add_product": ["add product", "new product", "create product", "product add", "item add", "सामान थप", "प्रोडक्ट थप", "नयाँ सामान"],
     }.get(intent, [])
     text = transcript
     lowered = normalized
