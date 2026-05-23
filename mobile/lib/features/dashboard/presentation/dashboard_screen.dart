@@ -21,28 +21,35 @@ class DashboardScreen extends ConsumerWidget {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    return RpPage(
-      title: tr(ref, 'dashboard'),
-      action: IconButton.filledTonal(
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
         onPressed: state.loading
             ? null
             : () => ref.read(appControllerProvider.notifier).refreshBootstrap(),
-        icon: const Icon(Icons.sync),
+        child: const Icon(Icons.sync),
         tooltip: tr(ref, 'sync'),
+        elevation: 4,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _WelcomeCard(bootstrap: bootstrap),
-          const SizedBox(height: 20),
-          const _DashboardActions(),
-          const SizedBox(height: 20),
-          _StatGrid(bootstrap: bootstrap),
-          const SizedBox(height: 20),
-          _RecentSales(bootstrap: bootstrap),
-          const SizedBox(height: 20),
-          _LowStock(bootstrap: bootstrap),
-        ],
+      // Elevate the FAB so it sits above the bottom nav bar (Thumb zone alignment)
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      body: RpPage(
+        title: tr(ref, 'dashboard'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _WelcomeCard(bootstrap: bootstrap),
+            const SizedBox(height: 20),
+            const _DashboardActions(),
+            const SizedBox(height: 20),
+            _StatGrid(bootstrap: bootstrap),
+            const SizedBox(height: 20),
+            _RecentSales(bootstrap: bootstrap),
+            const SizedBox(height: 20),
+            _LowStock(bootstrap: bootstrap),
+            const SizedBox(height: 80), // Padding for the FAB and Bottom Nav
+          ],
+        ),
       ),
     );
   }
