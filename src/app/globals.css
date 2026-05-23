@@ -3,62 +3,49 @@
 
 @layer base {
   :root {
-    --font-sans: Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     --font-heading: var(--font-sans);
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #111118;
-    --bg-card: #16161f;
-    --bg-card-hover: #1c1c27;
-    --border: #232333;
-    --border-subtle: #1a1a28;
-    --text-primary: #f0f0ff;
-    --text-secondary: #8888aa;
-    --text-muted: #555577;
-    --accent: #7c3aed;
-    --accent-glow: rgba(124, 58, 237, 0.16);
-    --accent-cyan: #d946ef;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --info: #3b82f6;
-    --surface-page: oklch(97.6% 0.006 82);
-    --surface-raised: oklch(99.1% 0.006 82);
-    --surface-muted: oklch(94.7% 0.012 82);
-    --surface-sidebar: oklch(24% 0.035 224);
-    --surface-sidebar-hover: oklch(30% 0.04 224);
-    --border-strong: oklch(76% 0.024 82);
-    --text-on-image: oklch(96% 0.01 82);
-    --accent-strong: #5b21b6;
-    --accent-contrast: oklch(98% 0.006 82);
-    --accent-warm: oklch(83% 0.12 78);
-    --success-bg: oklch(92% 0.048 158);
-    --success-text: oklch(42% 0.1 158);
-    --warning-bg: oklch(93% 0.065 82);
-    --warning-text: oklch(54% 0.12 70);
-    --danger-bg: oklch(92% 0.05 25);
-    --danger-text: oklch(52% 0.14 25);
-    --info-bg: oklch(93% 0.04 230);
-    --info-text: oklch(45% 0.1 230);
-    --shadow-soft: 0 18px 50px oklch(30% 0.04 224 / 0.08);
+    --bg-primary: oklch(0.12 0.01 280);
+    --bg-secondary: oklch(0.14 0.015 280);
+    --bg-card: oklch(0.16 0.02 280);
+    --bg-card-hover: oklch(0.18 0.025 280);
+    --bg-glass: oklch(0.16 0.02 280 / 0.65);
+    --border: oklch(0.24 0.03 280 / 0.8);
+    --border-subtle: oklch(0.20 0.02 280 / 0.6);
+    --text-primary: oklch(0.96 0.01 280);
+    --text-secondary: oklch(0.72 0.02 280);
+    --text-muted: oklch(0.55 0.03 280);
+    --accent: oklch(0.60 0.22 285);
+    --accent-glow: oklch(0.60 0.22 285 / 0.16);
+    --accent-strong: oklch(0.50 0.20 285);
+    --accent-cyan: oklch(0.65 0.18 310);
+    --success: oklch(0.70 0.15 160);
+    --warning: oklch(0.75 0.18 70);
+    --danger: oklch(0.65 0.20 25);
+    --info: oklch(0.60 0.15 250);
+    --shadow-soft: 0 12px 36px oklch(0.08 0.02 280 / 0.4);
+    --shadow-popover: 0 24px 64px oklch(0.05 0.02 280 / 0.6);
   }
 
   .light {
-    --bg-primary: #f4f4f8;
-    --bg-secondary: #ffffff;
-    --bg-card: #ffffff;
-    --bg-card-hover: #f9f9fc;
-    --border: #e2e2ee;
-    --border-subtle: #ededf5;
-    --text-primary: #0a0a1a;
-    --text-secondary: #555577;
-    --text-muted: #9999bb;
-    --accent: #7c3aed;
-    --accent-glow: rgba(124, 58, 237, 0.09);
-    --accent-cyan: #d946ef;
-    --success: #059669;
-    --warning: #d97706;
-    --danger: #dc2626;
-    --info: #2563eb;
+    --bg-primary: oklch(0.98 0.005 280);
+    --bg-secondary: oklch(1.0 0 0);
+    --bg-card: oklch(1.0 0 0);
+    --bg-card-hover: oklch(0.97 0.005 280);
+    --bg-glass: oklch(1.0 0 0 / 0.75);
+    --border: oklch(0.92 0.01 280);
+    --border-subtle: oklch(0.95 0.005 280);
+    --text-primary: oklch(0.25 0.02 280);
+    --text-secondary: oklch(0.45 0.03 280);
+    --text-muted: oklch(0.65 0.02 280);
+    --accent: oklch(0.55 0.22 285);
+    --accent-glow: oklch(0.55 0.22 285 / 0.12);
+    --success: oklch(0.55 0.15 160);
+    --warning: oklch(0.65 0.18 70);
+    --danger: oklch(0.55 0.20 25);
+    --info: oklch(0.50 0.15 250);
+    --shadow-soft: 0 12px 32px oklch(0.4 0.02 280 / 0.08);
+    --shadow-popover: 0 24px 64px oklch(0.3 0.02 280 / 0.12);
   }
 
   * {
@@ -1199,11 +1186,12 @@
       z-index: 86;
       min-height: 72px;
       padding: 8px 8px 7px;
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
-      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.46);
-      backdrop-filter: blur(18px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 32px;
+      background: var(--bg-glass);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(24px);
+      WebkitBackdropFilter: blur(24px);
     }
 
     .mobile-bottom-item {

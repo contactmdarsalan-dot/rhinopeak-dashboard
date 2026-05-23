@@ -207,16 +207,18 @@ class BootstrapData {
 
   factory BootstrapData.fromJson(Map<String, dynamic> json) {
     final team = _list(json['teamMembers']);
-    final currentRole =
-        team.isNotEmpty ? team.first['role']?.toString() : 'Owner';
+    final currentRole = team.isNotEmpty
+        ? team.first['role']?.toString()
+        : 'Owner';
     final roleDefinitions = _list(json['roleDefinitions']);
     final role = roleDefinitions.cast<Map<String, dynamic>?>().firstWhere(
-          (item) => item?['name']?.toString() == currentRole,
-          orElse: () => null,
-        );
+      (item) => item?['name']?.toString() == currentRole,
+      orElse: () => null,
+    );
     final permissions = role?['permissions'] is List
         ? Set<String>.from(
-            (role?['permissions'] as List).map((item) => item.toString()))
+            (role?['permissions'] as List).map((item) => item.toString()),
+          )
         : <String>{};
 
     return BootstrapData(
@@ -261,7 +263,8 @@ class BootstrapData {
     final today = DateTime.now().toIso8601String().substring(0, 10);
     return sales
         .where(
-            (sale) => sale.date.startsWith(today) && sale.status != 'Refunded')
+          (sale) => sale.date.startsWith(today) && sale.status != 'Refunded',
+        )
         .fold<num>(0, (sum, sale) => sum + sale.amount);
   }
 
@@ -269,7 +272,8 @@ class BootstrapData {
     final month = DateTime.now().toIso8601String().substring(0, 7);
     return sales
         .where(
-            (sale) => sale.date.startsWith(month) && sale.status != 'Refunded')
+          (sale) => sale.date.startsWith(month) && sale.status != 'Refunded',
+        )
         .fold<num>(0, (sum, sale) => sum + sale.amount);
   }
 
@@ -283,28 +287,27 @@ class BootstrapData {
       products.where((item) => item.stock <= item.reorderLevel).length;
 
   num get expenseTotal => expenses.fold<num>(
-      0,
-      (sum, item) =>
-          sum + (num.tryParse(item['amount']?.toString() ?? '') ?? 0));
+    0,
+    (sum, item) => sum + (num.tryParse(item['amount']?.toString() ?? '') ?? 0),
+  );
 
   num get purchaseTotal => purchases.fold<num>(
-      0,
-      (sum, item) =>
-          sum + (num.tryParse(item['amount']?.toString() ?? '') ?? 0));
+    0,
+    (sum, item) => sum + (num.tryParse(item['amount']?.toString() ?? '') ?? 0),
+  );
 
   num get cashBankBalance => cashBankAccounts.fold<num>(
-      0,
-      (sum, item) =>
-          sum + (num.tryParse(item['balance']?.toString() ?? '') ?? 0));
+    0,
+    (sum, item) => sum + (num.tryParse(item['balance']?.toString() ?? '') ?? 0),
+  );
 
   bool can(String permission) =>
       permissions.isEmpty || permissions.contains(permission);
 
   static List<Map<String, dynamic>> _list(Object? value) {
-    return _rawList(value)
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
+    return _rawList(
+      value,
+    ).whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
   }
 
   static List<dynamic> _rawList(Object? value) =>

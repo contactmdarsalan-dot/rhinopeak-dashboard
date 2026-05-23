@@ -104,8 +104,11 @@ class _SalesSummaryBanner extends StatelessWidget {
                 width: 1.5,
               ),
             ),
-            child: Icon(Icons.receipt_long_rounded,
-                color: colorScheme.primary, size: 20),
+            child: Icon(
+              Icons.receipt_long_rounded,
+              color: colorScheme.primary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -176,8 +179,9 @@ class _SaleCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: colorScheme.primary
-                      .withValues(alpha: isDark ? 0.12 : 0.08),
+                  color: colorScheme.primary.withValues(
+                    alpha: isDark ? 0.12 : 0.08,
+                  ),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -203,8 +207,9 @@ class _SaleCard extends ConsumerWidget {
                       trProductList(ref, sale.products),
                       style: TextStyle(
                         fontSize: 12.5,
-                        color:
-                            colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.8,
+                        ),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -268,7 +273,10 @@ class _SaleCard extends ConsumerWidget {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _StatusTag(label: trValue(ref, sale.payment), type: _TagType.payment),
+              _StatusTag(
+                label: trValue(ref, sale.payment),
+                type: _TagType.payment,
+              ),
               _StatusTag(
                 label: trValue(ref, sale.status),
                 type: sale.status == 'Completed'
@@ -349,7 +357,9 @@ class _EmptyState extends StatelessWidget {
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.35),
+          color: colorScheme.outlineVariant.withValues(
+            alpha: isDark ? 0.15 : 0.35,
+          ),
           width: 1,
         ),
       ),
@@ -358,10 +368,16 @@ class _EmptyState extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.07),
+              color: colorScheme.primary.withValues(
+                alpha: isDark ? 0.12 : 0.07,
+              ),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 32, color: colorScheme.primary.withValues(alpha: 0.6)),
+            child: Icon(
+              icon,
+              size: 32,
+              color: colorScheme.primary.withValues(alpha: 0.6),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -400,7 +416,9 @@ Future<void> _confirmDeleteSale(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('Delete sale?'),
-      content: Text('${tr(ref, 'deleteRecordBody')}\n\n${trValue(ref, sale.customer)}'),
+      content: Text(
+        '${tr(ref, 'deleteRecordBody')}\n\n${trValue(ref, sale.customer)}',
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),

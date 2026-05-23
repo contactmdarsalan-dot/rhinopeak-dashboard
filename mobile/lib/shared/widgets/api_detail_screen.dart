@@ -30,10 +30,12 @@ class ApiDetailScreen extends ConsumerWidget {
           future: future,
           builder: (context, snapshot) {
             final fallback = _fallbackDetail(ref, entity, id);
-            final useFallback = fallback != null &&
+            final useFallback =
+                fallback != null &&
                 (snapshot.hasError ||
                     snapshot.connectionState != ConnectionState.done);
-            final loading = snapshot.connectionState != ConnectionState.done &&
+            final loading =
+                snapshot.connectionState != ConnectionState.done &&
                 fallback == null;
             final detail = useFallback
                 ? fallback
@@ -46,13 +48,17 @@ class ApiDetailScreen extends ConsumerWidget {
                   stretch: true,
                   backgroundColor: Theme.of(context).colorScheme.surface,
                   surfaceTintColor: Colors.transparent,
-                  title: Text(trRecordText(ref, title),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  title: Text(
+                    trRecordText(ref, title),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   actions: [
                     IconButton(
                       tooltip: tr(ref, 'refresh'),
-                      onPressed: () =>
-                          ref.read(appControllerProvider.notifier).refreshBootstrap(),
+                      onPressed: () => ref
+                          .read(appControllerProvider.notifier)
+                          .refreshBootstrap(),
                       icon: const Icon(Icons.sync_rounded),
                     ),
                   ],
@@ -105,8 +111,11 @@ class _DetailContent extends ConsumerWidget {
     final record = Map<String, dynamic>.from(detail['record'] as Map? ?? {});
     final related = Map<String, dynamic>.from(detail['related'] as Map? ?? {});
     final amount = record['amount'] ?? record['balance'] ?? record['price'];
-    final status =
-        _text(record, 'status', fallback: _text(record, 'type', fallback: entity));
+    final status = _text(
+      record,
+      'status',
+      fallback: _text(record, 'type', fallback: entity),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -137,19 +146,28 @@ class _DetailContent extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.info_outline,
-                      color: Theme.of(context).colorScheme.primary, size: 18),
+                  child: Icon(
+                    Icons.info_outline,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    trValue(ref, 'No related records yet. New sales, payments, stock logs, and documents will appear here.'),
+                    trValue(
+                      ref,
+                      'No related records yet. New sales, payments, stock logs, and documents will appear here.',
+                    ),
                     style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 13),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -184,11 +202,7 @@ class _HeroCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppTheme.primary,
-            Color(0xFF0A5C4E),
-            AppTheme.accent,
-          ],
+          colors: [AppTheme.primary, Color(0xFF0A5C4E), AppTheme.accent],
           stops: [0.0, 0.55, 1.0],
         ),
         borderRadius: BorderRadius.circular(28),
@@ -212,12 +226,18 @@ class _HeroCard extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.receipt_long, color: Colors.white, size: 24),
+                child: const Icon(
+                  Icons.receipt_long,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
               const Spacer(),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(999),
@@ -251,20 +271,20 @@ class _HeroCard extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  height: 1.1,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
           ),
           if (amountValue != null) ...[
             const SizedBox(height: 16),
             Text(
               money(amountValue),
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
             ),
           ],
           if (offlineFallback) ...[
@@ -278,8 +298,11 @@ class _HeroCard extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.cloud_off_outlined,
-                      color: Colors.white.withValues(alpha: 0.86), size: 14),
+                  Icon(
+                    Icons.cloud_off_outlined,
+                    color: Colors.white.withValues(alpha: 0.86),
+                    size: 14,
+                  ),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -310,8 +333,11 @@ class _QuickFacts extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final facts = [
       _Fact(Icons.badge_outlined, 'ID', _text(record, 'id')),
-      _Fact(Icons.calendar_today_outlined, 'Date',
-          shortDate(_text(record, 'date', fallback: _text(record, 'createdAt')))),
+      _Fact(
+        Icons.calendar_today_outlined,
+        'Date',
+        shortDate(_text(record, 'date', fallback: _text(record, 'createdAt'))),
+      ),
       _Fact(Icons.payments_outlined, 'Payment', _text(record, 'payment')),
       _Fact(Icons.category_outlined, 'Category', _text(record, 'category')),
     ].where((item) => item.value.trim().isNotEmpty).toList();
@@ -331,7 +357,9 @@ class _QuickFacts extends ConsumerWidget {
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: isDark ? 0.3 : 0.5),
+                color: Theme.of(context).colorScheme.outlineVariant.withValues(
+                  alpha: isDark ? 0.3 : 0.5,
+                ),
               ),
               boxShadow: isDark
                   ? []
@@ -349,28 +377,37 @@ class _QuickFacts extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(fact.icon,
-                      size: 16, color: Theme.of(context).colorScheme.primary),
+                  child: Icon(
+                    fact.icon,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(trValue(ref, fact.label),
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w600,
-                            )),
+                    Text(
+                      trValue(ref, fact.label),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       _displayLocalized(ref, fact.value),
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w900, fontSize: 13),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -408,25 +445,32 @@ class _FriendlyErrorCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.travel_explore_rounded,
-                color: Theme.of(context).colorScheme.primary, size: 26),
+            child: Icon(
+              Icons.travel_explore_rounded,
+              color: Theme.of(context).colorScheme.primary,
+              size: 26,
+            ),
           ),
           const SizedBox(height: 16),
-          Text('Detail is not available yet',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w900)),
+          Text(
+            'Detail is not available yet',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: 6),
           Text(
             message == 'Route not found.'
                 ? 'Please restart the backend so the latest mobile detail routes are active.'
                 : message,
-            style:
-                TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -444,18 +488,20 @@ class _DetailSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entries = rows.entries
         .where(
-            (entry) => entry.value != null && entry.value.toString().isNotEmpty)
+          (entry) => entry.value != null && entry.value.toString().isNotEmpty,
+        )
         .take(24)
         .toList();
     return RpCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(trValue(ref, title),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w900)),
+          Text(
+            trValue(ref, title),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: 14),
           for (var i = 0; i < entries.length; i++)
             Container(
@@ -464,10 +510,9 @@ class _DetailSection extends ConsumerWidget {
                 border: i < entries.length - 1
                     ? Border(
                         bottom: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outlineVariant
-                              .withValues(alpha: 0.4),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outlineVariant.withValues(alpha: 0.4),
                           width: 1,
                         ),
                       )
@@ -481,9 +526,9 @@ class _DetailSection extends ConsumerWidget {
                     child: Text(
                       trValue(ref, _label(entries[i].key)),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -524,19 +569,21 @@ class _RelatedSection extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(trValue(ref, _label(title)),
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w900)),
+            Text(
+              trValue(ref, _label(title)),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
             const SizedBox(height: 12),
             for (final row in rows.take(8))
               Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.35),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Row(
@@ -544,11 +591,16 @@ class _RelatedSection extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.description_outlined,
-                          size: 16, color: Theme.of(context).colorScheme.primary),
+                      child: Icon(
+                        Icons.description_outlined,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -556,19 +608,42 @@ class _RelatedSection extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _displayLocalized(ref, _text(row, 'name',
-                                fallback: _text(row, 'customer',
-                                    fallback: _text(row, 'title',
-                                        fallback: _text(row, 'id'))))),
+                            _displayLocalized(
+                              ref,
+                              _text(
+                                row,
+                                'name',
+                                fallback: _text(
+                                  row,
+                                  'customer',
+                                  fallback: _text(
+                                    row,
+                                    'title',
+                                    fallback: _text(row, 'id'),
+                                  ),
+                                ),
+                              ),
+                            ),
                             style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            _displayLocalized(ref, _text(row, 'date',
-                                fallback: _text(row, 'status',
-                                    fallback: _text(row, 'type')))),
+                            _displayLocalized(
+                              ref,
+                              _text(
+                                row,
+                                'date',
+                                fallback: _text(
+                                  row,
+                                  'status',
+                                  fallback: _text(row, 'type'),
+                                ),
+                              ),
+                            ),
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                               fontSize: 12,
                             ),
                           ),
@@ -576,8 +651,13 @@ class _RelatedSection extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Text(_displayLocalized(ref, row['amount'] ?? row['delta'] ?? ''),
-                        style: const TextStyle(fontWeight: FontWeight.w900)),
+                    Text(
+                      _displayLocalized(
+                        ref,
+                        row['amount'] ?? row['delta'] ?? '',
+                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
                   ],
                 ),
               ),
@@ -607,33 +687,40 @@ Map<String, dynamic>? _fallbackDetail(WidgetRef ref, String entity, String id) {
 }
 
 Map<String, dynamic>? _findFallbackRecord(
-    BootstrapData bootstrap, String entity, String id) {
+  BootstrapData bootstrap,
+  String entity,
+  String id,
+) {
   Iterable<Map<String, dynamic>> rows;
   switch (entity) {
     case 'sales':
-      rows = bootstrap.sales.map((sale) => {
-            'id': sale.id,
-            'customer': sale.customer,
-            'products': sale.products,
-            'amount': sale.amount,
-            'payment': sale.payment,
-            'status': sale.status,
-            'date': sale.date,
-          });
+      rows = bootstrap.sales.map(
+        (sale) => {
+          'id': sale.id,
+          'customer': sale.customer,
+          'products': sale.products,
+          'amount': sale.amount,
+          'payment': sale.payment,
+          'status': sale.status,
+          'date': sale.date,
+        },
+      );
       break;
     case 'inventory':
-      rows = bootstrap.products.map((product) => {
-            'id': product.id,
-            'name': product.name,
-            'category': product.category,
-            'unit': product.unit,
-            'stock': product.stock,
-            'reorderLevel': product.reorderLevel,
-            'price': product.price,
-            'costPrice': product.costPrice,
-            'supplier': product.supplier,
-            'status': product.status,
-          });
+      rows = bootstrap.products.map(
+        (product) => {
+          'id': product.id,
+          'name': product.name,
+          'category': product.category,
+          'unit': product.unit,
+          'stock': product.stock,
+          'reorderLevel': product.reorderLevel,
+          'price': product.price,
+          'costPrice': product.costPrice,
+          'supplier': product.supplier,
+          'status': product.status,
+        },
+      );
       break;
     case 'customers':
       rows = bootstrap.customers;
@@ -702,7 +789,10 @@ Map<String, dynamic>? _findFallbackRecord(
 }
 
 Map<String, List<Map<String, dynamic>>> _fallbackRelated(
-    BootstrapData bootstrap, String entity, Map<String, dynamic> record) {
+  BootstrapData bootstrap,
+  String entity,
+  Map<String, dynamic> record,
+) {
   final id = _text(record, 'id');
   final customerId = _text(record, 'customerId', fallback: id);
   final productId = entity == 'inventory' ? id : _text(record, 'productId');
@@ -727,8 +817,10 @@ Map<String, List<Map<String, dynamic>>> _fallbackRelated(
 
 String _label(String value) {
   final spaced = value
-      .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
-          (match) => '${match.group(1)} ${match.group(2)}')
+      .replaceAllMapped(
+        RegExp(r'([a-z])([A-Z])'),
+        (match) => '${match.group(1)} ${match.group(2)}',
+      )
       .replaceAll('-', ' ')
       .replaceAll('_', ' ');
   return spaced.isEmpty ? value : spaced[0].toUpperCase() + spaced.substring(1);

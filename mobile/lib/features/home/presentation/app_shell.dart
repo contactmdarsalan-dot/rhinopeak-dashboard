@@ -33,8 +33,9 @@ class _AppShellState extends ConsumerState<AppShell> {
       const InventoryScreen(),
       MoreScreen(
         onOpenSettings: () {
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
         },
       ),
     ];
@@ -46,9 +47,9 @@ class _AppShellState extends ConsumerState<AppShell> {
         currentIndex: _index,
         onTap: (buttonIndex) {
           if (buttonIndex == 2) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ScanBillScreen()),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ScanBillScreen()));
           } else {
             int targetScreenIndex = buttonIndex;
             if (buttonIndex > 2) {
@@ -63,10 +64,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 }
 
 class _MobileBottomNav extends ConsumerWidget {
-  const _MobileBottomNav({
-    required this.currentIndex,
-    required this.onTap,
-  });
+  const _MobileBottomNav({required this.currentIndex, required this.onTap});
 
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -88,7 +86,11 @@ class _MobileBottomNav extends ConsumerWidget {
     final items = [
       _NavItem(icon: Icons.grid_view_rounded, label: tr(ref, 'home')),
       _NavItem(icon: Icons.people_outline_rounded, label: tr(ref, 'parties')),
-      _NavItem(icon: Icons.document_scanner_outlined, label: tr(ref, 'scanBill'), primary: true),
+      _NavItem(
+        icon: Icons.document_scanner_outlined,
+        label: tr(ref, 'scanBill'),
+        primary: true,
+      ),
       _NavItem(icon: Icons.inventory_2_outlined, label: tr(ref, 'stock')),
       _NavItem(icon: Icons.more_horiz, label: tr(ref, 'more')),
     ];
@@ -150,7 +152,8 @@ class _NavButton extends StatefulWidget {
   State<_NavButton> createState() => _NavButtonState();
 }
 
-class _NavButtonState extends State<_NavButton> with SingleTickerProviderStateMixin {
+class _NavButtonState extends State<_NavButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -184,8 +187,8 @@ class _NavButtonState extends State<_NavButton> with SingleTickerProviderStateMi
     final color = widget.item.primary
         ? Colors.white
         : widget.selected
-            ? activeColor
-            : inactiveColor;
+        ? activeColor
+        : inactiveColor;
 
     Widget navItemContent;
 
@@ -236,11 +239,11 @@ class _NavButtonState extends State<_NavButton> with SingleTickerProviderStateMi
             widget.item.label,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: widget.selected ? FontWeight.w900 : FontWeight.w700,
-                  fontSize: 10.5,
-                  letterSpacing: 0.1,
-                ),
+              color: color,
+              fontWeight: widget.selected ? FontWeight.w900 : FontWeight.w700,
+              fontSize: 10.5,
+              letterSpacing: 0.1,
+            ),
           ),
         ],
       );

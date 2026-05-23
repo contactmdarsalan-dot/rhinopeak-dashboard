@@ -43,17 +43,22 @@ class SettingsScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: colorScheme.primary
-                            .withValues(alpha: isDark ? 0.12 : 0.08),
+                        color: colorScheme.primary.withValues(
+                          alpha: isDark ? 0.12 : 0.08,
+                        ),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: colorScheme.primary
-                              .withValues(alpha: isDark ? 0.25 : 0.15),
+                          color: colorScheme.primary.withValues(
+                            alpha: isDark ? 0.25 : 0.15,
+                          ),
                           width: 1.5,
                         ),
                       ),
-                      child: Icon(Icons.translate_rounded,
-                          size: 18, color: colorScheme.primary),
+                      child: Icon(
+                        Icons.translate_rounded,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -73,8 +78,9 @@ class SettingsScreen extends ConsumerWidget {
                                 : tr(ref, 'nepali'),
                             style: TextStyle(
                               fontSize: 12,
-                              color: colorScheme.onSurfaceVariant
-                                  .withValues(alpha: 0.75),
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.75,
+                              ),
                             ),
                           ),
                         ],
@@ -107,7 +113,8 @@ class SettingsScreen extends ConsumerWidget {
                   style: ButtonStyle(
                     shape: WidgetStateProperty.all(
                       RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
@@ -188,14 +195,17 @@ class SettingsScreen extends ConsumerWidget {
           FilledButton.icon(
             onPressed: state.loading
                 ? null
-                : () =>
-                    ref.read(appControllerProvider.notifier).refreshBootstrap(),
+                : () => ref
+                      .read(appControllerProvider.notifier)
+                      .refreshBootstrap(),
             icon: state.loading
                 ? const SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.cloud_sync_rounded, size: 18),
             label: Text(tr(ref, 'sync')),
@@ -253,7 +263,8 @@ class _Divider extends StatelessWidget {
         height: 1,
         thickness: 1,
         color: Theme.of(context).colorScheme.outlineVariant.withValues(
-            alpha: Theme.of(context).brightness == Brightness.dark ? 0.1 : 0.3),
+          alpha: Theme.of(context).brightness == Brightness.dark ? 0.1 : 0.3,
+        ),
       ),
     );
   }

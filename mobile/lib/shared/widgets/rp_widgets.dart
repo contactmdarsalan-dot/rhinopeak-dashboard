@@ -14,17 +14,22 @@ String trValue(WidgetRef ref, String value) {
 
 String trProductList(WidgetRef ref, String value) {
   final parts = value.split(',');
-  return parts.map((part) {
-    final trimmed = part.trim();
-    final match = RegExp(r'^(.+?)\s+x\s+([0-9.,]+)\s*([A-Za-z]+)?$')
-        .firstMatch(trimmed);
-    if (match == null) return trValue(ref, trimmed);
+  return parts
+      .map((part) {
+        final trimmed = part.trim();
+        final match = RegExp(
+          r'^(.+?)\s+x\s+([0-9.,]+)\s*([A-Za-z]+)?$',
+        ).firstMatch(trimmed);
+        if (match == null) return trValue(ref, trimmed);
 
-    final name = trValue(ref, match.group(1)!.trim());
-    final quantity = match.group(2)!;
-    final unit = (match.group(3) ?? '').trim();
-    return unit.isEmpty ? '$name x $quantity' : '$name x $quantity ${trValue(ref, unit)}';
-  }).join(', ');
+        final name = trValue(ref, match.group(1)!.trim());
+        final quantity = match.group(2)!;
+        final unit = (match.group(3) ?? '').trim();
+        return unit.isEmpty
+            ? '$name x $quantity'
+            : '$name x $quantity ${trValue(ref, unit)}';
+      })
+      .join(', ');
 }
 
 String trRecordText(WidgetRef ref, String value) {
@@ -38,9 +43,10 @@ String trRecordText(WidgetRef ref, String value) {
         '${trRecordText(ref, labelValueMatch.group(2)!.trim())}';
   }
 
-  final suffixMatch =
-      RegExp(r'^(.+?)\s+(voucher|account)$', caseSensitive: false)
-          .firstMatch(trimmed);
+  final suffixMatch = RegExp(
+    r'^(.+?)\s+(voucher|account)$',
+    caseSensitive: false,
+  ).firstMatch(trimmed);
   if (suffixMatch != null) {
     return '${trRecordText(ref, suffixMatch.group(1)!.trim())} '
         '${trValue(ref, suffixMatch.group(2)!.toLowerCase())}';
@@ -110,7 +116,7 @@ class RpPage extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(right: 16),
                         child: action,
-                      )
+                      ),
                     ],
             ),
             if (slivers != null)
@@ -143,8 +149,9 @@ class RpCard extends StatelessWidget {
         color: Theme.of(context).cardTheme.color ?? colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color:
-              colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.4),
+          color: colorScheme.outlineVariant.withValues(
+            alpha: isDark ? 0.15 : 0.4,
+          ),
           width: 1,
         ),
         boxShadow: isDark
@@ -153,7 +160,7 @@ class RpCard extends StatelessWidget {
                   color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
-                )
+                ),
               ]
             : [
                 BoxShadow(
@@ -177,10 +184,7 @@ class RpCard extends StatelessWidget {
             splashColor: colorScheme.primary.withValues(alpha: 0.05),
             highlightColor: colorScheme.primary.withValues(alpha: 0.02),
             borderRadius: BorderRadius.circular(24),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: child,
-            ),
+            child: Padding(padding: const EdgeInsets.all(20), child: child),
           ),
         ),
       ),
@@ -284,10 +288,10 @@ class StatCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2,
-                    ),
+                  color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
               ),
               const SizedBox(height: 4),
               FittedBox(
@@ -296,10 +300,10 @@ class StatCard extends StatelessWidget {
                 child: Text(
                   value,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                        color: scheme.onSurface,
-                      ),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                    color: scheme.onSurface,
+                  ),
                 ),
               ),
             ],

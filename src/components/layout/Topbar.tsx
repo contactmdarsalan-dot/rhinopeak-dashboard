@@ -97,7 +97,9 @@ export function Topbar() {
       className="app-topbar"
       style={{
         minHeight: 64,
-        background: 'var(--bg-secondary)',
+        background: 'var(--bg-glass)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
@@ -107,6 +109,7 @@ export function Topbar() {
         top: 0,
         zIndex: 30,
         flexWrap: 'wrap',
+        transition: 'background 0.3s ease, border-color 0.3s ease',
       }}
     >
       <div className="topbar-title" style={{ flex: '1 1 180px', minWidth: 160 }}>
@@ -309,16 +312,18 @@ export function Topbar() {
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               style={{
                 position: 'absolute',
                 right: 0,
                 top: 44,
                 width: 330,
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: 12,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                background: 'var(--bg-glass)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 16,
+                boxShadow: 'var(--shadow-popover)',
                 zIndex: 100,
                 overflow: 'hidden',
               }}
@@ -377,16 +382,18 @@ export function Topbar() {
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               style={{
                 position: 'absolute',
                 right: 0,
                 top: 44,
                 width: 240,
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: 12,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                background: 'var(--bg-glass)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 16,
+                boxShadow: 'var(--shadow-popover)',
                 overflow: 'hidden',
                 zIndex: 100,
               }}

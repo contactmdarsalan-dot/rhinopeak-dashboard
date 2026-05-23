@@ -34,59 +34,123 @@ class MoreScreen extends ConsumerWidget {
     }
 
     final dailyOps = [
-      createAction(Icons.people_alt_outlined, 'customers', 'customerModuleHelp',
-          module: 'customers'),
       createAction(
-          Icons.local_shipping_outlined, 'suppliers', 'supplierModuleHelp',
-          module: 'suppliers'),
-      createAction(Icons.groups_2_outlined, 'parties', 'partiesModuleHelp',
-          module: 'parties'),
+        Icons.people_alt_outlined,
+        'customers',
+        'customerModuleHelp',
+        module: 'customers',
+      ),
       createAction(
-          Icons.shopping_bag_outlined, 'purchases', 'purchasesModuleHelp',
-          module: 'purchases'),
+        Icons.local_shipping_outlined,
+        'suppliers',
+        'supplierModuleHelp',
+        module: 'suppliers',
+      ),
       createAction(
-          Icons.folder_copy_outlined, 'documents', 'documentsModuleHelp',
-          module: 'documents'),
+        Icons.groups_2_outlined,
+        'parties',
+        'partiesModuleHelp',
+        module: 'parties',
+      ),
+      createAction(
+        Icons.shopping_bag_outlined,
+        'purchases',
+        'purchasesModuleHelp',
+        module: 'purchases',
+      ),
+      createAction(
+        Icons.folder_copy_outlined,
+        'documents',
+        'documentsModuleHelp',
+        module: 'documents',
+      ),
     ];
 
     final financials = [
-      createAction(Icons.account_balance_wallet_outlined, 'creditCustomers',
-          'creditModuleHelp',
-          module: 'credit'),
-      createAction(Icons.wallet_outlined, 'expenses', 'expensesModuleHelp',
-          module: 'expenses'),
       createAction(
-          Icons.account_balance_outlined, 'cashBank', 'cashBankModuleHelp',
-          module: 'cashBank'),
-      createAction(Icons.book_outlined, 'accounting', 'accountingModuleHelp',
-          module: 'accounting'),
-      createAction(Icons.receipt_outlined, 'bills', 'billsModuleHelp',
-          module: 'bills'),
+        Icons.account_balance_wallet_outlined,
+        'creditCustomers',
+        'creditModuleHelp',
+        module: 'credit',
+      ),
+      createAction(
+        Icons.wallet_outlined,
+        'expenses',
+        'expensesModuleHelp',
+        module: 'expenses',
+      ),
+      createAction(
+        Icons.account_balance_outlined,
+        'cashBank',
+        'cashBankModuleHelp',
+        module: 'cashBank',
+      ),
+      createAction(
+        Icons.book_outlined,
+        'accounting',
+        'accountingModuleHelp',
+        module: 'accounting',
+      ),
+      createAction(
+        Icons.receipt_outlined,
+        'bills',
+        'billsModuleHelp',
+        module: 'bills',
+      ),
     ];
 
     final analytics = [
-      createAction(Icons.notifications_active_outlined, 'reminders',
-          'remindersModuleHelp',
-          module: 'reminders'),
-      createAction(Icons.bar_chart_outlined, 'reports', 'reportsModuleHelp',
-          module: 'reports'),
       createAction(
-          Icons.workspace_premium_outlined, 'billing', 'billingModuleHelp',
-          module: 'billing'),
+        Icons.notifications_active_outlined,
+        'reminders',
+        'remindersModuleHelp',
+        module: 'reminders',
+      ),
+      createAction(
+        Icons.bar_chart_outlined,
+        'reports',
+        'reportsModuleHelp',
+        module: 'reports',
+      ),
+      createAction(
+        Icons.workspace_premium_outlined,
+        'billing',
+        'billingModuleHelp',
+        module: 'billing',
+      ),
     ];
 
     final systemAdmin = [
       createAction(
-          Icons.admin_panel_settings_outlined, 'teamRoles', 'teamModuleHelp',
-          module: 'team'),
-      createAction(Icons.fact_check_outlined, 'audit', 'auditModuleHelp',
-          module: 'audit'),
-      createAction(Icons.sync_outlined, 'syncLog', 'syncModuleHelp',
-          module: 'sync'),
-      createAction(Icons.support_agent_outlined, 'support', 'supportModuleHelp',
-          module: 'support'),
-      createAction(Icons.settings_outlined, 'settings', 'settingsModuleHelp',
-          customOnTap: onOpenSettings),
+        Icons.admin_panel_settings_outlined,
+        'teamRoles',
+        'teamModuleHelp',
+        module: 'team',
+      ),
+      createAction(
+        Icons.fact_check_outlined,
+        'audit',
+        'auditModuleHelp',
+        module: 'audit',
+      ),
+      createAction(
+        Icons.sync_outlined,
+        'syncLog',
+        'syncModuleHelp',
+        module: 'sync',
+      ),
+      createAction(
+        Icons.support_agent_outlined,
+        'support',
+        'supportModuleHelp',
+        module: 'support',
+      ),
+      createAction(
+        Icons.settings_outlined,
+        'settings',
+        'settingsModuleHelp',
+        customOnTap: onOpenSettings,
+      ),
     ];
     Widget buildGrid(List<_MoreAction> actions) {
       return GridView.builder(
@@ -131,6 +195,7 @@ class MoreScreen extends ConsumerWidget {
       ),
     );
   }
+
   void _openModule(BuildContext context, _MoreAction action) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -145,8 +210,13 @@ class MoreScreen extends ConsumerWidget {
 }
 
 class _MoreAction {
-  const _MoreAction(this.icon, this.title, this.subtitle,
-      {this.module, this.onTap});
+  const _MoreAction(
+    this.icon,
+    this.title,
+    this.subtitle, {
+    this.module,
+    this.onTap,
+  });
 
   final IconData icon;
   final String title;
@@ -223,9 +293,12 @@ class _MoreActionGridTileState extends State<_MoreActionGridTile>
         color: Colors.transparent,
         child: InkWell(
           onTap: widget.action.onTap,
-          onTapDown: (_) => widget.action.onTap != null ? _controller.reverse() : null,
-          onTapUp: (_) => widget.action.onTap != null ? _controller.forward() : null,
-          onTapCancel: () => widget.action.onTap != null ? _controller.forward() : null,
+          onTapDown: (_) =>
+              widget.action.onTap != null ? _controller.reverse() : null,
+          onTapUp: (_) =>
+              widget.action.onTap != null ? _controller.forward() : null,
+          onTapCancel: () =>
+              widget.action.onTap != null ? _controller.forward() : null,
           borderRadius: BorderRadius.circular(20),
           child: Container(
             padding: const EdgeInsets.all(12),
@@ -233,7 +306,9 @@ class _MoreActionGridTileState extends State<_MoreActionGridTile>
               color: theme.cardTheme.color ?? colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: colorScheme.outlineVariant.withOpacity(isDark ? 0.1 : 0.4),
+                color: colorScheme.outlineVariant.withOpacity(
+                  isDark ? 0.1 : 0.4,
+                ),
                 width: 1,
               ),
               boxShadow: [
@@ -251,10 +326,14 @@ class _MoreActionGridTileState extends State<_MoreActionGridTile>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(isDark ? 0.12 : 0.08),
+                    color: colorScheme.primary.withOpacity(
+                      isDark ? 0.12 : 0.08,
+                    ),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: colorScheme.primary.withOpacity(isDark ? 0.25 : 0.18),
+                      color: colorScheme.primary.withOpacity(
+                        isDark ? 0.25 : 0.18,
+                      ),
                       width: 1,
                     ),
                   ),
@@ -317,12 +396,7 @@ class _ModuleDetailScreen extends ConsumerWidget {
         createEntity != null && canCreateMobileRecord(createEntity);
     void openCreate() {
       if (!canCreate) return;
-      showMobileRecordEditor(
-        context,
-        ref,
-        entity: createEntity,
-        title: title,
-      );
+      showMobileRecordEditor(context, ref, entity: createEntity, title: title);
     }
 
     return RpPage(
@@ -337,9 +411,12 @@ class _ModuleDetailScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(subtitle,
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
           if (canCreate) ...[
             const SizedBox(height: 14),
             SizedBox(
@@ -362,7 +439,10 @@ class _ModuleDetailScreen extends ConsumerWidget {
   }
 
   List<Widget> _moduleCards(
-      BuildContext context, WidgetRef ref, String module) {
+    BuildContext context,
+    WidgetRef ref,
+    String module,
+  ) {
     final bootstrap = ref.watch(appControllerProvider).bootstrap!;
     switch (module) {
       case 'customers':
@@ -373,8 +453,11 @@ class _ModuleDetailScreen extends ConsumerWidget {
           for (final customer in bootstrap.customers)
             _DataCard(
               title: _text(customer, 'name', fallback: tr(ref, 'customers')),
-              subtitle:
-                  _text(customer, 'phone', fallback: _text(customer, 'email')),
+              subtitle: _text(
+                customer,
+                'phone',
+                fallback: _text(customer, 'email'),
+              ),
               trailing: money(_number(customer, 'balance')),
               entity: 'customers',
               id: _text(customer, 'id'),
@@ -392,9 +475,15 @@ class _ModuleDetailScreen extends ConsumerWidget {
           for (final supplier in suppliers)
             _DataCard(
               title: _text(supplier, 'name', fallback: tr(ref, 'supplier')),
-              subtitle: _text(supplier, 'phone',
-                  fallback: _text(supplier, 'email',
-                      fallback: _text(supplier, 'address'))),
+              subtitle: _text(
+                supplier,
+                'phone',
+                fallback: _text(
+                  supplier,
+                  'email',
+                  fallback: _text(supplier, 'address'),
+                ),
+              ),
               trailing: money(_number(supplier, 'balance')),
               entity: 'suppliers',
               id: _text(supplier, 'id'),
@@ -424,8 +513,11 @@ class _ModuleDetailScreen extends ConsumerWidget {
         return [
           for (final row in bootstrap.creditLedger)
             _DataCard(
-              title:
-                  _text(row, 'customerName', fallback: _text(row, 'customer')),
+              title: _text(
+                row,
+                'customerName',
+                fallback: _text(row, 'customer'),
+              ),
               subtitle:
                   '${_text(row, 'type')} - ${shortDate(_text(row, 'date'))}',
               trailing: money(_number(row, 'amount')),
@@ -440,14 +532,21 @@ class _ModuleDetailScreen extends ConsumerWidget {
         }
         return [
           _SummaryCard(
-              title: tr(ref, 'purchases'),
-              value: money(bootstrap.purchaseTotal),
-              subtitle: '${bootstrap.purchases.length} entries'),
+            title: tr(ref, 'purchases'),
+            value: money(bootstrap.purchaseTotal),
+            subtitle: '${bootstrap.purchases.length} entries',
+          ),
           for (final row in bootstrap.purchases)
             _DataCard(
-              title: _text(row, 'supplier',
-                  fallback:
-                      _text(row, 'partyName', fallback: tr(ref, 'supplier'))),
+              title: _text(
+                row,
+                'supplier',
+                fallback: _text(
+                  row,
+                  'partyName',
+                  fallback: tr(ref, 'supplier'),
+                ),
+              ),
               subtitle:
                   '${_text(row, 'status')} - ${shortDate(_text(row, 'date'))}',
               trailing: money(_number(row, 'amount')),
@@ -462,9 +561,10 @@ class _ModuleDetailScreen extends ConsumerWidget {
         }
         return [
           _SummaryCard(
-              title: tr(ref, 'expenses'),
-              value: money(bootstrap.expenseTotal),
-              subtitle: '${bootstrap.expenseCategories.length} categories'),
+            title: tr(ref, 'expenses'),
+            value: money(bootstrap.expenseTotal),
+            subtitle: '${bootstrap.expenseCategories.length} categories',
+          ),
           for (final row in bootstrap.expenses)
             _DataCard(
               title: _text(row, 'category', fallback: tr(ref, 'expenses')),
@@ -483,9 +583,10 @@ class _ModuleDetailScreen extends ConsumerWidget {
         }
         return [
           _SummaryCard(
-              title: tr(ref, 'cashBank'),
-              value: money(bootstrap.cashBankBalance),
-              subtitle: '${bootstrap.cashBankAccounts.length} accounts'),
+            title: tr(ref, 'cashBank'),
+            value: money(bootstrap.cashBankBalance),
+            subtitle: '${bootstrap.cashBankAccounts.length} accounts',
+          ),
           for (final account in bootstrap.cashBankAccounts)
             _DataCard(
               title: _text(account, 'name', fallback: tr(ref, 'cashBank')),
@@ -514,9 +615,15 @@ class _ModuleDetailScreen extends ConsumerWidget {
         return [
           for (final entry in bootstrap.journalEntries)
             _DataCard(
-              title: _text(entry, 'description',
-                  fallback: _text(entry, 'sourceType',
-                      fallback: tr(ref, 'accounting'))),
+              title: _text(
+                entry,
+                'description',
+                fallback: _text(
+                  entry,
+                  'sourceType',
+                  fallback: tr(ref, 'accounting'),
+                ),
+              ),
               subtitle:
                   '${_text(entry, 'sourceType')} - ${shortDate(_text(entry, 'date'))}',
               trailing: money(_number(entry, 'totalDebit')),
@@ -533,7 +640,8 @@ class _ModuleDetailScreen extends ConsumerWidget {
           for (final sale in bootstrap.sales)
             _DataCard(
               title: trValue(ref, sale.customer),
-              subtitle: '${trProductList(ref, sale.products)} - ${shortDate(sale.date)}',
+              subtitle:
+                  '${trProductList(ref, sale.products)} - ${shortDate(sale.date)}',
               trailing: money(sale.amount),
               entity: 'sales',
               id: sale.id,
@@ -555,8 +663,11 @@ class _ModuleDetailScreen extends ConsumerWidget {
         return [
           for (final doc in bootstrap.documents)
             _DataCard(
-              title: _text(doc, 'title',
-                  fallback: _text(doc, 'name', fallback: tr(ref, 'documents'))),
+              title: _text(
+                doc,
+                'title',
+                fallback: _text(doc, 'name', fallback: tr(ref, 'documents')),
+              ),
               subtitle:
                   '${_text(doc, 'type')} - ${shortDate(_text(doc, 'createdAt'))}',
               trailing: _text(doc, 'status', fallback: 'Ready'),
@@ -574,8 +685,11 @@ class _ModuleDetailScreen extends ConsumerWidget {
           for (final template in bootstrap.reminderTemplates)
             _DataCard(
               title: _text(template, 'name', fallback: tr(ref, 'reminders')),
-              subtitle: _text(template, 'channel',
-                  fallback: _text(template, 'message')),
+              subtitle: _text(
+                template,
+                'channel',
+                fallback: _text(template, 'message'),
+              ),
               trailing: _text(template, 'active', fallback: 'Active'),
               entity: 'reminder-templates',
               id: _text(template, 'id'),
@@ -595,17 +709,20 @@ class _ModuleDetailScreen extends ConsumerWidget {
       case 'reports':
         return [
           _DataCard(
-              title: tr(ref, 'monthlyRevenue'),
-              subtitle: tr(ref, 'reportsModuleHelp'),
-              trailing: money(bootstrap.monthlyRevenue)),
+            title: tr(ref, 'monthlyRevenue'),
+            subtitle: tr(ref, 'reportsModuleHelp'),
+            trailing: money(bootstrap.monthlyRevenue),
+          ),
           _DataCard(
-              title: tr(ref, 'creditDue'),
-              subtitle: tr(ref, 'creditModuleHelp'),
-              trailing: money(bootstrap.creditDue)),
+            title: tr(ref, 'creditDue'),
+            subtitle: tr(ref, 'creditModuleHelp'),
+            trailing: money(bootstrap.creditDue),
+          ),
           _DataCard(
-              title: tr(ref, 'lowStock'),
-              subtitle: tr(ref, 'inventory'),
-              trailing: bootstrap.lowStockCount.toString()),
+            title: tr(ref, 'lowStock'),
+            subtitle: tr(ref, 'inventory'),
+            trailing: bootstrap.lowStockCount.toString(),
+          ),
           for (final report in bootstrap.reports)
             _DataCard(
               title: _text(report, 'title', fallback: tr(ref, 'reports')),
@@ -620,13 +737,15 @@ class _ModuleDetailScreen extends ConsumerWidget {
       case 'billing':
         return [
           _DataCard(
-              title: tr(ref, 'plan'),
-              subtitle: bootstrap.billingCycle,
-              trailing: bootstrap.plan.toUpperCase()),
+            title: tr(ref, 'plan'),
+            subtitle: bootstrap.billingCycle,
+            trailing: bootstrap.plan.toUpperCase(),
+          ),
           _DataCard(
-              title: tr(ref, 'currency'),
-              subtitle: tr(ref, 'settings'),
-              trailing: bootstrap.settings.currency),
+            title: tr(ref, 'currency'),
+            subtitle: tr(ref, 'settings'),
+            trailing: bootstrap.settings.currency,
+          ),
           for (final bill in bootstrap.billingHistory)
             _DataCard(
               title: _text(bill, 'plan', fallback: tr(ref, 'billing')),
@@ -780,12 +899,15 @@ class _DataCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(displayTitle,
-                          style: const TextStyle(fontWeight: FontWeight.w900)),
+                      Text(
+                        displayTitle,
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
                       const SizedBox(height: 3),
-                      Text(displaySubtitle,
-                          style:
-                              TextStyle(color: colorScheme.onSurfaceVariant)),
+                      Text(
+                        displaySubtitle,
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      ),
                     ],
                   ),
                 ),
@@ -800,8 +922,10 @@ class _DataCard extends ConsumerWidget {
                 ),
                 if (canOpen && !canEdit) ...[
                   const SizedBox(width: 6),
-                  Icon(Icons.chevron_right_rounded,
-                      color: colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ],
               ],
             ),
@@ -843,9 +967,13 @@ class _DataCard extends ConsumerWidget {
                       dimension: 48,
                       child: IconButton.outlined(
                         tooltip: tr(ref, 'delete'),
-                        onPressed: () =>
-                            _confirmDelete(
-                                context, ref, entity!, id!, displayTitle),
+                        onPressed: () => _confirmDelete(
+                          context,
+                          ref,
+                          entity!,
+                          id!,
+                          displayTitle,
+                        ),
                         icon: const Icon(Icons.delete_outline_rounded),
                         style: IconButton.styleFrom(
                           foregroundColor: colorScheme.error,
@@ -869,11 +997,8 @@ class _DataCard extends ConsumerWidget {
     if (entity == null || id == null || id!.isEmpty) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ApiDetailScreen(
-          title: displayTitle,
-          entity: entity!,
-          id: id!,
-        ),
+        builder: (_) =>
+            ApiDetailScreen(title: displayTitle, entity: entity!, id: id!),
       ),
     );
   }
@@ -887,9 +1012,10 @@ class _EmptyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RpCard(
-      child: Text(message,
-          style:
-              TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      child: Text(
+        message,
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      ),
     );
   }
 }
@@ -915,15 +1041,19 @@ class _SummaryCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(displayTitle,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(
+              displayTitle,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 6),
-            Text(value,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w900)),
+            Text(
+              value,
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
             const SizedBox(height: 4),
             Text(displaySubtitle),
           ],
@@ -1019,10 +1149,12 @@ List<Map<String, dynamic>> _suppliersFromProducts(dynamic bootstrap) {
     }
   }
   return supplierNames.entries
-      .map((entry) => {
-            'name': entry.key,
-            'balance': 0,
-            'phone': '${entry.value} products',
-          })
+      .map(
+        (entry) => {
+          'name': entry.key,
+          'balance': 0,
+          'phone': '${entry.value} products',
+        },
+      )
       .toList();
 }

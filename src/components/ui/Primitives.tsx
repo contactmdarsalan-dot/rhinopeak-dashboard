@@ -127,18 +127,28 @@ export function Button({
       style={{
         ...styles,
         minHeight: 36,
-        padding: '8px 12px',
-        borderRadius: 8,
+        padding: '8px 16px',
+        borderRadius: 10,
         cursor: disabled ? 'not-allowed' : 'pointer',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 7,
+        gap: 8,
         fontSize: 13,
         fontWeight: 650,
-        opacity: disabled ? 0.55 : 1,
-        transition: 'opacity 0.15s ease, transform 0.15s ease, border-color 0.15s ease',
+        opacity: disabled ? 0.6 : 1,
+        transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        boxShadow: variant === 'primary' ? '0 2px 8px var(--accent-glow)' : 'none',
         ...style,
+      }}
+      onMouseDown={(e) => {
+        if (!disabled) e.currentTarget.style.transform = 'scale(0.96)';
+      }}
+      onMouseUp={(e) => {
+        if (!disabled) e.currentTarget.style.transform = 'scale(1)';
+      }}
+      onMouseLeave={(e) => {
+        if (!disabled) e.currentTarget.style.transform = 'scale(1)';
       }}
     >
       {translateNode(language, children)}
@@ -169,16 +179,17 @@ export function Field({
 
 export const controlStyle: CSSProperties = {
   width: '100%',
-  background: 'var(--bg-primary)',
+  background: 'var(--bg-card)',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'var(--border)',
-  borderRadius: 8,
+  borderColor: 'var(--border-subtle)',
+  borderRadius: 10,
   color: 'var(--text-primary)',
-  minHeight: 38,
-  padding: '8px 11px',
+  minHeight: 40,
+  padding: '8px 12px',
   outline: 'none',
   fontSize: 13,
+  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
 };
 
 export function Badge({
@@ -270,13 +281,14 @@ export function Modal({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.68)',
+        background: 'rgba(0,0,0,0.5)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 18,
         zIndex: 200,
-        backdropFilter: 'blur(6px)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
       }}
     >
       <div
@@ -288,9 +300,9 @@ export function Modal({
           maxHeight: '90vh',
           overflowY: 'auto',
           background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: 14,
-          boxShadow: '0 24px 72px rgba(0,0,0,0.45)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 16,
+          boxShadow: 'var(--shadow-popover)',
         }}
       >
         <div

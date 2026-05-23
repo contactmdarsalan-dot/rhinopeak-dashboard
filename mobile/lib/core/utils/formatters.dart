@@ -6,8 +6,9 @@ String money(num value, {String currency = 'NPR'}) {
 }
 
 String quantity(num value, String unit) {
-  final number =
-      value % 1 == 0 ? value.toInt().toString() : value.toStringAsFixed(2);
+  final number = value % 1 == 0
+      ? value.toInt().toString()
+      : value.toStringAsFixed(2);
   return '$number $unit';
 }
 

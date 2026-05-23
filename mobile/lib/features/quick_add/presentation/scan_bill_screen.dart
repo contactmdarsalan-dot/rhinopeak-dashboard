@@ -75,7 +75,8 @@ Payment Mode:                Bank''',
   double? _confidence;
 
   late AnimationController _scanController;
-  int _scanStep = 0; // 0: Idle, 1: Uploading, 2: Extracting OCR, 3: Structuring AI, 4: Validating, 5: Done
+  int _scanStep =
+      0; // 0: Idle, 1: Uploading, 2: Extracting OCR, 3: Structuring AI, 4: Validating, 5: Done
   String? _selectedTemplateName;
   String? _selectedTemplateText;
   bool _isManualTextExpanded = false;
@@ -101,7 +102,11 @@ Payment Mode:                Bank''',
     super.dispose();
   }
 
-  Future<void> _runScanPipeline(String text, String fileName, String sourceType) async {
+  Future<void> _runScanPipeline(
+    String text,
+    String fileName,
+    String sourceType,
+  ) async {
     setState(() {
       _scanStep = 1; // Uploading
       _scanId = null;
@@ -133,7 +138,9 @@ Payment Mode:                Bank''',
       // Step 3: LLM Structuring (Custom PyTorch GPT / Gemini)
       setState(() => _scanStep = 3);
       final parsedResult = await controller.parseBillScan(scanId, text);
-      final parsed = Map<String, dynamic>.from(parsedResult?['parsed'] as Map? ?? {});
+      final parsed = Map<String, dynamic>.from(
+        parsedResult?['parsed'] as Map? ?? {},
+      );
 
       // Step 4: Mathematical Validation delay
       setState(() => _scanStep = 4);
@@ -152,7 +159,7 @@ Payment Mode:                Bank''',
         _payment = _mapText(parsed, 'paymentMethod', fallback: 'Cash');
         _vat.text = _mapNum(parsed, 'vatAmount').toString();
         _total.text = _mapNum(parsed, 'totalAmount').toString();
-        
+
         final rawItems = _rawList(parsed['items']);
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         _items = rawItems.asMap().entries.map((entry) {
@@ -167,9 +174,9 @@ Payment Mode:                Bank''',
         _scanStep = 0;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Scan failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Scan failed: $e')));
       }
     } finally {
       _scanController.stop();
@@ -210,7 +217,7 @@ Payment Mode:                Bank''',
       if (item['tempId'] != tempId) return item;
       final updated = Map<String, dynamic>.from(item);
       updated[key] = value;
-      
+
       final qty = _mapNum(updated, 'quantity').toDouble();
       final price = _mapNum(updated, 'unitPrice').toDouble();
       final lineTotal = qty * price;
@@ -250,7 +257,9 @@ Payment Mode:                Bank''',
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(
               top: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
+                color: colorScheme.outlineVariant.withValues(
+                  alpha: isDark ? 0.15 : 0.3,
+                ),
                 width: 1,
               ),
             ),
@@ -310,14 +319,20 @@ Payment Mode:                Bank''',
                         _selectedTemplateText = tmpl['text'];
                         _rawText.text = tmpl['text']!;
                       });
-                      _runScanPipeline(tmpl['text']!, tmpl['fileName']!, 'gallery');
+                      _runScanPipeline(
+                        tmpl['text']!,
+                        tmpl['fileName']!,
+                        'gallery',
+                      );
                     },
                     child: Container(
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: 0.4,
+                          ),
                           width: 1,
                         ),
                         boxShadow: [
@@ -334,13 +349,17 @@ Payment Mode:                Bank''',
                             child: Container(
                               margin: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: colorScheme.primary.withValues(alpha: 0.06),
+                                color: colorScheme.primary.withValues(
+                                  alpha: 0.06,
+                                ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Center(
                                 child: Icon(
                                   Icons.receipt_long_rounded,
-                                  color: colorScheme.primary.withValues(alpha: 0.65),
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.65,
+                                  ),
                                   size: 28,
                                 ),
                               ),
@@ -354,7 +373,9 @@ Payment Mode:                Bank''',
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.bold),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
@@ -373,25 +394,27 @@ Payment Mode:                Bank''',
   Future<void> _save() async {
     final scanId = _scanId;
     if (scanId == null) return;
-    await ref.read(appControllerProvider.notifier).approveBillScan(
-      scanId: scanId,
-      targetRecordType: _target,
-      approved: {
-        'vendorName': _vendor.text.trim(),
-        'billNumber': _billNumber.text.trim(),
-        'billDate': _billDate.text.trim(),
-        'paymentMethod': _payment,
-        'vatAmount': _num(_vat.text),
-        'totalAmount': _num(_total.text),
-        'subtotal': _items.fold<num>(
-          0,
-          (sum, item) => sum + _mapNum(item, 'lineTotal'),
-        ),
-        'discountAmount': 0,
-        'items': _items,
-        'rawText': _rawText.text.trim(),
-      },
-    );
+    await ref
+        .read(appControllerProvider.notifier)
+        .approveBillScan(
+          scanId: scanId,
+          targetRecordType: _target,
+          approved: {
+            'vendorName': _vendor.text.trim(),
+            'billNumber': _billNumber.text.trim(),
+            'billDate': _billDate.text.trim(),
+            'paymentMethod': _payment,
+            'vatAmount': _num(_vat.text),
+            'totalAmount': _num(_total.text),
+            'subtotal': _items.fold<num>(
+              0,
+              (sum, item) => sum + _mapNum(item, 'lineTotal'),
+            ),
+            'discountAmount': 0,
+            'items': _items,
+            'rawText': _rawText.text.trim(),
+          },
+        );
     setState(() {
       _scanStep = 0;
       _scanId = null;
@@ -408,7 +431,9 @@ Payment Mode:                Bank''',
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bill registered in workspace successfully')),
+        const SnackBar(
+          content: Text('Bill registered in workspace successfully'),
+        ),
       );
     }
   }
@@ -455,7 +480,9 @@ Payment Mode:                Bank''',
             decoration: BoxDecoration(
               color: isDone
                   ? Colors.green.withOpacity(0.15)
-                  : (isActive ? theme.colorScheme.primary.withOpacity(0.1) : Colors.transparent),
+                  : (isActive
+                        ? theme.colorScheme.primary.withOpacity(0.1)
+                        : Colors.transparent),
               shape: BoxShape.circle,
               border: Border.all(color: color, width: 1.5),
             ),
@@ -470,7 +497,9 @@ Payment Mode:                Bank''',
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                 color: isActive
                     ? theme.colorScheme.primary
-                    : (isDone ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant),
+                    : (isDone
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.onSurfaceVariant),
               ),
             ),
           ),
@@ -486,19 +515,19 @@ Payment Mode:                Bank''',
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final isLowConfidence = _scanId != null && _confidence != null && _confidence! < 0.80;
+    final isLowConfidence =
+        _scanId != null && _confidence != null && _confidence! < 0.80;
     double subtotal = 0.0;
     for (final item in _items) {
       subtotal += _mapNum(item, 'lineTotal').toDouble();
     }
     final vat = double.tryParse(_vat.text.trim()) ?? 0.0;
     final total = double.tryParse(_total.text.trim()) ?? 0.0;
-    final isMathMismatch = _scanId != null && (subtotal + vat - total).abs() > 0.02;
+    final isMathMismatch =
+        _scanId != null && (subtotal + vat - total).abs() > 0.02;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(tr(ref, 'scanBill')),
-      ),
+      appBar: AppBar(title: Text(tr(ref, 'scanBill'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -511,18 +540,32 @@ Payment Mode:                Bank''',
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.camera_alt_outlined, color: colorScheme.primary),
+                      Icon(
+                        Icons.camera_alt_outlined,
+                        color: colorScheme.primary,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           tr(ref, 'simulatedView'),
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                       TextButton.icon(
-                        onPressed: state.loading ? null : () => _showGallerySheet(context),
-                        icon: const Icon(Icons.photo_library_outlined, size: 16),
-                        label: const Text('Gallery', style: TextStyle(fontSize: 12)),
+                        onPressed: state.loading
+                            ? null
+                            : () => _showGallerySheet(context),
+                        icon: const Icon(
+                          Icons.photo_library_outlined,
+                          size: 16,
+                        ),
+                        label: const Text(
+                          'Gallery',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: TextButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           foregroundColor: colorScheme.primary,
@@ -535,7 +578,9 @@ Payment Mode:                Bank''',
                     height: 200,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.black.withOpacity(0.4) : Colors.grey.withOpacity(0.08),
+                      color: isDark
+                          ? Colors.black.withOpacity(0.4)
+                          : Colors.grey.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _scanStep > 0 && _scanStep < 5
@@ -556,8 +601,14 @@ Payment Mode:                Bank''',
                               height: 15,
                               decoration: BoxDecoration(
                                 border: Border(
-                                  top: BorderSide(color: colorScheme.primary, width: 2),
-                                  left: BorderSide(color: colorScheme.primary, width: 2),
+                                  top: BorderSide(
+                                    color: colorScheme.primary,
+                                    width: 2,
+                                  ),
+                                  left: BorderSide(
+                                    color: colorScheme.primary,
+                                    width: 2,
+                                  ),
                                 ),
                               ),
                             ),
@@ -570,8 +621,14 @@ Payment Mode:                Bank''',
                               height: 15,
                               decoration: BoxDecoration(
                                 border: Border(
-                                  top: BorderSide(color: colorScheme.primary, width: 2),
-                                  right: BorderSide(color: colorScheme.primary, width: 2),
+                                  top: BorderSide(
+                                    color: colorScheme.primary,
+                                    width: 2,
+                                  ),
+                                  right: BorderSide(
+                                    color: colorScheme.primary,
+                                    width: 2,
+                                  ),
                                 ),
                               ),
                             ),
@@ -584,8 +641,14 @@ Payment Mode:                Bank''',
                               height: 15,
                               decoration: BoxDecoration(
                                 border: Border(
-                                  bottom: BorderSide(color: colorScheme.primary, width: 2),
-                                  left: BorderSide(color: colorScheme.primary, width: 2),
+                                  bottom: BorderSide(
+                                    color: colorScheme.primary,
+                                    width: 2,
+                                  ),
+                                  left: BorderSide(
+                                    color: colorScheme.primary,
+                                    width: 2,
+                                  ),
                                 ),
                               ),
                             ),
@@ -598,8 +661,14 @@ Payment Mode:                Bank''',
                               height: 15,
                               decoration: BoxDecoration(
                                 border: Border(
-                                  bottom: BorderSide(color: colorScheme.primary, width: 2),
-                                  right: BorderSide(color: colorScheme.primary, width: 2),
+                                  bottom: BorderSide(
+                                    color: colorScheme.primary,
+                                    width: 2,
+                                  ),
+                                  right: BorderSide(
+                                    color: colorScheme.primary,
+                                    width: 2,
+                                  ),
                                 ),
                               ),
                             ),
@@ -609,12 +678,14 @@ Payment Mode:                Bank''',
                                 ? Padding(
                                     padding: const EdgeInsets.all(20.0),
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           Icons.center_focus_weak,
                                           size: 40,
-                                          color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                          color: colorScheme.onSurfaceVariant
+                                              .withOpacity(0.6),
                                         ),
                                         const SizedBox(height: 10),
                                         Text(
@@ -633,15 +704,19 @@ Payment Mode:                Bank''',
                                     width: double.infinity,
                                     height: double.infinity,
                                     child: SingleChildScrollView(
-                                      physics: const NeverScrollableScrollPhysics(),
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
-                                                _selectedTemplateName!.toUpperCase(),
+                                                _selectedTemplateName!
+                                                    .toUpperCase(),
                                                 style: TextStyle(
                                                   fontFamily: 'monospace',
                                                   fontWeight: FontWeight.bold,
@@ -651,18 +726,26 @@ Payment Mode:                Bank''',
                                               ),
                                               Icon(
                                                 Icons.check_circle_outline,
-                                                color: _scanStep == 5 ? Colors.green : Colors.grey,
+                                                color: _scanStep == 5
+                                                    ? Colors.green
+                                                    : Colors.grey,
                                                 size: 14,
                                               ),
                                             ],
                                           ),
-                                          const Divider(height: 12, thickness: 1, color: Colors.white10),
+                                          const Divider(
+                                            height: 12,
+                                            thickness: 1,
+                                            color: Colors.white10,
+                                          ),
                                           Text(
                                             _selectedTemplateText ?? '',
                                             style: TextStyle(
                                               fontFamily: 'monospace',
                                               fontSize: 9,
-                                              color: isDark ? Colors.white70 : Colors.black87,
+                                              color: isDark
+                                                  ? Colors.white70
+                                                  : Colors.black87,
                                             ),
                                           ),
                                         ],
@@ -684,7 +767,8 @@ Payment Mode:                Bank''',
                                       color: colorScheme.primary,
                                       boxShadow: [
                                         BoxShadow(
-                                          color: colorScheme.primary.withOpacity(0.8),
+                                          color: colorScheme.primary
+                                              .withOpacity(0.8),
                                           blurRadius: 8,
                                           spreadRadius: 2,
                                         ),
@@ -713,7 +797,8 @@ Payment Mode:                Bank''',
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: _templates.map((tmpl) {
-                        final isSelected = _selectedTemplateName == tmpl['name'];
+                        final isSelected =
+                            _selectedTemplateName == tmpl['name'];
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: ActionChip(
@@ -726,7 +811,11 @@ Payment Mode:                Bank''',
                                       _selectedTemplateText = tmpl['text'];
                                       _rawText.text = tmpl['text']!;
                                     });
-                                    _runScanPipeline(tmpl['text']!, tmpl['fileName']!, 'camera');
+                                    _runScanPipeline(
+                                      tmpl['text']!,
+                                      tmpl['fileName']!,
+                                      'camera',
+                                    );
                                   },
                             backgroundColor: isSelected
                                 ? colorScheme.primaryContainer
@@ -751,20 +840,31 @@ Payment Mode:                Bank''',
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withOpacity(isDark ? 0.3 : 0.6),
+                  color: colorScheme.surfaceContainerHighest.withOpacity(
+                    isDark ? 0.3 : 0.6,
+                  ),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5)),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withOpacity(0.5),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.psychology_outlined, color: colorScheme.primary, size: 20),
+                        Icon(
+                          Icons.psychology_outlined,
+                          color: colorScheme.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           tr(ref, 'customGptPipeline'),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -783,11 +883,17 @@ Payment Mode:                Bank''',
             ExpansionTile(
               title: Text(
                 tr(ref, 'ocrText'),
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               leading: const Icon(Icons.description_outlined),
-              trailing: Icon(_isManualTextExpanded ? Icons.expand_less : Icons.expand_more),
-              onExpansionChanged: (expanded) => setState(() => _isManualTextExpanded = expanded),
+              trailing: Icon(
+                _isManualTextExpanded ? Icons.expand_less : Icons.expand_more,
+              ),
+              onExpansionChanged: (expanded) =>
+                  setState(() => _isManualTextExpanded = expanded),
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -806,7 +912,10 @@ Payment Mode:                Bank''',
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
-                          onPressed: state.loading || _rawText.text.trim().isEmpty ? null : _parseManual,
+                          onPressed:
+                              state.loading || _rawText.text.trim().isEmpty
+                              ? null
+                              : _parseManual,
                           icon: const Icon(Icons.auto_awesome_outlined),
                           label: Text(tr(ref, 'parseBill')),
                         ),
@@ -822,7 +931,10 @@ Payment Mode:                Bank''',
               const SizedBox(height: 20),
               Text(
                 tr(ref, 'reviewBill'),
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
               ),
               const SizedBox(height: 12),
               if (isLowConfidence) ...[
@@ -835,7 +947,11 @@ Payment Mode:                Bank''',
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 20),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.amber,
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -911,7 +1027,11 @@ Payment Mode:                Bank''',
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline_rounded, color: Colors.red, size: 20),
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: Colors.red,
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -947,10 +1067,9 @@ Payment Mode:                Bank''',
                           child: Text(tr(ref, 'sales')),
                         ),
                       ],
-                      onChanged: (value) => setState(() => _target = value ?? 'Expense'),
-                      decoration: InputDecoration(
-                        labelText: tr(ref, 'saveAs'),
-                      ),
+                      onChanged: (value) =>
+                          setState(() => _target = value ?? 'Expense'),
+                      decoration: InputDecoration(labelText: tr(ref, 'saveAs')),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -958,13 +1077,29 @@ Payment Mode:                Bank''',
                     child: DropdownButtonFormField<String>(
                       value: _payment,
                       items: [
-                        DropdownMenuItem(value: 'Cash', child: Text(tr(ref, 'cash'))),
-                        DropdownMenuItem(value: 'Credit', child: Text(tr(ref, 'credit'))),
-                        const DropdownMenuItem(value: 'eSewa', child: Text('eSewa')),
-                        const DropdownMenuItem(value: 'Khalti', child: Text('Khalti')),
-                        const DropdownMenuItem(value: 'Bank', child: Text('Bank')),
+                        DropdownMenuItem(
+                          value: 'Cash',
+                          child: Text(tr(ref, 'cash')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Credit',
+                          child: Text(tr(ref, 'credit')),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'eSewa',
+                          child: Text('eSewa'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'Khalti',
+                          child: Text('Khalti'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'Bank',
+                          child: Text('Bank'),
+                        ),
                       ],
-                      onChanged: (value) => setState(() => _payment = value ?? 'Cash'),
+                      onChanged: (value) =>
+                          setState(() => _payment = value ?? 'Cash'),
                       decoration: InputDecoration(
                         labelText: tr(ref, 'payment'),
                       ),
@@ -978,7 +1113,10 @@ Payment Mode:                Bank''',
                 children: [
                   Text(
                     tr(ref, 'items'),
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
                   ),
                   TextButton.icon(
                     onPressed: _addItem,
@@ -993,7 +1131,10 @@ Payment Mode:                Bank''',
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Text(
                     'No items. Add items or save bill as a single amount.',
-                    style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
                   ),
                 )
               else
@@ -1008,7 +1149,8 @@ Payment Mode:                Bank''',
                       child: _EditableBillItemTile(
                         key: ValueKey(item['tempId']),
                         item: item,
-                        onUpdate: (key, val) => _updateItem(item['tempId'] as String, key, val),
+                        onUpdate: (key, val) =>
+                            _updateItem(item['tempId'] as String, key, val),
                         onRemove: () => _removeItem(item['tempId'] as String),
                       ),
                     );
@@ -1019,13 +1161,19 @@ Payment Mode:                Bank''',
                 color: colorScheme.primaryContainer.withOpacity(0.1),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: colorScheme.primary.withOpacity(0.15)),
+                  side: BorderSide(
+                    color: colorScheme.primary.withOpacity(0.15),
+                  ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, color: colorScheme.primary, size: 18),
+                      Icon(
+                        Icons.info_outline,
+                        color: colorScheme.primary,
+                        size: 18,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -1071,7 +1219,8 @@ class _EditableBillItemTile extends ConsumerStatefulWidget {
   final VoidCallback onRemove;
 
   @override
-  ConsumerState<_EditableBillItemTile> createState() => _EditableBillItemTileState();
+  ConsumerState<_EditableBillItemTile> createState() =>
+      _EditableBillItemTileState();
 }
 
 class _EditableBillItemTileState extends ConsumerState<_EditableBillItemTile> {
@@ -1085,9 +1234,15 @@ class _EditableBillItemTileState extends ConsumerState<_EditableBillItemTile> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: _mapText(widget.item, 'name'));
-    _qtyController = TextEditingController(text: _mapNum(widget.item, 'quantity').toString());
-    _rateController = TextEditingController(text: _mapNum(widget.item, 'unitPrice').toString());
+    _nameController = TextEditingController(
+      text: _mapText(widget.item, 'name'),
+    );
+    _qtyController = TextEditingController(
+      text: _mapNum(widget.item, 'quantity').toString(),
+    );
+    _rateController = TextEditingController(
+      text: _mapNum(widget.item, 'unitPrice').toString(),
+    );
     _nameFocusNode = FocusNode();
     _qtyFocusNode = FocusNode();
     _rateFocusNode = FocusNode();
@@ -1103,10 +1258,12 @@ class _EditableBillItemTileState extends ConsumerState<_EditableBillItemTile> {
     if (_nameController.text != newName && !_nameFocusNode.hasFocus) {
       _nameController.text = newName;
     }
-    if (double.tryParse(_qtyController.text) != double.tryParse(newQtyStr) && !_qtyFocusNode.hasFocus) {
+    if (double.tryParse(_qtyController.text) != double.tryParse(newQtyStr) &&
+        !_qtyFocusNode.hasFocus) {
       _qtyController.text = newQtyStr;
     }
-    if (double.tryParse(_rateController.text) != double.tryParse(newRateStr) && !_rateFocusNode.hasFocus) {
+    if (double.tryParse(_rateController.text) != double.tryParse(newRateStr) &&
+        !_rateFocusNode.hasFocus) {
       _rateController.text = newRateStr;
     }
   }
@@ -1148,7 +1305,10 @@ class _EditableBillItemTileState extends ConsumerState<_EditableBillItemTile> {
                   decoration: InputDecoration(
                     labelText: tr(ref, 'item'),
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                   ),
                   onChanged: (val) => widget.onUpdate('name', val.trim()),
                 ),
@@ -1170,12 +1330,19 @@ class _EditableBillItemTileState extends ConsumerState<_EditableBillItemTile> {
                 child: TextFormField(
                   controller: _qtyController,
                   focusNode: _qtyFocusNode,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                  ],
                   decoration: InputDecoration(
                     labelText: tr(ref, 'quantity'),
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                   ),
                   onChanged: (val) {
                     final d = double.tryParse(val) ?? 0.0;
@@ -1187,7 +1354,9 @@ class _EditableBillItemTileState extends ConsumerState<_EditableBillItemTile> {
               Expanded(
                 flex: 2,
                 child: DropdownButtonFormField<String>(
-                  value: ['pcs', 'liter', 'kg', 'unit'].contains(selectedUnit) ? selectedUnit : 'pcs',
+                  value: ['pcs', 'liter', 'kg', 'unit'].contains(selectedUnit)
+                      ? selectedUnit
+                      : 'pcs',
                   items: const [
                     DropdownMenuItem(value: 'pcs', child: Text('pcs')),
                     DropdownMenuItem(value: 'liter', child: Text('liter')),
@@ -1202,7 +1371,10 @@ class _EditableBillItemTileState extends ConsumerState<_EditableBillItemTile> {
                   decoration: const InputDecoration(
                     labelText: 'Unit',
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                   ),
                 ),
               ),
@@ -1212,12 +1384,19 @@ class _EditableBillItemTileState extends ConsumerState<_EditableBillItemTile> {
                 child: TextFormField(
                   controller: _rateController,
                   focusNode: _rateFocusNode,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                  ],
                   decoration: InputDecoration(
                     labelText: tr(ref, 'price'),
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                   ),
                   onChanged: (val) {
                     final d = double.tryParse(val) ?? 0.0;
@@ -1233,7 +1412,10 @@ class _EditableBillItemTileState extends ConsumerState<_EditableBillItemTile> {
                   children: [
                     Text(
                       tr(ref, 'lineTotal'),
-                      style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -1271,8 +1453,9 @@ class _TextField extends ConsumerWidget {
     return TextFormField(
       controller: controller,
       validator: requiredField
-          ? (value) =>
-              value == null || value.trim().isEmpty ? tr(ref, 'required') : null
+          ? (value) => value == null || value.trim().isEmpty
+                ? tr(ref, 'required')
+                : null
           : null,
       decoration: InputDecoration(
         labelText: label,

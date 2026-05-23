@@ -41,8 +41,9 @@ export function Sidebar() {
       style={{
         width: sidebarCollapsed ? 64 : 220,
         background: 'var(--bg-secondary)',
-        borderRight: '1px solid var(--border)',
-        transition: 'width 0.25s ease',
+        borderRight: '1px solid var(--border-subtle)',
+        boxShadow: '1px 0 12px rgba(0,0,0,0.02)',
+        transition: 'width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
@@ -107,21 +108,21 @@ export function Sidebar() {
                 gap: 10,
                 width: '100%',
                 padding: sidebarCollapsed ? '10px 16px' : '10px 12px',
-                borderRadius: 8,
+                borderRadius: 10,
                 border: 'none',
                 cursor: 'pointer',
-                marginBottom: 2,
+                marginBottom: 4,
                 background: active ? 'var(--accent-glow)' : 'transparent',
-                color: active ? 'var(--accent)' : 'var(--text-secondary)',
-                transition: 'all 0.2s ease',
+                color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                transition: 'background 0.2s ease, color 0.2s ease, transform 0.1s ease',
                 justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                 textDecoration: 'none',
                 position: 'relative',
-                boxShadow: active ? '0 0 10px rgba(15,118,110,0.1)' : 'none',
+                boxShadow: active ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
               }}
               onMouseEnter={(e) => {
                 if (!active) {
-                  (e.currentTarget as HTMLAnchorElement).style.background = 'var(--border-subtle)';
+                  (e.currentTarget as HTMLAnchorElement).style.background = 'var(--bg-card-hover)';
                   (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-primary)';
                 }
               }}
@@ -131,16 +132,21 @@ export function Sidebar() {
                   (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-secondary)';
                 }
               }}
+              onMouseDown={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.transform = 'scale(0.98)';
+              }}
+              onMouseUp={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)';
+              }}
             >
               {active && (
                 <div style={{
                   position: 'absolute',
-                  left: 0,
-                  width: 3,
-                  height: 28,
+                  left: -8,
+                  width: 4,
+                  height: 20,
                   background: 'var(--accent)',
                   borderRadius: '0 4px 4px 0',
-                  marginLeft: 0,
                 }} />
               )}
               <Icon size={18} strokeWidth={active ? 2 : 1.5} style={{ flexShrink: 0 }} />

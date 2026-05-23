@@ -32,7 +32,7 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
   void _simulateVoiceDictation(String targetText) {
     _controller.clear();
     int index = 0;
-    
+
     setState(() {
       _loading = true;
     });
@@ -56,13 +56,15 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
   @override
   void initState() {
     super.initState();
-    _messages.add(_ChatMessage(
-      text: AppStrings.tr(
-        ref.read(appControllerProvider).language,
-        'assistantWelcome',
+    _messages.add(
+      _ChatMessage(
+        text: AppStrings.tr(
+          ref.read(appControllerProvider).language,
+          'assistantWelcome',
+        ),
+        isUser: false,
       ),
-      isUser: false,
-    ));
+    );
   }
 
   @override
@@ -96,12 +98,16 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
 
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.post('/assistant/command', data: {
-        'transcript': text,
-        'language': ref.read(appControllerProvider).language.code,
-      });
-      
-      final assistantCommand = response['assistantCommand'] as Map<String, dynamic>?;
+      final response = await api.post(
+        '/assistant/command',
+        data: {
+          'transcript': text,
+          'language': ref.read(appControllerProvider).language.code,
+        },
+      );
+
+      final assistantCommand =
+          response['assistantCommand'] as Map<String, dynamic>?;
       if (assistantCommand == null) {
         throw Exception("Invalid response from assistant");
       }
@@ -111,7 +117,8 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
         language,
         assistantCommand['reply']?.toString() ?? 'I could not understand that.',
       );
-      final requiresConfirmation = assistantCommand['requiresConfirmation'] == true;
+      final requiresConfirmation =
+          assistantCommand['requiresConfirmation'] == true;
       final canExecute = assistantCommand['canExecute'] == true;
 
       setState(() {
@@ -123,7 +130,9 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
       _handleRouteAction(assistantCommand);
     } catch (e) {
       setState(() {
-        _messages.add(_ChatMessage(text: "Error: ${e.toString()}", isUser: false));
+        _messages.add(
+          _ChatMessage(text: "Error: ${e.toString()}", isUser: false),
+        );
       });
     } finally {
       setState(() {
@@ -156,18 +165,23 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
 
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.post('/assistant/command', data: {
-        'transcript': cmd['transcript'],
-        'language': ref.read(appControllerProvider).language.code,
-        'confirm': true,
-        'overrides': cmd['slots'],
-      });
+      final response = await api.post(
+        '/assistant/command',
+        data: {
+          'transcript': cmd['transcript'],
+          'language': ref.read(appControllerProvider).language.code,
+          'confirm': true,
+          'overrides': cmd['slots'],
+        },
+      );
 
-      final assistantCommand = response['assistantCommand'] as Map<String, dynamic>?;
+      final assistantCommand =
+          response['assistantCommand'] as Map<String, dynamic>?;
       final language = ref.read(appControllerProvider).language;
       final reply = AppStrings.tr(
         language,
-        assistantCommand?['reply']?.toString() ?? 'Command executed successfully.',
+        assistantCommand?['reply']?.toString() ??
+            'Command executed successfully.',
       );
 
       setState(() {
@@ -178,7 +192,12 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
       await ref.read(appControllerProvider.notifier).refreshBootstrap();
     } catch (e) {
       setState(() {
-        _messages.add(_ChatMessage(text: "Execution failed: ${e.toString()}", isUser: false));
+        _messages.add(
+          _ChatMessage(
+            text: "Execution failed: ${e.toString()}",
+            isUser: false,
+          ),
+        );
       });
     } finally {
       setState(() {
@@ -195,10 +214,22 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
     final isDark = theme.brightness == Brightness.dark;
 
     final suggestions = [
-      _AssistantSuggestion(label: tr(ref, 'assistantSuggestionRevenue'), command: 'What is my revenue today?'),
-      _AssistantSuggestion(label: tr(ref, 'assistantSuggestionExpense'), command: 'Add expense 1500 for rent'),
-      _AssistantSuggestion(label: tr(ref, 'assistantSuggestionStock'), command: 'Show low stock products'),
-      _AssistantSuggestion(label: tr(ref, 'assistantSuggestionBalance'), command: 'List customer balance'),
+      _AssistantSuggestion(
+        label: tr(ref, 'assistantSuggestionRevenue'),
+        command: 'What is my revenue today?',
+      ),
+      _AssistantSuggestion(
+        label: tr(ref, 'assistantSuggestionExpense'),
+        command: 'Add expense 1500 for rent',
+      ),
+      _AssistantSuggestion(
+        label: tr(ref, 'assistantSuggestionStock'),
+        command: 'Show low stock products',
+      ),
+      _AssistantSuggestion(
+        label: tr(ref, 'assistantSuggestionBalance'),
+        command: 'List customer balance',
+      ),
     ];
 
     return Container(
@@ -208,7 +239,9 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
           top: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
+            color: colorScheme.outlineVariant.withValues(
+              alpha: isDark ? 0.15 : 0.3,
+            ),
             width: 1,
           ),
         ),
@@ -238,7 +271,9 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                       onPressed: () {
                         Navigator.of(context).pop();
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const ScanBillScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const ScanBillScreen(),
+                          ),
                         );
                       },
                     ),
@@ -250,12 +285,19 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                             color: colorScheme.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.auto_awesome_rounded, color: colorScheme.primary, size: 20),
+                          child: Icon(
+                            Icons.auto_awesome_rounded,
+                            color: colorScheme.primary,
+                            size: 20,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Text(
                           tr(ref, 'aiAssistant'),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -265,7 +307,10 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                     ),
                   ],
                 ),
-                Divider(color: colorScheme.outlineVariant.withValues(alpha: 0.25), height: 16),
+                Divider(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.25),
+                  height: 16,
+                ),
               ],
             ),
           ),
@@ -275,13 +320,16 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: _messages.length + (_loading ? 1 : 0) + (_pendingCommand != null ? 1 : 0),
+              itemCount:
+                  _messages.length +
+                  (_loading ? 1 : 0) +
+                  (_pendingCommand != null ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index < _messages.length) {
                   final msg = _messages[index];
                   return _ChatBubble(message: msg);
                 }
-                
+
                 // Loading indicator
                 if (index == _messages.length && _loading) {
                   return const _ChatLoadingBubble();
@@ -296,7 +344,12 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                     onCancel: () {
                       setState(() {
                         _pendingCommand = null;
-                        _messages.add(_ChatMessage(text: tr(ref, 'operationCancelled'), isUser: false));
+                        _messages.add(
+                          _ChatMessage(
+                            text: tr(ref, 'operationCancelled'),
+                            isUser: false,
+                          ),
+                        );
                       });
                       _scrollToBottom();
                     },
@@ -344,10 +397,18 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                             color: colorScheme.primary,
                           ),
                         ),
-                        onPressed: _loading ? null : () => _sendMessage(suggestions[index].command),
-                        backgroundColor: colorScheme.primary.withValues(alpha: 0.05),
-                        side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.15)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        onPressed: _loading
+                            ? null
+                            : () => _sendMessage(suggestions[index].command),
+                        backgroundColor: colorScheme.primary.withValues(
+                          alpha: 0.05,
+                        ),
+                        side: BorderSide(
+                          color: colorScheme.primary.withValues(alpha: 0.15),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                       ),
                     );
                   },
@@ -364,10 +425,14 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.06),
+                          color: isDark
+                              ? Colors.black.withValues(alpha: 0.2)
+                              : Colors.grey.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.35,
+                            ),
                             width: 1,
                           ),
                         ),
@@ -384,14 +449,19 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
                                   isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                 ),
                                 textInputAction: TextInputAction.send,
                                 onSubmitted: _sendMessage,
                               ),
                             ),
                             IconButton(
-                              icon: Icon(Icons.mic_none_rounded, color: colorScheme.primary),
+                              icon: Icon(
+                                Icons.mic_none_rounded,
+                                color: colorScheme.primary,
+                              ),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                               onPressed: _loading || _pendingCommand != null
@@ -423,7 +493,11 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                         ],
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                        icon: const Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         onPressed: _loading || _pendingCommand != null
                             ? null
                             : () => _sendMessage(_controller.text),
@@ -463,7 +537,9 @@ class _ChatBubble extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final align = message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final align = message.isUser
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start;
     final bubbleColor = message.isUser
         ? colorScheme.primary
         : (isDark ? const Color(0xFF23232E) : const Color(0xFFF3F4F6));
@@ -491,24 +567,24 @@ class _ChatBubble extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: radius,
               border: message.isUser
                   ? null
                   : Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.4),
+                      color: colorScheme.outlineVariant.withValues(
+                        alpha: isDark ? 0.15 : 0.4,
+                      ),
                       width: 1,
                     ),
             ),
             child: Text(
               message.text,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 14,
-                height: 1.4,
-              ),
+              style: TextStyle(color: textColor, fontSize: 14, height: 1.4),
             ),
           ),
         ],
@@ -544,7 +620,9 @@ class _ChatLoadingBubble extends StatelessWidget {
           height: 16,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              theme.colorScheme.primary,
+            ),
           ),
         ),
       ),
@@ -567,7 +645,7 @@ class _ConfirmationCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     final slots = Map<String, dynamic>.from(command['slots'] as Map? ?? {});
     final intent = command['intent']?.toString() ?? 'Record Action';
 
@@ -577,10 +655,26 @@ class _ConfirmationCard extends ConsumerWidget {
     if (intent == 'add_expense') {
       title = tr(ref, 'confirmNewExpense');
       details = [
-        _buildRow(context, tr(ref, 'category'), trValue(ref, slots['category']?.toString() ?? 'General')),
-        _buildRow(context, tr(ref, 'amount'), money(num.tryParse(slots['amount']?.toString() ?? '') ?? 0)),
-        _buildRow(context, tr(ref, 'vendor'), slots['vendor']?.toString() ?? 'Voice entry'),
-        _buildRow(context, tr(ref, 'payment'), trValue(ref, slots['paymentMethod']?.toString() ?? 'Cash')),
+        _buildRow(
+          context,
+          tr(ref, 'category'),
+          trValue(ref, slots['category']?.toString() ?? 'General'),
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'amount'),
+          money(num.tryParse(slots['amount']?.toString() ?? '') ?? 0),
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'vendor'),
+          slots['vendor']?.toString() ?? 'Voice entry',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'payment'),
+          trValue(ref, slots['paymentMethod']?.toString() ?? 'Cash'),
+        ),
       ];
     } else if (intent == 'add_customer') {
       title = tr(ref, 'confirmNewCustomer');
@@ -599,12 +693,18 @@ class _ConfirmationCard extends ConsumerWidget {
       details = [
         _buildRow(context, tr(ref, 'name'), slots['name']?.toString() ?? '—'),
         _buildRow(context, tr(ref, 'unit'), slots['unit']?.toString() ?? 'pcs'),
-        _buildRow(context, tr(ref, 'initialStock'), slots['stock']?.toString() ?? '0'),
+        _buildRow(
+          context,
+          tr(ref, 'initialStock'),
+          slots['stock']?.toString() ?? '0',
+        ),
       ];
     } else {
       title = tr(ref, 'confirmAction');
       for (final entry in slots.entries) {
-        details.add(_buildRow(context, entry.key, entry.value?.toString() ?? '—'));
+        details.add(
+          _buildRow(context, entry.key, entry.value?.toString() ?? '—'),
+        );
       }
     }
 
@@ -614,7 +714,10 @@ class _ConfirmationCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.35), width: 1.5),
+        border: Border.all(
+          color: colorScheme.primary.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: colorScheme.primary.withValues(alpha: 0.08),
@@ -628,11 +731,18 @@ class _ConfirmationCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.assignment_turned_in_rounded, color: colorScheme.primary, size: 20),
+              Icon(
+                Icons.assignment_turned_in_rounded,
+                color: colorScheme.primary,
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Text(
                 title,
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                ),
               ),
             ],
           ),
@@ -645,7 +755,9 @@ class _ConfirmationCard extends ConsumerWidget {
                 child: OutlinedButton(
                   onPressed: onCancel,
                   style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   child: Text(tr(ref, 'cancel')),
                 ),
@@ -655,7 +767,9 @@ class _ConfirmationCard extends ConsumerWidget {
                 child: FilledButton(
                   onPressed: onConfirm,
                   style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   child: Text(tr(ref, 'confirmAndSave')),
                 ),
@@ -673,8 +787,17 @@ class _ConfirmationCard extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
         ],
       ),
     );
@@ -726,13 +849,19 @@ class _VoiceRippleAnimationState extends State<_VoiceRippleAnimation>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: colorScheme.primary.withValues(alpha: 0.15),
-                    border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.5),
+                    border: Border.all(
+                      color: colorScheme.primary.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
             ),
             Opacity(
-              opacity: (1.0 - ((_controller.value + 0.5) % 1.0)).clamp(0.0, 1.0),
+              opacity: (1.0 - ((_controller.value + 0.5) % 1.0)).clamp(
+                0.0,
+                1.0,
+              ),
               child: Transform.scale(
                 scale: 1.0 + (((_controller.value + 0.5) % 1.0) * 0.8),
                 child: Container(
@@ -741,7 +870,10 @@ class _VoiceRippleAnimationState extends State<_VoiceRippleAnimation>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: colorScheme.secondary.withValues(alpha: 0.1),
-                    border: Border.all(color: colorScheme.secondary.withValues(alpha: 0.2), width: 1.5),
+                    border: Border.all(
+                      color: colorScheme.secondary.withValues(alpha: 0.2),
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -793,10 +925,22 @@ class _VoiceListeningPanel extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     final voiceSuggestions = [
-      _AssistantSuggestion(label: tr(ref, 'assistantSuggestionRevenue'), command: 'What is my revenue today?'),
-      _AssistantSuggestion(label: tr(ref, 'assistantSuggestionExpense'), command: 'Add expense 1500 for rent'),
-      _AssistantSuggestion(label: tr(ref, 'assistantSuggestionStock'), command: 'Show low stock products'),
-      _AssistantSuggestion(label: tr(ref, 'assistantSuggestionBalance'), command: 'List customer balance'),
+      _AssistantSuggestion(
+        label: tr(ref, 'assistantSuggestionRevenue'),
+        command: 'What is my revenue today?',
+      ),
+      _AssistantSuggestion(
+        label: tr(ref, 'assistantSuggestionExpense'),
+        command: 'Add expense 1500 for rent',
+      ),
+      _AssistantSuggestion(
+        label: tr(ref, 'assistantSuggestionStock'),
+        command: 'Show low stock products',
+      ),
+      _AssistantSuggestion(
+        label: tr(ref, 'assistantSuggestionBalance'),
+        command: 'List customer balance',
+      ),
     ];
 
     return Container(
@@ -831,14 +975,18 @@ class _VoiceListeningPanel extends ConsumerWidget {
                   foregroundColor: colorScheme.onSurfaceVariant,
                   visualDensity: VisualDensity.compact,
                 ),
-                child: Text(tr(ref, 'cancel'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                child: Text(
+                  tr(ref, 'cancel'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          const Center(
-            child: _VoiceRippleAnimation(),
-          ),
+          const Center(child: _VoiceRippleAnimation()),
           const SizedBox(height: 28),
           Align(
             alignment: Alignment.centerLeft,
@@ -870,10 +1018,15 @@ class _VoiceListeningPanel extends ConsumerWidget {
                         color: colorScheme.onSurface,
                       ),
                     ),
-                    onPressed: () => onSelectText(voiceSuggestions[index].command),
+                    onPressed: () =>
+                        onSelectText(voiceSuggestions[index].command),
                     backgroundColor: colorScheme.surface,
-                    side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    side: BorderSide(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
                   ),
                 );
               },

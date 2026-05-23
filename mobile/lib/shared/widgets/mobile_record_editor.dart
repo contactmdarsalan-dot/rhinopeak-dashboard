@@ -17,11 +17,8 @@ Future<void> showMobileRecordEditor(
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _RecordEditorSheet(
-      entity: entity,
-      title: title,
-      initial: initial,
-    ),
+    builder: (_) =>
+        _RecordEditorSheet(entity: entity, title: title, initial: initial),
   );
 }
 
@@ -69,7 +66,8 @@ class _RecordEditorSheetState extends ConsumerState<_RecordEditorSheet> {
     final payload = <String, dynamic>{};
     for (final field in fields) {
       if (field.kind == _FieldKind.select) {
-        payload[field.key] = _selectValues[field.key] ??
+        payload[field.key] =
+            _selectValues[field.key] ??
             _selectedOption(field, _controllers[field.key]?.text);
       } else {
         final raw = _controllers[field.key]?.text.trim() ?? '';
@@ -89,7 +87,10 @@ class _RecordEditorSheetState extends ConsumerState<_RecordEditorSheet> {
     final notifier = ref.read(appControllerProvider.notifier);
     if (widget.editing) {
       await notifier.updateRecord(
-          widget.entity, widget.initial!['id'].toString(), enriched);
+        widget.entity,
+        widget.initial!['id'].toString(),
+        enriched,
+      );
     } else {
       await notifier.createRecord(widget.entity, {
         ..._defaultPayload(widget.entity),
@@ -163,9 +164,10 @@ class _RecordEditorSheetState extends ConsumerState<_RecordEditorSheet> {
                     field: field,
                     controller: _controllerFor(field),
                     value: _selectValues[field.key],
-                    onSelect: (value) => setState(() =>
-                        _selectValues[field.key] =
-                            value ?? field.options.first),
+                    onSelect: (value) => setState(
+                      () => _selectValues[field.key] =
+                          value ?? field.options.first,
+                    ),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -294,297 +296,608 @@ List<_FieldSpec> _recordFields(
     case 'sales':
       return editing
           ? [
-              const _FieldSpec('customer', 'Customer', Icons.person_outline,
-                  required: true),
-              const _FieldSpec('payment', 'Payment', Icons.wallet_outlined,
-                  kind: _FieldKind.select,
-                  options: ['Cash', 'Credit', 'Online'],
-                  defaultValue: 'Cash'),
-              const _FieldSpec('status', 'Status', Icons.verified_outlined,
-                  kind: _FieldKind.select,
-                  options: ['Completed', 'Pending', 'Refunded'],
-                  defaultValue: 'Completed'),
-              _FieldSpec('date', 'Date', Icons.calendar_today_outlined,
-                  defaultValue: today),
-              const _FieldSpec('notes', 'Notes', Icons.note_outlined,
-                  kind: _FieldKind.longText),
+              const _FieldSpec(
+                'customer',
+                'Customer',
+                Icons.person_outline,
+                required: true,
+              ),
+              const _FieldSpec(
+                'payment',
+                'Payment',
+                Icons.wallet_outlined,
+                kind: _FieldKind.select,
+                options: ['Cash', 'Credit', 'Online'],
+                defaultValue: 'Cash',
+              ),
+              const _FieldSpec(
+                'status',
+                'Status',
+                Icons.verified_outlined,
+                kind: _FieldKind.select,
+                options: ['Completed', 'Pending', 'Refunded'],
+                defaultValue: 'Completed',
+              ),
+              _FieldSpec(
+                'date',
+                'Date',
+                Icons.calendar_today_outlined,
+                defaultValue: today,
+              ),
+              const _FieldSpec(
+                'notes',
+                'Notes',
+                Icons.note_outlined,
+                kind: _FieldKind.longText,
+              ),
             ]
           : const [];
     case 'customers':
       return const [
-        _FieldSpec('name', 'Customer name', Icons.person_outline,
-            required: true),
+        _FieldSpec(
+          'name',
+          'Customer name',
+          Icons.person_outline,
+          required: true,
+        ),
         _FieldSpec('phone', 'Phone number', Icons.phone_outlined),
         _FieldSpec('email', 'Email', Icons.mail_outline),
         _FieldSpec('address', 'Address', Icons.location_on_outlined),
         _FieldSpec('company', 'Shop / company', Icons.store_outlined),
         _FieldSpec('taxId', 'PAN / VAT no.', Icons.badge_outlined),
-        _FieldSpec('creditLimit', 'Credit limit', Icons.credit_score_outlined,
-            kind: _FieldKind.number),
         _FieldSpec(
-            'balance', 'Opening balance', Icons.account_balance_wallet_outlined,
-            kind: _FieldKind.number),
+          'creditLimit',
+          'Credit limit',
+          Icons.credit_score_outlined,
+          kind: _FieldKind.number,
+        ),
+        _FieldSpec(
+          'balance',
+          'Opening balance',
+          Icons.account_balance_wallet_outlined,
+          kind: _FieldKind.number,
+        ),
       ];
     case 'suppliers':
       return const [
-        _FieldSpec('name', 'Supplier name', Icons.local_shipping_outlined,
-            required: true),
+        _FieldSpec(
+          'name',
+          'Supplier name',
+          Icons.local_shipping_outlined,
+          required: true,
+        ),
         _FieldSpec('phone', 'Phone number', Icons.phone_outlined),
         _FieldSpec('email', 'Email', Icons.mail_outline),
         _FieldSpec('address', 'Address', Icons.location_on_outlined),
         _FieldSpec('pan', 'PAN / VAT no.', Icons.badge_outlined),
         _FieldSpec(
-            'contactPerson', 'Contact person', Icons.person_pin_outlined),
-        _FieldSpec('payableBalance', 'Opening payable', Icons.payments_outlined,
-            kind: _FieldKind.number),
-        _FieldSpec('notes', 'Notes', Icons.note_outlined,
-            kind: _FieldKind.longText),
+          'contactPerson',
+          'Contact person',
+          Icons.person_pin_outlined,
+        ),
+        _FieldSpec(
+          'payableBalance',
+          'Opening payable',
+          Icons.payments_outlined,
+          kind: _FieldKind.number,
+        ),
+        _FieldSpec(
+          'notes',
+          'Notes',
+          Icons.note_outlined,
+          kind: _FieldKind.longText,
+        ),
       ];
     case 'parties':
       return const [
-        _FieldSpec('name', 'Party name', Icons.groups_2_outlined,
-            required: true),
-        _FieldSpec('type', 'Party type', Icons.swap_horiz_outlined,
-            kind: _FieldKind.select,
-            options: ['Customer', 'Supplier'],
-            defaultValue: 'Customer'),
+        _FieldSpec(
+          'name',
+          'Party name',
+          Icons.groups_2_outlined,
+          required: true,
+        ),
+        _FieldSpec(
+          'type',
+          'Party type',
+          Icons.swap_horiz_outlined,
+          kind: _FieldKind.select,
+          options: ['Customer', 'Supplier'],
+          defaultValue: 'Customer',
+        ),
         _FieldSpec('phone', 'Phone number', Icons.phone_outlined),
         _FieldSpec('address', 'Address', Icons.location_on_outlined),
         _FieldSpec('pan', 'PAN / VAT no.', Icons.badge_outlined),
-        _FieldSpec('openingBalance', 'Opening balance',
-            Icons.account_balance_wallet_outlined,
-            kind: _FieldKind.number),
-        _FieldSpec('creditLimit', 'Credit limit', Icons.credit_score_outlined,
-            kind: _FieldKind.number),
-        _FieldSpec('dueDays', 'Due days', Icons.event_outlined,
-            kind: _FieldKind.number),
-        _FieldSpec('notes', 'Notes', Icons.note_outlined,
-            kind: _FieldKind.longText),
+        _FieldSpec(
+          'openingBalance',
+          'Opening balance',
+          Icons.account_balance_wallet_outlined,
+          kind: _FieldKind.number,
+        ),
+        _FieldSpec(
+          'creditLimit',
+          'Credit limit',
+          Icons.credit_score_outlined,
+          kind: _FieldKind.number,
+        ),
+        _FieldSpec(
+          'dueDays',
+          'Due days',
+          Icons.event_outlined,
+          kind: _FieldKind.number,
+        ),
+        _FieldSpec(
+          'notes',
+          'Notes',
+          Icons.note_outlined,
+          kind: _FieldKind.longText,
+        ),
       ];
     case 'credit-ledger':
       return [
-        _FieldSpec('customerName', 'Customer', Icons.person_outline,
-            kind: customerOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
-            options: customerOptions.isEmpty ? const [] : customerOptions,
-            required: true),
-        const _FieldSpec('type', 'Entry type', Icons.receipt_long_outlined,
-            kind: _FieldKind.select,
-            options: ['Credit Sale', 'Payment Received'],
-            defaultValue: 'Credit Sale'),
-        const _FieldSpec('amount', 'Amount', Icons.payments_outlined,
-            kind: _FieldKind.number, required: true),
-        _FieldSpec('date', 'Date', Icons.calendar_today_outlined,
-            defaultValue: today),
-        _FieldSpec('dueDate', 'Due date', Icons.event_outlined,
-            defaultValue: today),
-        const _FieldSpec('note', 'Note', Icons.note_outlined,
-            kind: _FieldKind.longText),
+        _FieldSpec(
+          'customerName',
+          'Customer',
+          Icons.person_outline,
+          kind: customerOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
+          options: customerOptions.isEmpty ? const [] : customerOptions,
+          required: true,
+        ),
+        const _FieldSpec(
+          'type',
+          'Entry type',
+          Icons.receipt_long_outlined,
+          kind: _FieldKind.select,
+          options: ['Credit Sale', 'Payment Received'],
+          defaultValue: 'Credit Sale',
+        ),
+        const _FieldSpec(
+          'amount',
+          'Amount',
+          Icons.payments_outlined,
+          kind: _FieldKind.number,
+          required: true,
+        ),
+        _FieldSpec(
+          'date',
+          'Date',
+          Icons.calendar_today_outlined,
+          defaultValue: today,
+        ),
+        _FieldSpec(
+          'dueDate',
+          'Due date',
+          Icons.event_outlined,
+          defaultValue: today,
+        ),
+        const _FieldSpec(
+          'note',
+          'Note',
+          Icons.note_outlined,
+          kind: _FieldKind.longText,
+        ),
       ];
     case 'purchases':
       return [
-        _FieldSpec('supplierName', 'Supplier', Icons.local_shipping_outlined,
-            kind: supplierOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
-            options: supplierOptions.isEmpty ? const [] : supplierOptions,
-            required: true),
+        _FieldSpec(
+          'supplierName',
+          'Supplier',
+          Icons.local_shipping_outlined,
+          kind: supplierOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
+          options: supplierOptions.isEmpty ? const [] : supplierOptions,
+          required: true,
+        ),
         const _FieldSpec('billNo', 'Supplier bill no.', Icons.receipt_outlined),
-        _FieldSpec('date', 'Date', Icons.calendar_today_outlined,
-            defaultValue: today),
-        const _FieldSpec('amount', 'Total amount', Icons.payments_outlined,
-            kind: _FieldKind.number, required: true),
-        const _FieldSpec('payment', 'Payment', Icons.wallet_outlined,
-            kind: _FieldKind.select,
-            options: ['Cash', 'Credit', 'Online'],
-            defaultValue: 'Cash'),
-        const _FieldSpec('status', 'Status', Icons.verified_outlined,
-            kind: _FieldKind.select,
-            options: ['Draft', 'Ordered', 'Received'],
-            defaultValue: 'Received'),
-        const _FieldSpec('notes', 'Notes', Icons.note_outlined,
-            kind: _FieldKind.longText),
+        _FieldSpec(
+          'date',
+          'Date',
+          Icons.calendar_today_outlined,
+          defaultValue: today,
+        ),
+        const _FieldSpec(
+          'amount',
+          'Total amount',
+          Icons.payments_outlined,
+          kind: _FieldKind.number,
+          required: true,
+        ),
+        const _FieldSpec(
+          'payment',
+          'Payment',
+          Icons.wallet_outlined,
+          kind: _FieldKind.select,
+          options: ['Cash', 'Credit', 'Online'],
+          defaultValue: 'Cash',
+        ),
+        const _FieldSpec(
+          'status',
+          'Status',
+          Icons.verified_outlined,
+          kind: _FieldKind.select,
+          options: ['Draft', 'Ordered', 'Received'],
+          defaultValue: 'Received',
+        ),
+        const _FieldSpec(
+          'notes',
+          'Notes',
+          Icons.note_outlined,
+          kind: _FieldKind.longText,
+        ),
       ];
     case 'expenses':
       return [
-        _FieldSpec('category', 'Category', Icons.category_outlined,
-            kind: (bootstrap?.expenseCategories.isNotEmpty ?? false)
-                ? _FieldKind.select
-                : _FieldKind.text,
-            options: bootstrap?.expenseCategories ?? const [],
-            required: true),
+        _FieldSpec(
+          'category',
+          'Category',
+          Icons.category_outlined,
+          kind: (bootstrap?.expenseCategories.isNotEmpty ?? false)
+              ? _FieldKind.select
+              : _FieldKind.text,
+          options: bootstrap?.expenseCategories ?? const [],
+          required: true,
+        ),
         const _FieldSpec('vendor', 'Paid to', Icons.store_outlined),
-        const _FieldSpec('amount', 'Amount', Icons.payments_outlined,
-            kind: _FieldKind.number, required: true),
-        const _FieldSpec('taxAmount', 'VAT amount', Icons.percent_outlined,
-            kind: _FieldKind.number),
         const _FieldSpec(
-            'paymentMethod', 'Payment method', Icons.wallet_outlined,
-            kind: _FieldKind.select,
-            options: ['Cash', 'Bank', 'Wallet', 'Credit'],
-            defaultValue: 'Cash'),
-        _FieldSpec('date', 'Date', Icons.calendar_today_outlined,
-            defaultValue: today),
-        const _FieldSpec('note', 'Note', Icons.note_outlined,
-            kind: _FieldKind.longText),
+          'amount',
+          'Amount',
+          Icons.payments_outlined,
+          kind: _FieldKind.number,
+          required: true,
+        ),
+        const _FieldSpec(
+          'taxAmount',
+          'VAT amount',
+          Icons.percent_outlined,
+          kind: _FieldKind.number,
+        ),
+        const _FieldSpec(
+          'paymentMethod',
+          'Payment method',
+          Icons.wallet_outlined,
+          kind: _FieldKind.select,
+          options: ['Cash', 'Bank', 'Wallet', 'Credit'],
+          defaultValue: 'Cash',
+        ),
+        _FieldSpec(
+          'date',
+          'Date',
+          Icons.calendar_today_outlined,
+          defaultValue: today,
+        ),
+        const _FieldSpec(
+          'note',
+          'Note',
+          Icons.note_outlined,
+          kind: _FieldKind.longText,
+        ),
       ];
     case 'cash-bank-accounts':
       return const [
-        _FieldSpec('name', 'Account name', Icons.account_balance_outlined,
-            required: true),
-        _FieldSpec('type', 'Type', Icons.account_balance_wallet_outlined,
-            kind: _FieldKind.select,
-            options: ['Cash', 'Bank', 'Wallet'],
-            defaultValue: 'Cash'),
+        _FieldSpec(
+          'name',
+          'Account name',
+          Icons.account_balance_outlined,
+          required: true,
+        ),
+        _FieldSpec(
+          'type',
+          'Type',
+          Icons.account_balance_wallet_outlined,
+          kind: _FieldKind.select,
+          options: ['Cash', 'Bank', 'Wallet'],
+          defaultValue: 'Cash',
+        ),
         _FieldSpec('institution', 'Bank / counter', Icons.store_outlined),
         _FieldSpec('accountNumber', 'Account number', Icons.numbers_outlined),
-        _FieldSpec('openingBalance', 'Opening balance', Icons.payments_outlined,
-            kind: _FieldKind.number),
         _FieldSpec(
-            'balance', 'Current balance', Icons.account_balance_wallet_outlined,
-            kind: _FieldKind.number),
+          'openingBalance',
+          'Opening balance',
+          Icons.payments_outlined,
+          kind: _FieldKind.number,
+        ),
+        _FieldSpec(
+          'balance',
+          'Current balance',
+          Icons.account_balance_wallet_outlined,
+          kind: _FieldKind.number,
+        ),
       ];
     case 'money-movements':
       return [
         _FieldSpec(
-            'accountName', 'Account', Icons.account_balance_wallet_outlined,
-            kind: accountOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
-            options: accountOptions.isEmpty ? const [] : accountOptions,
-            required: true),
-        const _FieldSpec('type', 'Type', Icons.swap_vert_outlined,
-            kind: _FieldKind.select,
-            options: ['Receipt', 'Payment', 'Transfer'],
-            defaultValue: 'Receipt'),
-        const _FieldSpec('amount', 'Amount', Icons.payments_outlined,
-            kind: _FieldKind.number, required: true),
-        _FieldSpec('date', 'Date', Icons.calendar_today_outlined,
-            defaultValue: today),
-        _FieldSpec('partyName', 'Party', Icons.groups_2_outlined,
-            kind: partyOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
-            options: partyOptions.isEmpty ? const [] : partyOptions),
-        const _FieldSpec('note', 'Note', Icons.note_outlined,
-            kind: _FieldKind.longText),
+          'accountName',
+          'Account',
+          Icons.account_balance_wallet_outlined,
+          kind: accountOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
+          options: accountOptions.isEmpty ? const [] : accountOptions,
+          required: true,
+        ),
+        const _FieldSpec(
+          'type',
+          'Type',
+          Icons.swap_vert_outlined,
+          kind: _FieldKind.select,
+          options: ['Receipt', 'Payment', 'Transfer'],
+          defaultValue: 'Receipt',
+        ),
+        const _FieldSpec(
+          'amount',
+          'Amount',
+          Icons.payments_outlined,
+          kind: _FieldKind.number,
+          required: true,
+        ),
+        _FieldSpec(
+          'date',
+          'Date',
+          Icons.calendar_today_outlined,
+          defaultValue: today,
+        ),
+        _FieldSpec(
+          'partyName',
+          'Party',
+          Icons.groups_2_outlined,
+          kind: partyOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
+          options: partyOptions.isEmpty ? const [] : partyOptions,
+        ),
+        const _FieldSpec(
+          'note',
+          'Note',
+          Icons.note_outlined,
+          kind: _FieldKind.longText,
+        ),
       ];
     case 'documents':
       return const [
-        _FieldSpec('name', 'Document name', Icons.description_outlined,
-            required: true),
-        _FieldSpec('recordType', 'Linked module', Icons.link_outlined,
-            kind: _FieldKind.select,
-            options: [
-              'sales',
-              'purchases',
-              'expenses',
-              'customers',
-              'inventory'
-            ],
-            defaultValue: 'sales'),
+        _FieldSpec(
+          'name',
+          'Document name',
+          Icons.description_outlined,
+          required: true,
+        ),
+        _FieldSpec(
+          'recordType',
+          'Linked module',
+          Icons.link_outlined,
+          kind: _FieldKind.select,
+          options: ['sales', 'purchases', 'expenses', 'customers', 'inventory'],
+          defaultValue: 'sales',
+        ),
         _FieldSpec('fileName', 'File name', Icons.attach_file_outlined),
-        _FieldSpec('mimeType', 'File type', Icons.file_copy_outlined,
-            defaultValue: 'text/html'),
+        _FieldSpec(
+          'mimeType',
+          'File type',
+          Icons.file_copy_outlined,
+          defaultValue: 'text/html',
+        ),
       ];
     case 'reminder-templates':
       return const [
-        _FieldSpec('name', 'Template name', Icons.notifications_active_outlined,
-            required: true),
-        _FieldSpec('channel', 'Channel', Icons.sms_outlined,
-            kind: _FieldKind.select,
-            options: ['SMS', 'Email', 'WhatsApp'],
-            defaultValue: 'SMS'),
-        _FieldSpec('language', 'Language', Icons.translate_outlined,
-            kind: _FieldKind.select, options: ['en', 'ne'], defaultValue: 'ne'),
-        _FieldSpec('message', 'Message', Icons.message_outlined,
-            kind: _FieldKind.longText, required: true),
         _FieldSpec(
-            'daysOffset', 'Days before/after due date', Icons.event_outlined,
-            kind: _FieldKind.number),
+          'name',
+          'Template name',
+          Icons.notifications_active_outlined,
+          required: true,
+        ),
+        _FieldSpec(
+          'channel',
+          'Channel',
+          Icons.sms_outlined,
+          kind: _FieldKind.select,
+          options: ['SMS', 'Email', 'WhatsApp'],
+          defaultValue: 'SMS',
+        ),
+        _FieldSpec(
+          'language',
+          'Language',
+          Icons.translate_outlined,
+          kind: _FieldKind.select,
+          options: ['en', 'ne'],
+          defaultValue: 'ne',
+        ),
+        _FieldSpec(
+          'message',
+          'Message',
+          Icons.message_outlined,
+          kind: _FieldKind.longText,
+          required: true,
+        ),
+        _FieldSpec(
+          'daysOffset',
+          'Days before/after due date',
+          Icons.event_outlined,
+          kind: _FieldKind.number,
+        ),
       ];
     case 'reminders':
       return [
-        _FieldSpec('partyName', 'Party', Icons.groups_2_outlined,
-            kind: partyOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
-            options: partyOptions.isEmpty ? const [] : partyOptions,
-            required: true),
-        const _FieldSpec('channel', 'Channel', Icons.sms_outlined,
-            kind: _FieldKind.select,
-            options: ['SMS', 'Email', 'WhatsApp'],
-            defaultValue: 'SMS'),
-        const _FieldSpec('message', 'Message', Icons.message_outlined,
-            kind: _FieldKind.longText, required: true),
-        const _FieldSpec('amount', 'Amount due', Icons.payments_outlined,
-            kind: _FieldKind.number),
-        _FieldSpec('dueDate', 'Due date', Icons.event_outlined,
-            defaultValue: today),
-        const _FieldSpec('status', 'Status', Icons.verified_outlined,
-            kind: _FieldKind.select,
-            options: ['Draft', 'Sent', 'Failed'],
-            defaultValue: 'Draft'),
+        _FieldSpec(
+          'partyName',
+          'Party',
+          Icons.groups_2_outlined,
+          kind: partyOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
+          options: partyOptions.isEmpty ? const [] : partyOptions,
+          required: true,
+        ),
+        const _FieldSpec(
+          'channel',
+          'Channel',
+          Icons.sms_outlined,
+          kind: _FieldKind.select,
+          options: ['SMS', 'Email', 'WhatsApp'],
+          defaultValue: 'SMS',
+        ),
+        const _FieldSpec(
+          'message',
+          'Message',
+          Icons.message_outlined,
+          kind: _FieldKind.longText,
+          required: true,
+        ),
+        const _FieldSpec(
+          'amount',
+          'Amount due',
+          Icons.payments_outlined,
+          kind: _FieldKind.number,
+        ),
+        _FieldSpec(
+          'dueDate',
+          'Due date',
+          Icons.event_outlined,
+          defaultValue: today,
+        ),
+        const _FieldSpec(
+          'status',
+          'Status',
+          Icons.verified_outlined,
+          kind: _FieldKind.select,
+          options: ['Draft', 'Sent', 'Failed'],
+          defaultValue: 'Draft',
+        ),
       ];
     case 'reports':
       return const [
-        _FieldSpec('title', 'Report title', Icons.bar_chart_outlined,
-            required: true),
-        _FieldSpec('type', 'Type', Icons.category_outlined,
-            kind: _FieldKind.select,
-            options: ['Sales', 'Stock', 'Tax', 'Profit', 'Credit'],
-            defaultValue: 'Sales'),
-        _FieldSpec('range', 'Date range', Icons.date_range_outlined,
-            kind: _FieldKind.select,
-            options: ['Today', 'This week', 'This month', 'Custom'],
-            defaultValue: 'This month'),
-        _FieldSpec('format', 'Format', Icons.file_download_outlined,
-            kind: _FieldKind.select,
-            options: ['HTML', 'PDF'],
-            defaultValue: 'HTML'),
-        _FieldSpec('status', 'Status', Icons.verified_outlined,
-            kind: _FieldKind.select,
-            options: ['Ready', 'Scheduled'],
-            defaultValue: 'Ready'),
+        _FieldSpec(
+          'title',
+          'Report title',
+          Icons.bar_chart_outlined,
+          required: true,
+        ),
+        _FieldSpec(
+          'type',
+          'Type',
+          Icons.category_outlined,
+          kind: _FieldKind.select,
+          options: ['Sales', 'Stock', 'Tax', 'Profit', 'Credit'],
+          defaultValue: 'Sales',
+        ),
+        _FieldSpec(
+          'range',
+          'Date range',
+          Icons.date_range_outlined,
+          kind: _FieldKind.select,
+          options: ['Today', 'This week', 'This month', 'Custom'],
+          defaultValue: 'This month',
+        ),
+        _FieldSpec(
+          'format',
+          'Format',
+          Icons.file_download_outlined,
+          kind: _FieldKind.select,
+          options: ['HTML', 'PDF'],
+          defaultValue: 'HTML',
+        ),
+        _FieldSpec(
+          'status',
+          'Status',
+          Icons.verified_outlined,
+          kind: _FieldKind.select,
+          options: ['Ready', 'Scheduled'],
+          defaultValue: 'Ready',
+        ),
       ];
     case 'roles':
       return const [
-        _FieldSpec('name', 'Role name', Icons.admin_panel_settings_outlined,
-            required: true),
-        _FieldSpec('description', 'Description', Icons.notes_outlined,
-            kind: _FieldKind.longText),
+        _FieldSpec(
+          'name',
+          'Role name',
+          Icons.admin_panel_settings_outlined,
+          required: true,
+        ),
+        _FieldSpec(
+          'description',
+          'Description',
+          Icons.notes_outlined,
+          kind: _FieldKind.longText,
+        ),
       ];
     case 'inventory':
       return [
-        const _FieldSpec('name', 'Product name', Icons.shopping_bag_outlined,
-            required: true),
-        _FieldSpec('category', 'Category', Icons.category_outlined,
-            kind: (bootstrap?.inventoryCategories.isNotEmpty ?? false)
-                ? _FieldKind.select
-                : _FieldKind.text,
-            options: bootstrap?.inventoryCategories ?? const [],
-            required: true),
-        const _FieldSpec('unit', 'Unit', Icons.straighten_outlined,
-            kind: _FieldKind.select,
-            options: ['pcs', 'kg', 'liter', 'meter', 'box', 'service'],
-            defaultValue: 'pcs'),
-        const _FieldSpec('stock', 'Stock', Icons.layers_outlined,
-            kind: _FieldKind.number),
         const _FieldSpec(
-            'reorderLevel', 'Reorder level', Icons.warning_amber_outlined,
-            kind: _FieldKind.number),
-        const _FieldSpec('price', 'Selling price', Icons.sell_outlined,
-            kind: _FieldKind.number),
-        const _FieldSpec('costPrice', 'Cost price', Icons.price_check_outlined,
-            kind: _FieldKind.number),
-        _FieldSpec('supplier', 'Supplier', Icons.local_shipping_outlined,
-            kind: supplierOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
-            options: supplierOptions.isEmpty ? const [] : supplierOptions),
+          'name',
+          'Product name',
+          Icons.shopping_bag_outlined,
+          required: true,
+        ),
+        _FieldSpec(
+          'category',
+          'Category',
+          Icons.category_outlined,
+          kind: (bootstrap?.inventoryCategories.isNotEmpty ?? false)
+              ? _FieldKind.select
+              : _FieldKind.text,
+          options: bootstrap?.inventoryCategories ?? const [],
+          required: true,
+        ),
+        const _FieldSpec(
+          'unit',
+          'Unit',
+          Icons.straighten_outlined,
+          kind: _FieldKind.select,
+          options: ['pcs', 'kg', 'liter', 'meter', 'box', 'service'],
+          defaultValue: 'pcs',
+        ),
+        const _FieldSpec(
+          'stock',
+          'Stock',
+          Icons.layers_outlined,
+          kind: _FieldKind.number,
+        ),
+        const _FieldSpec(
+          'reorderLevel',
+          'Reorder level',
+          Icons.warning_amber_outlined,
+          kind: _FieldKind.number,
+        ),
+        const _FieldSpec(
+          'price',
+          'Selling price',
+          Icons.sell_outlined,
+          kind: _FieldKind.number,
+        ),
+        const _FieldSpec(
+          'costPrice',
+          'Cost price',
+          Icons.price_check_outlined,
+          kind: _FieldKind.number,
+        ),
+        _FieldSpec(
+          'supplier',
+          'Supplier',
+          Icons.local_shipping_outlined,
+          kind: supplierOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
+          options: supplierOptions.isEmpty ? const [] : supplierOptions,
+        ),
       ];
     case 'inventory-movements':
       return [
-        _FieldSpec('productName', 'Product', Icons.inventory_2_outlined,
-            kind: productOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
-            options: productOptions.isEmpty ? const [] : productOptions),
-        const _FieldSpec('delta', 'Quantity change', Icons.add_chart_outlined,
-            kind: _FieldKind.number, required: true),
-        const _FieldSpec('reason', 'Reason', Icons.info_outline,
-            kind: _FieldKind.select,
-            options: ['Stock In', 'Stock Out', 'Correction', 'Purchase'],
-            defaultValue: 'Stock In'),
-        const _FieldSpec('note', 'Note', Icons.note_outlined,
-            kind: _FieldKind.longText),
+        _FieldSpec(
+          'productName',
+          'Product',
+          Icons.inventory_2_outlined,
+          kind: productOptions.isEmpty ? _FieldKind.text : _FieldKind.select,
+          options: productOptions.isEmpty ? const [] : productOptions,
+        ),
+        const _FieldSpec(
+          'delta',
+          'Quantity change',
+          Icons.add_chart_outlined,
+          kind: _FieldKind.number,
+          required: true,
+        ),
+        const _FieldSpec(
+          'reason',
+          'Reason',
+          Icons.info_outline,
+          kind: _FieldKind.select,
+          options: ['Stock In', 'Stock Out', 'Correction', 'Purchase'],
+          defaultValue: 'Stock In',
+        ),
+        const _FieldSpec(
+          'note',
+          'Note',
+          Icons.note_outlined,
+          kind: _FieldKind.longText,
+        ),
       ];
     default:
       return const [];
@@ -600,7 +913,7 @@ Map<String, dynamic> _defaultPayload(String entity) {
         'date': today,
         'payment': 'Cash',
         'status': 'Received',
-        'items': []
+        'items': [],
       };
     case 'expenses':
       return {'date': today, 'paymentMethod': 'Cash', 'attachmentIds': []};
@@ -611,7 +924,7 @@ Map<String, dynamic> _defaultPayload(String entity) {
         'createdAt': now,
         'template': 'Executive',
         'downloadUrl': '',
-        'scheduledAt': ''
+        'scheduledAt': '',
       };
     case 'reminder-templates':
       return {'active': true};
@@ -623,7 +936,7 @@ Map<String, dynamic> _defaultPayload(String entity) {
       return {'createdAt': now, 'reason': 'Stock In'};
     case 'roles':
       return {
-        'permissions': ['dashboard.view']
+        'permissions': ['dashboard.view'],
       };
     default:
       return {'createdAt': now};
@@ -635,8 +948,7 @@ List<String> _names(List<Map<String, dynamic>>? rows, String key) {
     for (final row in rows ?? const <Map<String, dynamic>>[])
       if ((row[key]?.toString().trim() ?? '').isNotEmpty)
         row[key].toString().trim(),
-  }.toList()
-    ..sort();
+  }.toList()..sort();
   return values;
 }
 
@@ -693,7 +1005,9 @@ Map<String, dynamic> _enrichPayload(
 }
 
 Map<String, dynamic>? _findByName(
-    List<Map<String, dynamic>> rows, String name) {
+  List<Map<String, dynamic>> rows,
+  String name,
+) {
   for (final row in rows) {
     if (row['name']?.toString() == name) return row;
   }

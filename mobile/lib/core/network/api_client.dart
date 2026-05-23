@@ -15,14 +15,14 @@ class ApiException implements Exception {
 
 class ApiClient {
   ApiClient(this._tokenStore)
-      : _dio = Dio(
-          BaseOptions(
-            baseUrl: AppConfig.apiBaseUrl,
-            connectTimeout: const Duration(seconds: 12),
-            receiveTimeout: const Duration(seconds: 20),
-            headers: const {'Accept': 'application/json'},
-          ),
-        );
+    : _dio = Dio(
+        BaseOptions(
+          baseUrl: AppConfig.apiBaseUrl,
+          connectTimeout: const Duration(seconds: 12),
+          receiveTimeout: const Duration(seconds: 20),
+          headers: const {'Accept': 'application/json'},
+        ),
+      );
 
   final TokenStore _tokenStore;
   final Dio _dio;
@@ -31,18 +31,27 @@ class ApiClient {
     return request('GET', path, auth: auth);
   }
 
-  Future<Map<String, dynamic>> post(String path,
-      {Map<String, dynamic>? data, bool auth = true}) {
+  Future<Map<String, dynamic>> post(
+    String path, {
+    Map<String, dynamic>? data,
+    bool auth = true,
+  }) {
     return request('POST', path, data: data, auth: auth);
   }
 
-  Future<Map<String, dynamic>> patch(String path,
-      {Map<String, dynamic>? data, bool auth = true}) {
+  Future<Map<String, dynamic>> patch(
+    String path, {
+    Map<String, dynamic>? data,
+    bool auth = true,
+  }) {
     return request('PATCH', path, data: data, auth: auth);
   }
 
-  Future<Map<String, dynamic>> delete(String path,
-      {Map<String, dynamic>? data, bool auth = true}) {
+  Future<Map<String, dynamic>> delete(
+    String path, {
+    Map<String, dynamic>? data,
+    bool auth = true,
+  }) {
     return request('DELETE', path, data: data, auth: auth);
   }
 
@@ -64,8 +73,13 @@ class ApiClient {
       if (auth && retryOnUnauthorized && error.response?.statusCode == 401) {
         final refreshed = await _refreshSession();
         if (refreshed) {
-          return request(method, path,
-              data: data, auth: auth, retryOnUnauthorized: false);
+          return request(
+            method,
+            path,
+            data: data,
+            auth: auth,
+            retryOnUnauthorized: false,
+          );
         }
       }
       final responseData = error.response?.data;
@@ -95,7 +109,10 @@ class ApiClient {
       } else if (responseData is String) {
         final trimmed = responseData.trim();
         if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
-          message = error.response?.statusMessage ?? error.message ?? 'Request failed.';
+          message =
+              error.response?.statusMessage ??
+              error.message ??
+              'Request failed.';
         } else if (trimmed.isNotEmpty) {
           message = trimmed;
         } else {
