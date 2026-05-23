@@ -7,7 +7,7 @@ import '../../dashboard/presentation/dashboard_screen.dart';
 import '../../inventory/presentation/inventory_screen.dart';
 import '../../more/presentation/more_screen.dart';
 import '../../more/presentation/parties_screen.dart';
-import '../../quick_add/presentation/scan_bill_screen.dart';
+import '../../quick_add/presentation/quick_add_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 
 class AppShell extends ConsumerStatefulWidget {
@@ -19,6 +19,39 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
+
+  void _showQuickAddSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (_, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Expanded(child: QuickAddScreen()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +80,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         currentIndex: _index,
         onTap: (buttonIndex) {
           if (buttonIndex == 2) {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ScanBillScreen()));
+            _showQuickAddSheet();
           } else {
             int targetScreenIndex = buttonIndex;
             if (buttonIndex > 2) {
@@ -87,8 +118,8 @@ class _MobileBottomNav extends ConsumerWidget {
       _NavItem(icon: Icons.grid_view_rounded, label: tr(ref, 'home')),
       _NavItem(icon: Icons.people_outline_rounded, label: tr(ref, 'parties')),
       _NavItem(
-        icon: Icons.document_scanner_outlined,
-        label: tr(ref, 'scanBill'),
+        icon: Icons.add_rounded,
+        label: tr(ref, 'add') ?? 'Add',
         primary: true,
       ),
       _NavItem(icon: Icons.inventory_2_outlined, label: tr(ref, 'stock')),

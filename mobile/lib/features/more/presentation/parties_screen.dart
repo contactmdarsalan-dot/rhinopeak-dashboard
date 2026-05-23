@@ -89,6 +89,19 @@ class _PartiesScreenState extends ConsumerState<PartiesScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          // Future task: Open add party sheet
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Add Party coming in next phase')),
+          );
+        },
+        icon: const Icon(Icons.person_add_alt_1),
+        label: Text(tr(ref, 'addParty') ?? 'Add Party'),
+        elevation: 4,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: Column(
         children: [
           // Total Cards Header
