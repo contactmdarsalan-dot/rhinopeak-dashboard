@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from apps.rhinopeak.data.repositories import create_audit, current_user_payload
 from apps.rhinopeak.domain.errors import AppError
-from apps.rhinopeak.domain.security import hash_password, hash_token, make_id, new_token, verify_password
+from apps.rhinopeak.domain.security import hash_password, hash_token, make_id, new_token, verify_password, generate_jwt_access_token, decode_jwt_access_token
 from apps.rhinopeak.models import PasswordResetToken, SessionToken, UserAccount
 from apps.rhinopeak.services.common import normalize_email, require_email, require_text
 from apps.rhinopeak.services.workspace_service import bootstrap_for_user, create_workspace_with_owner
@@ -18,10 +18,12 @@ from apps.rhinopeak.services.workspace_service import bootstrap_for_user, create
 
 def create_session(user: UserAccount) -> dict[str, str]:
     now = timezone.now()
-    access_token = new_token("rp_access")
-    refresh_token = new_token("rp_refresh")
     expires_at = now + timedelta(minutes=settings.SESSION_TTL_MINUTES)
     refresh_expires_at = now + timedelta(days=settings.REFRESH_TTL_DAYS)
+
+    access_token = generate_jwt_access_token({"sub": user.id}, expires_at)
+    refresh_token = new_token("rp_refresh")
+
     SessionToken.objects.create(
         access_token_hash=hash_token(access_token),
         refresh_token_hash=hash_token(refresh_token),
@@ -40,18 +42,27 @@ def create_session(user: UserAccount) -> dict[str, str]:
 def authenticate_access_token(access_token: str | None) -> UserAccount:
     if not access_token:
         raise AppError(401, "Missing access token.")
-    session = (
-        SessionToken.objects.select_related("user", "user__workspace", "user__role_record")
-        .filter(access_token_hash=hash_token(access_token))
+
+    payload = decode_jwt_access_token(access_token)
+    if not payload or "sub" not in payload:
+        raise AppError(401, "Invalid or expired session.")
+
+    user_id = payload["sub"]
+    user = (
+        UserAccount.objects.select_related("workspace", "role_record")
+        .filter(id=user_id)
         .first()
     )
-    if session is None or session.revoked_at is not None:
-        raise AppError(401, "Invalid session.")
-    if session.expires_at <= timezone.now():
-        raise AppError(401, "Session expired.")
-    session.user.last_active = timezone.now().isoformat(timespec="seconds")
-    session.user.save(update_fields=["last_active"])
-    return session.user
+
+    if user is None or user.status != "Active":
+        raise AppError(401, "User not found or inactive.")
+
+    if SessionToken.objects.filter(access_token_hash=hash_token(access_token), revoked_at__isnull=False).exists():
+        raise AppError(401, "Session revoked.")
+
+    user.last_active = timezone.now().isoformat(timespec="seconds")
+    user.save(update_fields=["last_active"])
+    return user
 
 
 def auth_response(user: UserAccount, session: dict[str, str]) -> dict[str, Any]:

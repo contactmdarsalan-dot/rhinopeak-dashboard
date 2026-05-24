@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import secrets
 
-PASSWORD_ITERATIONS = 240_000
+from django.contrib.auth.hashers import check_password, make_password
 
 
 def make_id(prefix: str) -> str:
@@ -12,14 +12,16 @@ def make_id(prefix: str) -> str:
 
 
 def hash_password(password: str, salt_hex: str | None = None) -> tuple[str, str]:
-    salt = bytes.fromhex(salt_hex) if salt_hex else secrets.token_bytes(16)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, PASSWORD_ITERATIONS)
-    return salt.hex(), digest.hex()
+    # We return the same single hash string for both tuple elements
+    # to maintain compatibility with existing call sites that expect two returned values (salt, hash).
+    # Since check_password handles the whole string, the 'salt' field in the DB becomes redundant but safe.
+    hashed = make_password(password)
+    return hashed, hashed
 
 
 def verify_password(password: str, salt_hex: str, digest_hex: str) -> bool:
-    _, candidate = hash_password(password, salt_hex)
-    return hmac.compare_digest(candidate, digest_hex)
+    # check_password handles the combined hash format automatically, so we just pass digest_hex.
+    return check_password(password, digest_hex)
 
 
 def new_token(prefix: str) -> str:
@@ -28,3 +30,23 @@ def new_token(prefix: str) -> str:
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+import jwt
+from django.conf import settings
+from datetime import datetime, timezone
+
+def generate_jwt_access_token(payload: dict, expires_at: datetime) -> str:
+    """Generate a stateless JWT access token containing the given payload."""
+    payload = dict(payload)
+    payload["exp"] = expires_at
+    payload["iat"] = datetime.now(timezone.utc)
+    payload["jti"] = secrets.token_hex(16)
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+def decode_jwt_access_token(token: str) -> dict | None:
+    """Decode a stateless JWT access token and return its payload. Returns None if invalid or expired."""
+    try:
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+    except jwt.InvalidTokenError:
+        return None

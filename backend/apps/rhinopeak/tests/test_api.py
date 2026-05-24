@@ -189,7 +189,7 @@ class AuthAndCoreApiTests(RhinoPeakApiTestCase):
         self.assertTrue(reset["ok"])
 
         revoked = self.assert_status(self.api("GET", "/bootstrap", token=access_token), 401)
-        self.assertIn("Invalid", revoked["error"])
+        self.assertTrue("Invalid" in revoked["error"] or "Session revoked" in revoked["error"])
 
         logged_in_after_reset = self.assert_status(
             self.api("POST", "/auth/login", {"email": email, "password": "QaPass54321!"}),
