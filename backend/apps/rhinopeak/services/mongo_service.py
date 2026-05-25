@@ -599,7 +599,8 @@ def health_payload() -> dict[str, Any]:
 
 def save_learning_memory(workspace_id: str, input_data: str, intent: str, slots: dict[str, Any], source_type: str = "assistant") -> dict[str, Any]:
     import hashlib
-    input_hash = hashlib.md5(input_data.encode("utf-8")).hexdigest()
+    # SHA-256 replaces MD5 for input hashing (MD5 is cryptographically broken)
+    input_hash = hashlib.sha256(input_data.encode("utf-8")).hexdigest()
 
     # Try to find an existing memory for this hash
     existing = collection("records").find_one({
@@ -625,7 +626,8 @@ def save_learning_memory(workspace_id: str, input_data: str, intent: str, slots:
 
 def get_learning_memory(workspace_id: str, input_data: str, source_type: str = "assistant") -> dict[str, Any] | None:
     import hashlib
-    input_hash = hashlib.md5(input_data.encode("utf-8")).hexdigest()
+    # SHA-256 replaces MD5 for input hashing (MD5 is cryptographically broken)
+    input_hash = hashlib.sha256(input_data.encode("utf-8")).hexdigest()
 
     existing = collection("records").find_one({
         "workspaceId": workspace_id,

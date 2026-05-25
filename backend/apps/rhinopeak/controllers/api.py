@@ -18,13 +18,49 @@ from apps.rhinopeak.domain.errors import AppError
 # low-traffic protection against brute-force on auth endpoints).
 # ---------------------------------------------------------------------------
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
+_redis_client = None
+
+
+def _get_redis_client():
+    """Lazily connect to Redis; falls back to in-memory store on failure."""
+    global _redis_client
+    if _redis_client is None:
+        import os
+        try:
+            import redis
+            redis_url = os.environ.get("RHINOPEAK_REDIS_URL", "redis://localhost:6379/0")
+            _redis_client = redis.from_url(redis_url, socket_connect_timeout=2)
+            _redis_client.ping()
+        except Exception:
+            _redis_client = None
+    return _redis_client
 
 
 def _check_rate_limit(key: str, max_attempts: int, window_seconds: int) -> None:
-    """Raise AppError 429 if key exceeds max_attempts within window_seconds."""
-    now = time.time()
+    """Raise AppError 429 if key exceeds max_attempts within window_seconds.
+
+    Uses Redis (via RHINOPEAK_REDIS_URL) when available; falls back to the
+    in-memory dict if Redis is unreachable so the app stays functional in dev.
+    """
+    import time as _time
+
+    redis = _get_redis_client()
+    now = _time.time()
+
+    if redis:
+        # Redis: atomic pipeline with window expiry
+        pipe = redis.pipeline()
+        pipe.zremrangebyscore(key, 0, now - window_seconds)
+        pipe.zcard(key)
+        pipe.zadd(key, {str(now): now})
+        pipe.expire(key, window_seconds)
+        counts, _ = pipe.execute()[1:3]
+        if counts and int(counts[0]) >= max_attempts:
+            raise AppError(429, "Too many attempts. Please try again later.")
+        return
+
+    # In-memory fallback for local dev without Redis
     window_start = now - window_seconds
-    # Prune stale entries
     _rate_limit_store[key] = [t for t in _rate_limit_store[key] if t > window_start]
     if len(_rate_limit_store[key]) >= max_attempts:
         raise AppError(429, "Too many attempts. Please try again later.")
@@ -174,22 +210,48 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
         return accept_invite(body)
 
     if method == "GET" and len(segments) == 3 and segments[:2] == ["payments", "esewa"] and segments[2] == "callback":
-        from apps.rhinopeak.services.payment_service import verify_esewa_callback
+        # eSewa redirects browser here after payment: ?oid=...&amt=...&refId=...&plan=...
+        from apps.rhinopeak.services.payment_service import verify_esewa_payment
 
-        data = request.GET.get("data", "")
-        result = verify_esewa_callback(data)
+        oid   = request.GET.get("oid", "")
+        amt   = request.GET.get("amt", "")
+        refId = request.GET.get("refId", "")
+        plan  = request.GET.get("plan", "")
+
+        result = verify_esewa_payment(oid, amt, refId)
         frontend_url = os.environ.get("RHINOPEAK_FRONTEND_URL", "http://localhost:3000")
+
+        if result.get("success"):
+            try:
+                complete_payment_session(oid, "eSewa", str(result.get("transaction_code", refId)))
+            except Exception as payment_error:
+                return HttpResponseRedirect(
+                    f"{frontend_url}/billing?payment=error&reason={quote(str(payment_error))}"
+                )
+            return HttpResponseRedirect(f"{frontend_url}/billing?payment=success&gateway=esewa")
+        return HttpResponseRedirect(
+            f"{frontend_url}/billing?payment=failed&reason={quote(str(result.get('error', 'verification_failed')))}"
+        )
+
+    if method == "POST" and segments == ["payments", "esewa", "verify"]:
+        # Server-side verification endpoint (called from frontend after eSewa redirect)
+        from apps.rhinopeak.services.payment_service import verify_esewa_payment
+
+        result = verify_esewa_payment(
+            oid=str(body.get("oid", "")),
+            amt=str(body.get("amt", "")),
+            refId=str(body.get("refId", "")),
+        )
         if result.get("success"):
             try:
                 complete_payment_session(
-                    str(result.get("transaction_uuid", "")),
+                    str(body.get("oid", "")),
                     "eSewa",
-                    str(result.get("transaction_code", "")),
+                    str(result.get("transaction_code", body.get("refId", ""))),
                 )
-            except Exception as payment_error:
-                return HttpResponseRedirect(f"{frontend_url}/billing?payment=error&reason={quote(str(payment_error))}")
-            return HttpResponseRedirect(f"{frontend_url}/billing?payment=success&gateway=esewa")
-        return HttpResponseRedirect(f"{frontend_url}/billing?payment=failed&reason={quote(str(result.get('error', 'verification_failed')))}")
+            except Exception:
+                pass
+        return result
 
     if method == "GET" and segments == ["platform", "auth", "state"]:
         return platform_state()
@@ -468,8 +530,9 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
     if method == "POST" and segments == ["payments", "khalti", "verify"]:
         from apps.rhinopeak.services.payment_service import verify_khalti_payment
 
-        pidx = str(body.get("pidx", ""))
-        result = verify_khalti_payment(pidx)
+        pidx           = str(body.get("pidx", ""))
+        expected_amount = body.get("amount")  # in paisa, optional
+        result = verify_khalti_payment(pidx, expected_amount=int(expected_amount) if expected_amount else None)
         if result.get("success"):
             transaction_uuid = str(body.get("transactionUuid") or pidx.removeprefix("demo_"))
             complete_payment_session(transaction_uuid, "Khalti", str(result.get("transaction_id", "")))
