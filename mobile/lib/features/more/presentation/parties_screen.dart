@@ -575,10 +575,8 @@ class _PartyLedgerDetailScreenState
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isDark
-                    ? [const Color(0xFF2E1065), const Color(0xFF1E1B4B)]
-                    : [colorScheme.primary, colorScheme.primary.withBlue(220)],
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0A6E46), Color(0xFF0E8757)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),

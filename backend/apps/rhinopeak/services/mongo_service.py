@@ -599,7 +599,6 @@ def health_payload() -> dict[str, Any]:
 
 def save_learning_memory(workspace_id: str, input_data: str, intent: str, slots: dict[str, Any], source_type: str = "assistant") -> dict[str, Any]:
     import hashlib
-    # SHA-256 replaces MD5 for input hashing (MD5 is cryptographically broken)
     input_hash = hashlib.sha256(input_data.encode("utf-8")).hexdigest()
 
     # Try to find an existing memory for this hash
@@ -626,7 +625,6 @@ def save_learning_memory(workspace_id: str, input_data: str, intent: str, slots:
 
 def get_learning_memory(workspace_id: str, input_data: str, source_type: str = "assistant") -> dict[str, Any] | None:
     import hashlib
-    # SHA-256 replaces MD5 for input hashing (MD5 is cryptographically broken)
     input_hash = hashlib.sha256(input_data.encode("utf-8")).hexdigest()
 
     existing = collection("records").find_one({
@@ -1231,7 +1229,7 @@ def bootstrap_payload(user: dict[str, Any]) -> dict[str, Any]:
         "expenseCategories": expense_category_names(workspace_id),
         "cashBankAccounts": list_records(workspace_id, "cash_bank_accounts"),
         "documents": list_records(workspace_id, "documents"),
-        "billScans": list_records(workspace_id, "bill_scans"),
+        "billScans": [{k: v for k, v in scan.items() if k != "imageDataUrl"} for scan in list_records(workspace_id, "bill_scans")],
         "reminderTemplates": list_records(workspace_id, "reminder_templates"),
         "reminderLogs": list_records(workspace_id, "reminder_logs"),
         "syncOperations": list_records(workspace_id, "sync_operations"),

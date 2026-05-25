@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 
 // Generate a random email to avoid duplicate user conflicts
 const testEmail = `testuser+${Date.now()}@example.com`;

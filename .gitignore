@@ -14,6 +14,7 @@
 /coverage
 playwright-report/
 test-results/
+/scratch/
 
 # next.js
 /.next/
@@ -70,6 +71,12 @@ venv/
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!*.env.example
+!**/.env.example
+/backend/scratch/
+/mobile/screenshot.png
+/mobile/test_bootstrap_payload.json
 
 # vercel
 .vercel

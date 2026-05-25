@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import time
+import uuid
+import logging
 from collections import defaultdict
 from typing import Any
 from urllib.parse import quote, unquote
@@ -13,9 +15,25 @@ from django.views.decorators.csrf import csrf_exempt
 
 from apps.rhinopeak.domain.errors import AppError
 
+logger = logging.getLogger(__name__)
+
 # ---------------------------------------------------------------------------
-# Simple in-memory rate limiter (resets on server restart, good enough for
-# low-traffic protection against brute-force on auth endpoints).
+# Correlation ID for distributed tracing
+# ---------------------------------------------------------------------------
+
+def get_correlation_id(request: HttpRequest) -> str:
+    """Get or generate a correlation ID for request tracing."""
+    return request.headers.get("X-Correlation-ID") or request.headers.get("X-Request-ID") or str(uuid.uuid4())
+
+
+def set_correlation_id(response: HttpResponse, correlation_id: str) -> HttpResponse:
+    """Set correlation ID in response headers."""
+    response["X-Correlation-ID"] = correlation_id
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Redis-backed rate limiter with in-memory fallback
 # ---------------------------------------------------------------------------
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
 _redis_client = None
@@ -28,9 +46,10 @@ def _get_redis_client():
         import os
         try:
             import redis
-            redis_url = os.environ.get("RHINOPEAK_REDIS_URL", "redis://localhost:6379/0")
-            _redis_client = redis.from_url(redis_url, socket_connect_timeout=2)
-            _redis_client.ping()
+            if getattr(settings, 'REDIS_ENABLED', True):
+                redis_url = os.environ.get("RHINOPEAK_REDIS_URL", "redis://localhost:6379/0")
+                _redis_client = redis.from_url(redis_url, socket_connect_timeout=2)
+                _redis_client.ping()
         except Exception:
             _redis_client = None
     return _redis_client
@@ -54,8 +73,10 @@ def _check_rate_limit(key: str, max_attempts: int, window_seconds: int) -> None:
         pipe.zcard(key)
         pipe.zadd(key, {str(now): now})
         pipe.expire(key, window_seconds)
-        counts, _ = pipe.execute()[1:3]
-        if counts and int(counts[0]) >= max_attempts:
+        results = pipe.execute()
+        current_count = int(results[1] or 0)
+        if current_count >= max_attempts:
+            logger.warning(f"Rate limit exceeded for key: {key}", extra={"key": key, "max_attempts": max_attempts})
             raise AppError(429, "Too many attempts. Please try again later.")
         return
 
@@ -63,6 +84,7 @@ def _check_rate_limit(key: str, max_attempts: int, window_seconds: int) -> None:
     window_start = now - window_seconds
     _rate_limit_store[key] = [t for t in _rate_limit_store[key] if t > window_start]
     if len(_rate_limit_store[key]) >= max_attempts:
+        logger.warning(f"Rate limit exceeded (in-memory) for key: {key}", extra={"key": key, "max_attempts": max_attempts})
         raise AppError(429, "Too many attempts. Please try again later.")
     _rate_limit_store[key].append(now)
 from apps.rhinopeak.services.assistant_service import handle_assistant_command
@@ -163,19 +185,58 @@ from apps.rhinopeak.services.mongo_service import (
 
 @csrf_exempt
 def api_entry(request: HttpRequest, route: str = "") -> HttpResponse:
+    """Main API entry point with correlation ID tracking and security hardening."""
+    # Get or generate correlation ID
+    correlation_id = get_correlation_id(request)
+
     if request.method == "OPTIONS":
-        return with_cors(HttpResponse(status=204), request)
+        response = HttpResponse(status=204)
+        return with_cors(set_correlation_id(response, correlation_id), request)
+
     try:
+        # Log request with correlation ID
+        logger.info(
+            f"API Request: {request.method} /{route}",
+            extra={
+                "correlation_id": correlation_id,
+                "method": request.method,
+                "path": f"/{route}",
+                "client_ip": request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR")),
+            }
+        )
+
         payload = dispatch(request, route)
         if isinstance(payload, HttpResponse):
-            return with_cors(payload, request)
-        return with_cors(JsonResponse(payload, safe=isinstance(payload, dict)), request)
+            response = with_cors(payload, request)
+            return set_correlation_id(response, correlation_id)
+
+        response = with_cors(JsonResponse(payload, safe=isinstance(payload, dict)), request)
+        return set_correlation_id(response, correlation_id)
+
     except AppError as error:
-        return with_cors(JsonResponse({"error": error.message}, status=error.status), request)
+        logger.warning(
+            f"AppError in API: {error.message}",
+            extra={"correlation_id": correlation_id, "status": error.status}
+        )
+        return with_cors(
+            set_correlation_id(JsonResponse({"error": error.message}, status=error.status), correlation_id),
+            request
+        )
     except json.JSONDecodeError:
-        return with_cors(JsonResponse({"error": "Invalid JSON body."}, status=400), request)
+        return with_cors(
+            set_correlation_id(JsonResponse({"error": "Invalid JSON body."}, status=400), correlation_id),
+            request
+        )
     except Exception as error:
-        return with_cors(JsonResponse({"error": str(error) or "Internal server error."}, status=500), request)
+        # SECURITY FIX: Don't expose internal error messages to clients
+        logger.exception(
+            f"Unhandled error in API request",
+            extra={"correlation_id": correlation_id, "error_type": type(error).__name__}
+        )
+        return with_cors(
+            set_correlation_id(JsonResponse({"error": "An unexpected error occurred."}, status=500), correlation_id),
+            request
+        )
 
 
 def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
@@ -183,15 +244,37 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
     segments = [segment for segment in route.strip("/").split("/") if segment]
     body = read_json(request) if method in {"POST", "PATCH", "DELETE"} else {}
 
+    # ── Health Check Endpoints ────────────────────────────────────────────────
+    # Basic liveness check - is the server alive?
     if method == "GET" and segments == ["health"]:
         return health_payload()
+
+    # Kubernetes-style liveness probe - is the server ready to serve traffic?
+    if method == "GET" and segments == ["health", "live"]:
+        return {"status": "alive", "timestamp": __import__('datetime').datetime.now().isoformat()}
+
+    # Readiness probe - is the server ready to accept traffic?
+    if method == "GET" and segments == ["health", "ready"]:
+        return _health_check_readiness()
+
+    # Detailed health check for monitoring
+    if method == "GET" and segments == ["health", "details"]:
+        return _health_check_detailed()
+
+    # ── API Version Endpoint ──────────────────────────────────────────────────
+    if method == "GET" and segments == ["version"]:
+        return _api_version_info()
     if method == "GET" and segments == ["schema", "audit"]:
         return schema_audit()
     if method == "POST" and segments == ["auth", "register"]:
         return register_user(body)
     if method == "POST" and segments == ["auth", "login"]:
         client_ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "unknown"))
-        _check_rate_limit(f"login:{client_ip}", max_attempts=10, window_seconds=60)
+        _check_rate_limit(
+            f"login:{client_ip}",
+            max_attempts=settings.RATE_LIMIT_AUTH_MAX_ATTEMPTS,
+            window_seconds=settings.RATE_LIMIT_AUTH_WINDOW_SECONDS,
+        )
         return login_user(body)
     if method == "POST" and segments == ["auth", "refresh"]:
         return refresh_session(body)
@@ -199,7 +282,11 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
         return logout(bearer_token(request, required=False), body)
     if method == "POST" and segments == ["auth", "password", "request"]:
         client_ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "unknown"))
-        _check_rate_limit(f"pwreset:{client_ip}", max_attempts=3, window_seconds=3600)
+        _check_rate_limit(
+            f"pwreset:{client_ip}",
+            max_attempts=settings.RATE_LIMIT_PASSWORD_RESET_MAX,
+            window_seconds=settings.RATE_LIMIT_PASSWORD_RESET_WINDOW,
+        )
         return request_password_reset(body)
     if method == "POST" and segments == ["auth", "password", "reset"]:
         return reset_password(body)
@@ -560,13 +647,24 @@ def bearer_token(request: HttpRequest, required: bool) -> str | None:
 
 
 def with_cors(response: HttpResponse, request: HttpRequest) -> HttpResponse:
+    """Add CORS headers with security hardening.
+
+    SECURITY FIX: Removed wildcard CORS in debug mode.
+    Debug mode no longer allows "*" - must use explicit allowed origins.
+    """
     origin = request.headers.get("Origin")
     if origin in settings.CORS_ORIGINS:
         response["Access-Control-Allow-Origin"] = origin
         response["Vary"] = "Origin"
-    elif settings.DEBUG:
-        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Credentials"] = "true"
+    # SECURITY FIX: No wildcard CORS even in DEBUG mode unless PRODUCTION is explicitly False
+    elif settings.DEBUG and not settings.PRODUCTION:
+        # Only allow for localhost development
+        if origin and ("localhost" in origin or "127.0.0.1" in origin):
+            response["Access-Control-Allow-Origin"] = origin
+            response["Vary"] = "Origin"
     response["Access-Control-Allow-Methods"] = "GET,POST,PATCH,DELETE,OPTIONS"
-    response["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    response["Access-Control-Allow-Headers"] = "Content-Type,Authorization,X-Request-ID,X-Correlation-ID"
+    response["Access-Control-Expose-Headers"] = "X-Request-ID,X-Correlation-ID"
     response["Access-Control-Max-Age"] = "86400"
     return response

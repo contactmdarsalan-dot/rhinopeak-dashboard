@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DollarSign, ShoppingBag, TrendingUp, UserPlus, BrainCircuit } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { KpiCard } from '@/components/ui/KpiCard';
@@ -29,13 +29,10 @@ export function DashboardPage() {
   const tx = (value: string) => uiText(settings.language, value);
 
   // Show onboarding wizard once for brand-new workspaces (no data yet)
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  useEffect(() => {
+  const [showOnboarding, setShowOnboarding] = useState(() => {
     const done = typeof window !== 'undefined' && localStorage.getItem('rhinopeak_onboarding_done');
-    if (!done && sales.length === 0 && inventory.length === 0) {
-      setShowOnboarding(true);
-    }
-  }, []); // intentionally run only once on mount
+    return !done && sales.length === 0 && inventory.length === 0;
+  });
 
 
   const activeSales = useMemo(() => sales.filter((sale) => !sale.deletedAt), [sales]);

@@ -1,15 +1,261 @@
-import unittest
-from apps.rhinopeak.services.assistant_service import detect_intent
+from __future__ import annotations
 
-class AssistantServiceTests(unittest.TestCase):
-    def test_record_sale_intents(self):
+from django.test import SimpleTestCase
+
+from apps.rhinopeak.services.assistant_service import detect_intent, parse_assistant_command
+from apps.rhinopeak.tests.test_api import RhinoPeakApiTestCase
+
+
+class AssistantIntentRuleTests(SimpleTestCase):
+    def test_record_sale_intents(self) -> None:
         self.assertEqual(detect_intent("नयाँ सेल्स एड गर"), "record_sale")
         self.assertEqual(detect_intent("सेल्स"), "record_sale")
         self.assertEqual(detect_intent("सेल"), "record_sale")
+        self.assertEqual(detect_intent("कस्टमर बिक्री"), "record_sale")
 
-    def test_expense_intents(self):
+    def test_expense_intents(self) -> None:
         self.assertEqual(detect_intent("खर्च"), "add_expense")
         self.assertEqual(detect_intent("खर्चा"), "add_expense")
+        self.assertEqual(detect_intent("नयाँ खर्च रेकर्ड"), "add_expense")
 
-    def test_add_product_intents(self):
+    def test_add_product_intents(self) -> None:
         self.assertEqual(detect_intent("नयाँ सामान"), "add_product")
+        self.assertEqual(detect_intent("नयाँ प्रोडक्ट थप"), "add_product")
+
+    def test_transliterated_customer_supplier(self) -> None:
+        self.assertEqual(detect_intent("मेरो नयाँ कस्टमर थप"), "add_customer")
+        self.assertEqual(detect_intent("सप्लायर थप"), "add_supplier")
+
+
+class AssistantCommandParserTests(SimpleTestCase):
+    def test_known_voice_commands_map_to_expected_intents(self) -> None:
+        cases = [
+            ("scan this VAT bill", "scan_bill"),
+            ("add expense NPR 500 rent paid cash", "add_expense"),
+            ("खर्च ५०० भाडा नगद", "add_expense"),
+            ("add customer Maya Store phone 9803333333", "add_customer"),
+            ("ग्राहक थप राम पसल 9801111111", "add_customer"),
+            ("add supplier Himal Dairy Suppliers 9811111111", "add_supplier"),
+            ("add product milk 20 liter", "add_product"),
+            ("record sale NPR 1200 to Hari Cafe cash", "record_sale"),
+            ("payment received NPR 2500 from Maya Store", "record_payment"),
+            ("create report for this month", "create_report"),
+            ("मेरो नयाँ कस्टमर थप", "add_customer"),
+            ("सप्लायर थप श्याम", "add_supplier"),
+            ("कस्टमर राम थप", "add_customer"),
+        ]
+
+        for transcript, intent in cases:
+            with self.subTest(transcript=transcript):
+                command = parse_assistant_command({"transcript": transcript})
+                self.assertEqual(command["intent"], intent)
+                self.assertGreaterEqual(command["confidence"], 0.7)
+
+    def test_unknown_command_stays_low_confidence_and_non_executable(self) -> None:
+        command = parse_assistant_command({"transcript": "please make everything perfect"})
+
+        self.assertEqual(command["intent"], "unknown")
+        self.assertLess(command["confidence"], 0.5)
+        self.assertFalse(command["canExecute"])
+        self.assertTrue(command["warnings"])
+
+    def test_business_questions_are_read_only_answers(self) -> None:
+        for transcript in ["What is my total sale?", "Miro total sale kothiyo."]:
+            with self.subTest(transcript=transcript):
+                command = parse_assistant_command({"transcript": transcript})
+
+                self.assertEqual(command["intent"], "business_question")
+                self.assertEqual(command["slots"]["questionType"], "sales_total")
+                self.assertFalse(command["requiresConfirmation"])
+                self.assertFalse(command["canExecute"])
+                self.assertFalse(command["warnings"])
+
+    def test_nepali_unicode_business_questions(self) -> None:
+        cases = [
+            ("मेरो जम्मा सेल्स कती छ", "sales_total", "all_time"),
+            ("आजको बिक्री कति भयो", "sales_total", "today"),
+            ("यो महिनाको खर्च कति छ", "expenses_total", "this_month"),
+            ("साहुलाई कति तिर्नु बाँकी छ", "supplier_payable", "all_time"),
+            ("ग्राहकबाट कति उठ्न बाँकी छ", "customer_receivable", "all_time"),
+            ("नगद ब्यालेन्स कति छ", "cash_balance", "all_time"),
+            ("स्टकको स्थिति कस्तो छ", "inventory_status", "all_time"),
+            ("यो वर्षको नाफा कति भयो", "profit_estimate", "this_year"),
+        ]
+
+        for transcript, q_type, scope in cases:
+            with self.subTest(transcript=transcript):
+                command = parse_assistant_command({"transcript": transcript})
+                self.assertEqual(command["intent"], "business_question")
+                self.assertEqual(command["slots"]["questionType"], q_type)
+                self.assertEqual(command["slots"]["scope"], scope)
+                self.assertFalse(command["requiresConfirmation"])
+                self.assertFalse(command["canExecute"])
+                self.assertFalse(command["warnings"])
+
+    def test_nepali_digits_are_normalized_for_amount_detection(self) -> None:
+        command = parse_assistant_command({"transcript": "खर्च रु १२३४ ढुवानी"})
+
+        self.assertEqual(command["intent"], "add_expense")
+        self.assertEqual(command["slots"]["amount"], 1234)
+        self.assertEqual(command["language"], "ne")
+
+    def test_guided_sales_bill_collects_required_fields_one_by_one(self) -> None:
+        command = parse_assistant_command({"transcript": "mero naya bikri bill banau", "language": "ne"})
+
+        self.assertEqual(command["intent"], "record_sale")
+        self.assertEqual(command["executionStatus"], "Collecting")
+        self.assertEqual(command["nextSlot"], "customerName")
+        self.assertFalse(command["canExecute"])
+
+        for answer, expected_next_slot in [
+            ("Hari Cafe", "productName"),
+            ("Buffalo Milk", "quantity"),
+            ("2 liter", "unitPrice"),
+            ("NPR 120", ""),
+        ]:
+            command = parse_assistant_command({"transcript": answer, "draft": command})
+            self.assertEqual(command["nextSlot"], expected_next_slot)
+
+        self.assertEqual(command["executionStatus"], "Draft")
+        self.assertTrue(command["canExecute"])
+        self.assertEqual(command["slots"]["customerName"], "Hari Cafe")
+        self.assertEqual(command["slots"]["productName"], "Buffalo Milk")
+        self.assertEqual(command["slots"]["quantity"], 2)
+        self.assertEqual(command["slots"]["unitPrice"], 120)
+
+
+class AssistantCommandApiTests(RhinoPeakApiTestCase):
+    def test_parse_command_requires_login(self) -> None:
+        response = self.api("POST", "/assistant/command", {"transcript": "add customer Test"})
+        self.assert_status(response, 401)
+
+    def test_business_question_returns_saved_sales_total(self) -> None:
+        token = self.auth_token()
+        for sale_id, amount in [("assistant-sale-1", 1200), ("assistant-sale-2", 800)]:
+            self.assert_status(
+                self.api(
+                    "POST",
+                    "/sales",
+                    {
+                        "id": f"{sale_id}-{self.suffix}",
+                        "customer": "Assistant QA Customer",
+                        "status": "Completed",
+                        "items": [{"productName": "QA Item", "quantity": 1, "unitPrice": amount, "tax": 0}],
+                    },
+                    token=token,
+                ),
+                200,
+            )
+        self.assert_status(
+            self.api(
+                "POST",
+                "/sales",
+                {
+                    "id": f"assistant-refund-{self.suffix}",
+                    "customer": "Assistant QA Customer",
+                    "status": "Refunded",
+                    "items": [{"productName": "Refunded Item", "quantity": 1, "unitPrice": 999, "tax": 0}],
+                },
+                token=token,
+            ),
+            200,
+        )
+
+        for transcript in ["What is my total sale?", "Miro total sale kothiyo."]:
+            with self.subTest(transcript=transcript):
+                command = self.assert_status(
+                    self.api("POST", "/assistant/command", {"transcript": transcript}, token=token),
+                    200,
+                )["assistantCommand"]
+
+                self.assertEqual(command["intent"], "business_question")
+                self.assertEqual(command["executionStatus"], "Answered")
+                self.assertEqual(command["slots"]["salesTotal"], 2000)
+                self.assertEqual(command["slots"]["salesCount"], 2)
+                self.assertIn("NPR 2,000", command["reply"])
+
+    def test_confirmed_customer_command_creates_customer(self) -> None:
+        token = self.auth_token()
+        draft = self.assert_status(
+            self.api("POST", "/assistant/command", {"transcript": "add customer Maya Store 9803333333"}, token=token),
+            200,
+        )["assistantCommand"]
+
+        self.assertEqual(draft["intent"], "add_customer")
+        self.assertTrue(draft["canExecute"])
+        self.assertEqual(draft["executionStatus"], "Draft")
+
+        executed = self.assert_status(
+            self.api(
+                "POST",
+                "/assistant/command",
+                {"transcript": "add customer Maya Store 9803333333", "confirm": True},
+                token=token,
+            ),
+            200,
+        )
+
+        command = executed["assistantCommand"]
+        self.assertEqual(command["executionStatus"], "Executed")
+        self.assertEqual(command["result"]["customer"]["name"], "Maya Store")
+        self.assertTrue(any(customer["name"] == "Maya Store" for customer in executed["bootstrap"]["customers"]))
+
+    def test_confirmed_expense_command_creates_expense(self) -> None:
+        token = self.auth_token()
+        executed = self.assert_status(
+            self.api(
+                "POST",
+                "/assistant/command",
+                {"transcript": "add expense NPR 1200 rent paid cash", "confirm": True},
+                token=token,
+            ),
+            200,
+        )
+
+        expense = executed["assistantCommand"]["result"]["expense"]
+        self.assertEqual(expense["category"], "Rent")
+        self.assertEqual(expense["amount"], 1200)
+        self.assertTrue(any(item["amount"] == 1200 for item in executed["bootstrap"]["expenses"]))
+
+    def test_incomplete_confirmed_command_is_rejected(self) -> None:
+        token = self.auth_token()
+        response = self.api("POST", "/assistant/command", {"transcript": "add expense for rent", "confirm": True}, token=token)
+
+        error = self.assert_status(response, 400)
+        self.assertIn("Amount is required", error["error"])
+
+    def test_guided_sales_bill_can_be_confirmed_after_followup_answers(self) -> None:
+        token = self.auth_token()
+        command = self.assert_status(
+            self.api("POST", "/assistant/command", {"transcript": "new sales bill"}, token=token),
+            200,
+        )["assistantCommand"]
+
+        for answer in ["Hari Cafe", "Buffalo Milk", "2", "120"]:
+            command = self.assert_status(
+                self.api("POST", "/assistant/command", {"transcript": answer, "draft": command}, token=token),
+                200,
+            )["assistantCommand"]
+
+        self.assertEqual(command["executionStatus"], "Draft")
+        self.assertTrue(command["canExecute"])
+
+        executed = self.assert_status(
+            self.api(
+                "POST",
+                "/assistant/command",
+                {
+                    "transcript": command["transcript"],
+                    "confirm": True,
+                    "overrides": command["slots"],
+                },
+                token=token,
+            ),
+            200,
+        )
+
+        saved_sale = executed["assistantCommand"]["result"]["sale"]
+        self.assertEqual(saved_sale["customer"], "Hari Cafe")
+        self.assertEqual(saved_sale["items"][0]["productName"], "Buffalo Milk")
+        self.assertEqual(saved_sale["amount"], 240)
+        self.assertTrue(any(sale["id"] == saved_sale["id"] for sale in executed["bootstrap"]["sales"]))

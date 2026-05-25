@@ -145,6 +145,68 @@ def list_records(workspace: Workspace, kind: str) -> list[dict[str, Any]]:
     ]
 
 
+def list_records_paginated(
+    workspace: Workspace,
+    kind: str,
+    page: int = 1,
+    page_size: int = 50,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    include_deleted: bool = False,
+) -> dict[str, Any]:
+    """List records with pagination support.
+
+    Args:
+        workspace: The workspace to list records from
+        kind: The record type (e.g., 'sales', 'inventory')
+        page: Page number (1-indexed)
+        page_size: Number of records per page (max 200)
+        sort_by: Field to sort by (default: 'created_at')
+        sort_order: 'asc' or 'desc' (default: 'desc')
+        include_deleted: Whether to include soft-deleted records
+
+    Returns:
+        Dictionary with 'data' (list of records) and 'pagination' metadata
+    """
+    from django.db.models import Q
+
+    # Ensure page_size is within limits
+    page_size = min(max(1, page_size), 200)
+    page = max(1, page)
+    offset = (page - 1) * page_size
+
+    # Build query
+    query = WorkspaceRecord.objects.filter(workspace=workspace, kind=kind)
+
+    if not include_deleted:
+        query = query.filter(deleted_at__isnull=True)
+
+    # Apply sorting
+    order_field = f"-{sort_by}" if sort_order == "desc" else sort_by
+    query = query.order_by(order_field)
+
+    # Get total count
+    total = query.count()
+
+    # Apply pagination
+    records = [
+        dict(row.payload)
+        for row in query[offset:offset + page_size]
+    ]
+
+    return {
+        "data": records,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": (total + page_size - 1) // page_size if total > 0 else 0,
+            "has_next": offset + page_size < total,
+            "has_prev": page > 1,
+        }
+    }
+
+
 def patch_record(workspace: Workspace, kind: str, record_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
     existing = get_record(workspace, kind, record_id)
     if existing is None:

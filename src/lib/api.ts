@@ -110,6 +110,8 @@ export interface AssistantCommandResult {
   route: string;
   slots: Record<string, unknown>;
   warnings: string[];
+  missingSlots?: string[];
+  nextSlot?: string;
   reply: string;
   safety: {
     autoExecute: boolean;
@@ -585,6 +587,9 @@ export async function runAssistantCommandInBackend(input: {
   language?: AppLanguage;
   confirm?: boolean;
   overrides?: Record<string, unknown>;
+  draft?: AssistantCommandResult | Record<string, unknown>;
+  conversation?: AssistantCommandResult | Record<string, unknown>;
+  activeCommand?: AssistantCommandResult | Record<string, unknown>;
 }) {
   return request<{ assistantCommand: AssistantCommandResult; bootstrap?: BackendBootstrap }>('/assistant/command', {
     method: 'POST',

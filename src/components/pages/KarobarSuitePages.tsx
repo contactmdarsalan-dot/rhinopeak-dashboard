@@ -58,6 +58,14 @@ const detailLinkStyle = {
   textDecoration: 'none',
 } as const;
 
+function tableAlign(header: string): 'left' | 'center' | 'right' {
+  const clean = header.toLowerCase();
+  if (['amount', 'total', 'vat', 'balance'].some((term) => clean.includes(term))) return 'right';
+  if (['status', 'payment', 'type'].some((term) => clean.includes(term))) return 'center';
+  if (clean.includes('actions')) return 'right';
+  return 'left';
+}
+
 function PageFrame({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -131,6 +139,7 @@ function AssistantCommandPanel() {
   const [isListening, setIsListening] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
   const [notice, setNotice] = useState('');
+  const isCollecting = assistantCommand?.executionStatus === 'Collecting' || Boolean(assistantCommand?.missingSlots?.length);
 
   const submitCommand = async (nextTranscript = transcript, confirm = false) => {
     const cleanTranscript = nextTranscript.trim();
@@ -146,10 +155,11 @@ function AssistantCommandPanel() {
         language: settings.language,
         confirm,
         overrides: assistantCommand?.slots,
+        draft: !confirm && isCollecting && assistantCommand ? assistantCommand : undefined,
       });
       const command = response.assistantCommand;
       setAssistantCommand(command);
-      setTranscript(command.transcript);
+      setTranscript(command.executionStatus === 'Collecting' ? '' : command.transcript);
       if (response.bootstrap) hydrateFromBackend(response.bootstrap);
       setNotice(tx(command.reply));
       if (['scan_bill', 'open_dashboard', 'open_analytics'].includes(command.intent) && command.route) {
@@ -212,7 +222,7 @@ function AssistantCommandPanel() {
           <textarea
             value={transcript}
             onChange={(event) => setTranscript(event.target.value)}
-            placeholder={tx('Example: add expense NPR 500 rent paid cash')}
+            placeholder={isCollecting ? tx('Type the requested detail here...') : tx('Example: add expense NPR 500 rent paid cash')}
             rows={3}
             style={{ ...controlStyle, minHeight: 82, resize: 'vertical', lineHeight: 1.5 }}
           />
@@ -225,7 +235,7 @@ function AssistantCommandPanel() {
           </Button>
           <Button onClick={() => submitCommand()} disabled={isWorking}>
             <BrainCircuit size={15} />
-            {isWorking ? tx('Working...') : tx('Understand')}
+            {isWorking ? tx('Working...') : isCollecting ? tx('Send detail') : tx('Understand')}
           </Button>
         </div>
       </div>
@@ -255,11 +265,16 @@ function AssistantCommandPanel() {
               {assistantCommand.warnings.map((warning) => <p key={warning}>{warning}</p>)}
             </div>
           )}
+          {assistantCommand.nextSlot && (
+            <div style={{ padding: 12, borderRadius: 12, border: '1px solid var(--border-subtle)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 13 }}>
+              {tx('Waiting for')}: <strong style={{ color: 'var(--text-primary)' }}>{tx(assistantCommand.nextSlot)}</strong>
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
             <Link href={assistantCommand.route} style={{ textDecoration: 'none' }}>
               <Button variant="secondary">{tx('Open page')}</Button>
             </Link>
-            {assistantCommand.canExecute && assistantCommand.executionStatus !== 'Executed' && (
+            {assistantCommand.requiresConfirmation && assistantCommand.canExecute && assistantCommand.executionStatus !== 'Executed' && (
               <Button onClick={() => submitCommand(assistantCommand.transcript, true)} disabled={isWorking}>
                 <CheckCircle2 size={15} />
                 {tx('Confirm and save')}
@@ -323,7 +338,7 @@ export function PartiesPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {['Party', 'Type', 'Contact', 'Balance', 'Actions'].map((header) => (
-                  <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
+                  <th key={header} data-align={tableAlign(header)} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: tableAlign(header), textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                 ))}
               </tr>
             </thead>
@@ -334,15 +349,15 @@ export function PartiesPage() {
                     <button onClick={() => setSelected(party.id)} style={{ background: 'transparent', border: 0, color: 'var(--text-primary)', fontWeight: 800, cursor: 'pointer', padding: 0 }}>{tx(party.name)}</button>
                     <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{party.id}</p>
                   </td>
-                  <td data-label={tx('Type')} style={{ padding: '12px 14px' }}><Badge tone="info">{tx(party.type)}</Badge></td>
+                  <td data-label={tx('Type')} data-align="center" style={{ padding: '12px 14px' }}><Badge tone="info">{tx(party.type)}</Badge></td>
                   <td data-label={tx('Contact')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{party.phone || party.email || tx('No contact')}</td>
-                  <td data-label={tx('Balance')} style={{ padding: '12px 14px', color: party.balance ? 'var(--warning)' : 'var(--success)', fontWeight: 850 }}>{formatCurrency(party.balance)}</td>
-                  <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
+                  <td data-label={tx('Balance')} data-align="right" style={{ padding: '12px 14px', color: party.balance ? 'var(--warning)' : 'var(--success)', fontWeight: 850 }}>{formatCurrency(party.balance)}</td>
+                  <td data-label={tx('Actions')} data-card-actions="true" data-align="right" style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <Link href={`/details/parties/${party.id}`} style={detailLinkStyle}>
                         <Eye size={14} /> {tx('View')}
                       </Link>
-                      <Button variant="danger" onClick={() => deleteParty(party.id)}><Trash2 size={14} /> Delete</Button>
+                      <Button variant="danger" onClick={() => deleteParty(party.id)}><Trash2 size={14} /> {tx('Delete')}</Button>
                     </div>
                   </td>
                 </tr>
@@ -507,7 +522,7 @@ export function PurchasesPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {['Bill', 'Supplier', 'Items', 'Payment', 'Status', 'Date', 'Amount', 'Actions'].map((header) => (
-                  <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
+                  <th key={header} data-align={tableAlign(header)} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: tableAlign(header), textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                 ))}
               </tr>
             </thead>
@@ -517,16 +532,16 @@ export function PurchasesPage() {
                   <td data-label={tx('Bill')} data-card-primary="true" style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 850 }}>{purchase.billNo}</td>
                   <td data-label={tx('Supplier')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{tx(purchase.supplierName)}</td>
                   <td data-label={tx('Items')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{purchase.items.map((item) => tx(item.productName)).join(', ') || tx('No items')}</td>
-                  <td data-label={tx('Payment')} style={{ padding: '12px 14px' }}><Badge tone={purchase.payment === 'Credit' ? 'warning' : 'success'}>{translatePaymentMethod(settings.language, purchase.payment)}</Badge></td>
-                  <td data-label={tx('Status')} style={{ padding: '12px 14px' }}><Badge tone={purchase.status === 'Received' ? 'success' : purchase.status === 'Pending' ? 'warning' : 'danger'}>{tx(purchase.status)}</Badge></td>
+                  <td data-label={tx('Payment')} data-align="center" style={{ padding: '12px 14px' }}><Badge tone={purchase.payment === 'Credit' ? 'warning' : 'success'}>{translatePaymentMethod(settings.language, purchase.payment)}</Badge></td>
+                  <td data-label={tx('Status')} data-align="center" style={{ padding: '12px 14px' }}><Badge tone={purchase.status === 'Received' ? 'success' : purchase.status === 'Pending' ? 'warning' : 'danger'}>{tx(purchase.status)}</Badge></td>
                   <td data-label={tx('Date')} style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: 12 }}>{purchase.date}</td>
-                  <td data-label={tx('Amount')} style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 850 }}>{formatCurrency(purchase.amount)}</td>
-                  <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
+                  <td data-label={tx('Amount')} data-align="right" style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 850 }}>{formatCurrency(purchase.amount)}</td>
+                  <td data-label={tx('Actions')} data-card-actions="true" data-align="right" style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       <Link href={`/details/purchases/${purchase.id}`} style={detailLinkStyle}>
                         <Eye size={14} /> {tx('View')}
                       </Link>
-                      <Button variant="danger" onClick={() => deletePurchase(purchase.id)}><Trash2 size={14} /> Delete</Button>
+                      <Button variant="danger" onClick={() => deletePurchase(purchase.id)}><Trash2 size={14} /> {tx('Delete')}</Button>
                     </div>
                   </td>
                 </tr>
@@ -644,7 +659,7 @@ export function ExpensesPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {['Category', 'Vendor', 'Payment', 'Date', 'VAT', 'Amount', 'Actions'].map((header) => (
-                  <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
+                  <th key={header} data-align={tableAlign(header)} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: tableAlign(header), textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                 ))}
               </tr>
             </thead>
@@ -653,16 +668,16 @@ export function ExpensesPage() {
                 <tr key={expense.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
                   <td data-label={tx('Category')} data-card-primary="true" style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 850 }}>{uiText(settings.language, expense.category)}</td>
                   <td data-label={tx('Vendor')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{expense.vendor || tx('No vendor')}</td>
-                  <td data-label={tx('Payment')} style={{ padding: '12px 14px' }}><Badge>{translatePaymentMethod(settings.language, expense.paymentMethod)}</Badge></td>
+                  <td data-label={tx('Payment')} data-align="center" style={{ padding: '12px 14px' }}><Badge>{translatePaymentMethod(settings.language, expense.paymentMethod)}</Badge></td>
                   <td data-label={tx('Date')} style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: 12 }}>{expense.date}</td>
-                  <td data-label={tx('VAT')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontWeight: 750 }}>{formatCurrency(expense.taxAmount)}</td>
-                  <td data-label={tx('Amount')} style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 850 }}>{formatCurrency(expense.amount)}</td>
-                  <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
+                  <td data-label={tx('VAT')} data-align="right" style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontWeight: 750 }}>{formatCurrency(expense.taxAmount)}</td>
+                  <td data-label={tx('Amount')} data-align="right" style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 850 }}>{formatCurrency(expense.amount)}</td>
+                  <td data-label={tx('Actions')} data-card-actions="true" data-align="right" style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       <Link href={`/details/expenses/${expense.id}`} style={detailLinkStyle}>
                         <Eye size={14} /> {tx('View')}
                       </Link>
-                      <Button variant="danger" onClick={() => deleteExpense(expense.id)}><Trash2 size={14} /> Delete</Button>
+                      <Button variant="danger" onClick={() => deleteExpense(expense.id)}><Trash2 size={14} /> {tx('Delete')}</Button>
                     </div>
                   </td>
                 </tr>
@@ -816,7 +831,7 @@ export function CashBankPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {['Account', 'Type', 'Institution', 'Status', 'Balance', 'Actions'].map((header) => (
-                  <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
+                  <th key={header} data-align={tableAlign(header)} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: tableAlign(header), textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                 ))}
               </tr>
             </thead>
@@ -827,14 +842,14 @@ export function CashBankPage() {
                     <p style={{ color: 'var(--text-primary)', fontWeight: 850 }}>{tx(account.name)}</p>
                     <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>{account.id}</p>
                   </td>
-                  <td data-label={tx('Type')} style={{ padding: '12px 14px' }}><Badge tone={account.type === 'Cash' ? 'success' : account.type === 'Bank' ? 'info' : 'accent'}>{tx(account.type)}</Badge></td>
+                  <td data-label={tx('Type')} data-align="center" style={{ padding: '12px 14px' }}><Badge tone={account.type === 'Cash' ? 'success' : account.type === 'Bank' ? 'info' : 'accent'}>{tx(account.type)}</Badge></td>
                   <td data-label={tx('Institution')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>
                     <p>{account.institution ? tx(account.institution) : tx('Not added')}</p>
                     {account.accountNumber && <p style={{ color: 'var(--text-muted)', marginTop: 2 }}>{account.accountNumber}</p>}
                   </td>
-                  <td data-label={tx('Status')} style={{ padding: '12px 14px' }}><Badge tone={account.active === false ? 'warning' : 'success'}>{account.active === false ? tx('Paused') : tx('Active')}</Badge></td>
-                  <td data-label={tx('Balance')} style={{ padding: '12px 14px', color: account.balance ? 'var(--success)' : 'var(--text-primary)', fontWeight: 900 }}>{formatCurrency(account.balance)}</td>
-                  <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
+                  <td data-label={tx('Status')} data-align="center" style={{ padding: '12px 14px' }}><Badge tone={account.active === false ? 'warning' : 'success'}>{account.active === false ? tx('Paused') : tx('Active')}</Badge></td>
+                  <td data-label={tx('Balance')} data-align="right" style={{ padding: '12px 14px', color: account.balance ? 'var(--success)' : 'var(--text-primary)', fontWeight: 900 }}>{formatCurrency(account.balance)}</td>
+                  <td data-label={tx('Actions')} data-card-actions="true" data-align="right" style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       <Link href={`/details/cash-bank/${account.id}`} style={detailLinkStyle}>
                         <Eye size={14} /> {tx('View')}
@@ -858,7 +873,7 @@ export function CashBankPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {['Movement', 'Account', 'Date', 'Note', 'Amount', 'Actions'].map((header) => (
-                  <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
+                  <th key={header} data-align={tableAlign(header)} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: tableAlign(header), textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                 ))}
               </tr>
             </thead>
@@ -875,8 +890,8 @@ export function CashBankPage() {
                     <td data-label={tx('Account')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontWeight: 700 }}>{tx(movement.accountName)}</td>
                     <td data-label={tx('Date')} style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: 12 }}>{movement.date}</td>
                     <td data-label={tx('Note')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{movement.note ? tx(movement.note) : tx('No note')}</td>
-                    <td data-label={tx('Amount')} style={{ padding: '12px 14px', color: inbound ? 'var(--success)' : outbound ? 'var(--warning)' : 'var(--text-primary)', fontWeight: 900 }}>{formatCurrency(movement.amount)}</td>
-                    <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
+                    <td data-label={tx('Amount')} data-align="right" style={{ padding: '12px 14px', color: inbound ? 'var(--success)' : outbound ? 'var(--warning)' : 'var(--text-primary)', fontWeight: 900 }}>{formatCurrency(movement.amount)}</td>
+                    <td data-label={tx('Actions')} data-card-actions="true" data-align="right" style={{ padding: '12px 14px' }}>
                       <Link href={`/details/money-movements/${movement.id}`} style={detailLinkStyle}>
                         <Eye size={14} /> {tx('View voucher')}
                       </Link>

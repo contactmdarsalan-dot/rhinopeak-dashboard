@@ -6,6 +6,7 @@ import hmac
 import base64
 from typing import Any
 from hmac import compare_digest
+from urllib.parse import urlencode
 
 # eSewa config — sandbox/test mode
 # Register at https://developer.esewa.com.np/ for live credentials.
@@ -49,7 +50,7 @@ def initiate_esewa_payment(transaction_uuid: str, amount: float, plan: str) -> d
             "gateway":    "esewa",
             "mode":       "demo",
             "payment_url": f"{FRONTEND_URL}/billing?payment=esewa_demo&transaction={transaction_uuid}",
-            "note":       "No ESEWA_SECRET_KEY set — demo mode. Set it in RHINOPEAK_SECRET_KEY env.",
+            "note":       "No ESEWA_SECRET_KEY set - demo mode. Set it before enabling live payments.",
         }
 
     total_amount = str(int(round(amount)))
@@ -118,7 +119,7 @@ def verify_esewa_payment(oid: str, amt: str, refId: str) -> dict[str, Any]:
         "amt":   amt,
         "refId": refId,
     }
-    query = "&".join(f"{k}={v}" for k, v in params.items())
+    query = urlencode(params)
     verify_url = f"{ESEWA_BASE_URL}/api/epay/main/v2/form?{query}"
 
     try:
@@ -153,6 +154,48 @@ def verify_esewa_payment(oid: str, amt: str, refId: str) -> dict[str, Any]:
             "success": False,
             "error":   str(e),
         }
+
+
+def verify_esewa_callback(encoded_data: str) -> dict[str, Any]:
+    """Verify the base64 JSON callback payload used by eSewa v2 redirects.
+
+    Kept for compatibility with older call sites and tests while the newer
+    server-to-server verification flow uses verify_esewa_payment().
+    """
+    if not ESEWA_SECRET_KEY:
+        return {
+            "success": False,
+            "mode": "demo",
+            "error": "ESEWA_SECRET_KEY is not configured.",
+        }
+
+    try:
+        payload = json.loads(base64.b64decode(encoded_data).decode("utf-8"))
+    except Exception:
+        return {"success": False, "error": "Invalid eSewa callback payload."}
+
+    signature = str(payload.get("signature", ""))
+    signed_field_names = str(
+        payload.get("signed_field_names", "total_amount,transaction_uuid,product_code")
+    )
+    signed_fields = [field.strip() for field in signed_field_names.split(",") if field.strip()]
+    signed_message = ",".join(f"{field}={payload.get(field, '')}" for field in signed_fields)
+    expected_signature = generate_esewa_signature(signed_message, ESEWA_SECRET_KEY)
+
+    if not signature or not compare_digest(signature, expected_signature):
+        return {"success": False, "error": "Invalid eSewa callback signature."}
+
+    status = str(payload.get("status", "")).upper()
+    if status and status not in {"COMPLETE", "COMPLETED", "SUCCESS"}:
+        return {"success": False, "error": f"Unexpected eSewa status: {status}"}
+
+    return {
+        "success": True,
+        "transaction_uuid": payload.get("transaction_uuid", ""),
+        "amount": payload.get("total_amount", ""),
+        "transaction_code": payload.get("transaction_code", payload.get("ref_id", "")),
+        "payload": payload,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────

@@ -31,6 +31,14 @@ const detailLinkStyle = {
   textDecoration: 'none',
 } as const;
 
+function tableAlign(header: string): 'left' | 'center' | 'right' {
+  const clean = header.toLowerCase();
+  if (['amount', 'total'].some((term) => clean.includes(term))) return 'right';
+  if (['payment', 'status'].some((term) => clean.includes(term))) return 'center';
+  if (clean.includes('actions')) return 'right';
+  return 'left';
+}
+
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] ?? char));
 }
@@ -401,7 +409,7 @@ export function SalesPage() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   {['Order', 'Customer', 'Products', 'Amount', 'Payment', 'Status', 'Date', 'Actions'].map((header) => (
-                    <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
+                    <th key={header} data-align={tableAlign(header)} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: tableAlign(header), textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                   ))}
                 </tr>
               </thead>
@@ -419,17 +427,17 @@ export function SalesPage() {
                     <td data-label={tx('Order')} data-card-primary="true" style={{ padding: '10px 14px', color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>{sale.id}</td>
                     <td data-label={tx('Customer')} style={{ padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13 }}>{tx(sale.customer)}</td>
                     <td data-label={tx('Products')} style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{uiProductList(settings.language, sale.products)}</td>
-                    <td data-label={tx('Amount')} style={{ padding: '10px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{formatCurrency(sale.amount)}</td>
-                    <td data-label={tx('Payment')} style={{ padding: '10px 14px' }}><Badge>{translatePaymentMethod(settings.language, sale.payment)}</Badge></td>
-                    <td data-label={tx('Status')} style={{ padding: '10px 14px' }}><Badge tone={statusTone(sale.status)}>{translateSaleStatus(settings.language, sale.status)}</Badge></td>
+                    <td data-label={tx('Amount')} data-align="right" style={{ padding: '10px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{formatCurrency(sale.amount)}</td>
+                    <td data-label={tx('Payment')} data-align="center" style={{ padding: '10px 14px' }}><Badge>{translatePaymentMethod(settings.language, sale.payment)}</Badge></td>
+                    <td data-label={tx('Status')} data-align="center" style={{ padding: '10px 14px' }}><Badge tone={statusTone(sale.status)}>{translateSaleStatus(settings.language, sale.status)}</Badge></td>
                     <td data-label={tx('Date')} style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12 }}>{sale.date}</td>
-                    <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '10px 14px' }}>
+                    <td data-label={tx('Actions')} data-card-actions="true" data-align="right" style={{ padding: '10px 14px' }}>
                       <span onClick={(event) => event.stopPropagation()} style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
                         <Link href={`/details/sales/${sale.id}`} style={detailLinkStyle}>
                           <Eye size={14} /> {tx('View')}
                         </Link>
-                        <Button variant="ghost" disabled={!canDeleteSales} onClick={() => softDeleteSale(sale.id)} title={canDeleteSales ? tx('Soft delete sale') : tx('Delete sales permission required')}>
-                          <Trash2 size={14} />
+                        <Button variant="danger" disabled={!canDeleteSales} onClick={() => softDeleteSale(sale.id)} title={canDeleteSales ? tx('Soft delete sale') : tx('Delete sales permission required')}>
+                          <Trash2 size={14} /> {tx('Delete')}
                         </Button>
                       </span>
                     </td>

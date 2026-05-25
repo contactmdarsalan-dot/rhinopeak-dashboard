@@ -7,6 +7,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../shared/models/rhino_models.dart';
 import '../../../shared/widgets/rp_widgets.dart';
 import '../../home/presentation/assistant_chat_sheet.dart';
+import '../../home/presentation/notifications_screen.dart';
 import '../../quick_add/presentation/scan_bill_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -35,6 +36,14 @@ class DashboardScreen extends ConsumerWidget {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: RpPage(
         title: tr(ref, 'dashboard'),
+        action: IconButton(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+            );
+          },
+          icon: const Icon(Icons.notifications_none_rounded),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -68,8 +77,8 @@ class _WelcomeCard extends ConsumerWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [scheme.primary, scheme.secondary],
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0A6E46), Color(0xFF0E8757)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -279,7 +288,7 @@ class _DashboardActionButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Container(
-        minHeight: 122,
+        constraints: const BoxConstraints(minHeight: 122),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: background,

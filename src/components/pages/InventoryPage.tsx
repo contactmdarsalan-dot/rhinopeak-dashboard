@@ -38,6 +38,14 @@ const detailLinkStyle = {
   textDecoration: 'none',
 } as const;
 
+function tableAlign(header: string): 'left' | 'center' | 'right' {
+  const clean = header.toLowerCase();
+  if (['stock', 'reorder', 'price', 'margin', 'valuation', 'payable'].some((term) => clean.includes(term))) return 'right';
+  if (['unit', 'status'].some((term) => clean.includes(term))) return 'center';
+  if (clean.includes('actions')) return 'right';
+  return 'left';
+}
+
 function statusTone(status: StockStatus) {
   if (status === 'In Stock') return 'success';
   if (status === 'Low Stock') return 'warning';
@@ -389,7 +397,7 @@ export function InventoryPage() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   {['Product', 'SKU', 'Category', 'Unit', 'Stock', 'Reorder', 'Price', 'Margin', 'Supplier', 'Status', 'Actions'].map((header) => (
-                    <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
+                    <th key={header} data-align={tableAlign(header)} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: tableAlign(header), textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                   ))}
                 </tr>
               </thead>
@@ -411,23 +419,23 @@ export function InventoryPage() {
                       <td data-label={tx('Product')} data-card-primary="true" style={{ padding: '12px 14px', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{tx(product.name)}</td>
                       <td data-label={tx('SKU')} style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: 12, fontFamily: 'monospace' }}>{product.sku}</td>
                       <td data-label={tx('Category')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{tx(product.category)}</td>
-                      <td data-label={tx('Unit')} style={{ padding: '12px 14px' }}>
+                      <td data-label={tx('Unit')} data-align="center" style={{ padding: '12px 14px' }}>
                         <Badge tone="info">{tx(meta.label)}</Badge>
                       </td>
-                      <td data-label={tx('Stock')} style={{ padding: '12px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <td data-label={tx('Stock')} data-align="right" style={{ padding: '12px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
                           <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 13, minWidth: 44 }}>{formatQuantity(product.stock, product.unit, settings.language)}</span>
                           <div style={{ width: 70, height: 5, background: 'var(--border)', borderRadius: 999, overflow: 'hidden' }}>
                             <div style={{ width: `${Math.min(100, (product.stock / Math.max(product.reorderLevel * 3, 1)) * 100)}%`, height: '100%', background: status === 'In Stock' ? 'var(--success)' : status === 'Low Stock' ? 'var(--warning)' : 'var(--danger)' }} />
                           </div>
                         </div>
                       </td>
-                      <td data-label={tx('Reorder')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 13 }}>{formatQuantity(product.reorderLevel, product.unit, settings.language)}</td>
-                      <td data-label={tx('Price')} style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{formatCurrency(product.price)}</td>
-                      <td data-label={tx('Margin')} style={{ padding: '12px 14px', color: margin > 35 ? 'var(--success)' : 'var(--warning)', fontWeight: 700, fontSize: 13 }}>{margin.toFixed(1)}%</td>
+                      <td data-label={tx('Reorder')} data-align="right" style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 13 }}>{formatQuantity(product.reorderLevel, product.unit, settings.language)}</td>
+                      <td data-label={tx('Price')} data-align="right" style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>{formatCurrency(product.price)}</td>
+                      <td data-label={tx('Margin')} data-align="right" style={{ padding: '12px 14px', color: margin > 35 ? 'var(--success)' : 'var(--warning)', fontWeight: 700, fontSize: 13 }}>{margin.toFixed(1)}%</td>
                       <td data-label={tx('Supplier')} style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{tx(product.supplier)}</td>
-                      <td data-label={tx('Status')} style={{ padding: '12px 14px' }}><Badge tone={statusTone(status)}>{translateStockStatus(settings.language, status)}</Badge></td>
-                      <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '12px 14px' }}>
+                      <td data-label={tx('Status')} data-align="center" style={{ padding: '12px 14px' }}><Badge tone={statusTone(status)}>{translateStockStatus(settings.language, status)}</Badge></td>
+                      <td data-label={tx('Actions')} data-card-actions="true" data-align="right" style={{ padding: '12px 14px' }}>
                         <Link href={`/details/inventory/${product.id}`} onClick={(event) => event.stopPropagation()} style={detailLinkStyle}>
                           <Eye size={14} /> {tx('View')}
                         </Link>
@@ -708,7 +716,7 @@ export function InventoryPage() {
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border)' }}>
                       {['Supplier', 'Contact', 'PAN / VAT No.', 'Payable', 'Actions'].map((header) => (
-                        <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
+                        <th key={header} data-align={tableAlign(header)} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 650, textAlign: tableAlign(header), textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tx(header)}</th>
                       ))}
                     </tr>
                   </thead>
@@ -724,8 +732,8 @@ export function InventoryPage() {
                           <div style={{ color: 'var(--text-muted)' }}>{item.phone || tx('No phone')}</div>
                         </td>
                         <td data-label={tx('PAN / VAT No.')} style={{ padding: '11px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{item.pan || tx('Not added')}</td>
-                        <td data-label={tx('Payable')} style={{ padding: '11px 14px', color: item.payableBalance ? 'var(--warning)' : 'var(--success)', fontSize: 13, fontWeight: 750 }}>{formatCurrency(item.payableBalance)}</td>
-                        <td data-label={tx('Actions')} data-card-actions="true" style={{ padding: '11px 14px' }}>
+                        <td data-label={tx('Payable')} data-align="right" style={{ padding: '11px 14px', color: item.payableBalance ? 'var(--warning)' : 'var(--success)', fontSize: 13, fontWeight: 750 }}>{formatCurrency(item.payableBalance)}</td>
+                        <td data-label={tx('Actions')} data-card-actions="true" data-align="right" style={{ padding: '11px 14px' }}>
                           <div style={{ display: 'flex', gap: 8 }}>
                             <Button variant="secondary" onClick={() => editSupplier(item.id)}><Edit3 size={14} /> {tx('Edit')}</Button>
                             <Button variant="danger" onClick={() => deleteSupplier(item.id)}><Trash2 size={14} /> {tx('Delete')}</Button>

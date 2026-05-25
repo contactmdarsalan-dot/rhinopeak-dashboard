@@ -526,6 +526,206 @@ Payment Mode:                Bank''',
     final isMathMismatch =
         _scanId != null && (subtotal + vat - total).abs() > 0.02;
 
+    if (_scanStep > 0 && _scanStep < 5) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 40),
+              const Text(
+                'Scan QR code',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F101A),
+                ),
+              ),
+              const SizedBox(height: 50),
+              Center(
+                child: Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Top Left Corner
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: Color(0xFF0FA871), width: 3),
+                              left: BorderSide(color: Color(0xFF0FA871), width: 3),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Top Right Corner
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: Color(0xFF0FA871), width: 3),
+                              right: BorderSide(color: Color(0xFF0FA871), width: 3),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Bottom Left Corner
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Color(0xFF0FA871), width: 3),
+                              left: BorderSide(color: Color(0xFF0FA871), width: 3),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Bottom Right Corner
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Color(0xFF0FA871), width: 3),
+                              right: BorderSide(color: Color(0xFF0FA871), width: 3),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // QR Code icon in center
+                      const Center(
+                        child: Icon(
+                          Icons.qr_code_2_rounded,
+                          size: 150,
+                          color: Color(0xFF0FA871),
+                        ),
+                      ),
+                      // Laser animation line
+                      AnimatedBuilder(
+                        animation: _scanController,
+                        builder: (context, child) {
+                          return Positioned(
+                            top: _scanController.value * 230 + 5,
+                            left: 10,
+                            right: 10,
+                            child: Container(
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0FA871),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF0FA871).withOpacity(0.8),
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+              const Text(
+                'Scanning code..',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF757891),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Sliding dot timeline progress indicator
+              Center(
+                child: SizedBox(
+                  width: 180,
+                  height: 8,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        top: 3,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: 2,
+                          color: const Color(0xFF0FA871).withOpacity(0.2),
+                        ),
+                      ),
+                      AnimatedBuilder(
+                        animation: _scanController,
+                        builder: (context, child) {
+                          return Positioned(
+                            left: _scanController.value * 172,
+                            top: 0,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF0FA871),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                child: FilledButton(
+                  onPressed: () {
+                    setState(() {
+                      _scanStep = 0;
+                      _scanController.stop();
+                      _scanController.reset();
+                    });
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFA733),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(tr(ref, 'scanBill'))),
       body: SingleChildScrollView(
