@@ -40,6 +40,15 @@ class ApiDetailScreen extends ConsumerWidget {
             final detail = useFallback
                 ? fallback
                 : Map<String, dynamic>.from(snapshot.data ?? const {});
+            final record = Map<String, dynamic>.from(detail['record'] as Map? ?? {});
+
+            if (!loading) {
+              if (entity == 'inventory') {
+                return _InventoryDetailShowcase(record: record);
+              } else if (entity == 'documents') {
+                return _DocumentTrackingShowcase(record: record);
+              }
+            }
 
             return CustomScrollView(
               slivers: [
@@ -846,4 +855,554 @@ String _display(Object? value) {
 String _displayLocalized(WidgetRef ref, Object? value) {
   final display = _display(value);
   return trRecordText(ref, display);
+}
+
+class _InventoryDetailShowcase extends ConsumerWidget {
+  const _InventoryDetailShowcase({required this.record});
+  final Map<String, dynamic> record;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = record['name']?.toString() ?? 'Product';
+    final id = record['id']?.toString() ?? '84254632';
+    final unit = record['unit']?.toString() ?? 'pcs';
+    final stock = record['stock']?.toString() ?? '0';
+    final reorder = record['reorderLevel']?.toString() ?? '0';
+    final price = record['price']?.toString() ?? '0';
+
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          // White Header Card
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Back Button
+                Row(
+                  children: [
+                    IconButton.filledTonal(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF0A6E46)),
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFE8F5EE),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // Fruit Showcase Image
+                Center(
+                  child: Container(
+                    height: 220,
+                    width: 220,
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
+                    ),
+                    child: Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            Icons.eco_rounded,
+                            size: 160,
+                            color: const Color(0xFFFFA733).withOpacity(0.9),
+                          ),
+                          const Positioned(
+                            top: 40,
+                            child: Icon(
+                              Icons.spa_rounded,
+                              size: 60,
+                              color: Color(0xFF0FA871),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Name & Product Code & More button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F101A),
+                              height: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Product code $id',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF757891),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Orange More Button
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFA733),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        children: [
+                          Text(
+                            'More',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_rounded, size: 14, color: Colors.white),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+          // Dark Green Bottom Card
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFF0A6E46),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+                  // Grid of two details cards
+                  Row(
+                    children: [
+                      // Card 1: Stock
+                      Expanded(
+                        child: _ShowcaseGridCard(
+                          label: 'Weight',
+                          value: '$stock $unit',
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Card 2: Price
+                      Expanded(
+                        child: _ShowcaseGridCard(
+                          label: 'Price',
+                          value: 'Rs $price',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      // Card 3: Reorder level
+                      Expanded(
+                        child: _ShowcaseGridCard(
+                          label: 'Reorder Level',
+                          value: '$reorder $unit',
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Card 4: Supplier
+                      Expanded(
+                        child: _ShowcaseGridCard(
+                          label: 'Supplier',
+                          value: record['supplier']?.toString() ?? 'Local',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShowcaseGridCard extends StatelessWidget {
+  const _ShowcaseGridCard({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0E8757),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF0FA871).withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DocumentTrackingShowcase extends ConsumerWidget {
+  const _DocumentTrackingShowcase({required this.record});
+  final Map<String, dynamic> record;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final senderName = record['senderName']?.toString() ?? 'Annie Holland';
+    final recipientName = record['recipientName']?.toString() ?? 'Earl Osborne';
+
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          // White Header Card
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Back Button
+                Row(
+                  children: [
+                    IconButton.filledTonal(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF0A6E46)),
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFE8F5EE),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Sender contact bubble
+                _ContactBubble(
+                  name: senderName,
+                  role: 'Sender',
+                  avatarColor: const Color(0xFFFBECE6),
+                  avatarIcon: Icons.person_rounded,
+                ),
+                const SizedBox(height: 12),
+                // Recipient contact bubble
+                _ContactBubble(
+                  name: recipientName,
+                  role: 'Recipient',
+                  avatarColor: const Color(0xFFE6F0EC),
+                  avatarIcon: Icons.person_3_rounded,
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+          // Dark Green Bottom Card
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFF0A6E46),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 30, 24, 24),
+              child: const SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _TimelineItem(
+                      date: 'JAN 24',
+                      title: 'Sent by sender',
+                      address: '13 Hilda Radial Suite 822',
+                      time: '10:45AM',
+                      icon: Icons.flight_takeoff_rounded,
+                      isFirst: true,
+                    ),
+                    _TimelineItem(
+                      date: 'JAN 25',
+                      title: 'Warehouse 1',
+                      address: '13 Barrett Dam Apt. 803',
+                      time: '06:15PM',
+                      icon: Icons.store_rounded,
+                    ),
+                    _TimelineItem(
+                      date: 'FEB 14',
+                      title: 'Warehouse 2',
+                      address: '169 Wisozk Cove Apt. 727',
+                      time: '08:30PM',
+                      icon: Icons.store_rounded,
+                    ),
+                    _TimelineItem(
+                      date: 'FEB 28',
+                      title: 'Must be taken',
+                      address: '169 Wisozk Cove Apt. 727',
+                      time: '08:00AM - 05:00PM',
+                      icon: Icons.local_shipping_rounded,
+                      isLast: true,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContactBubble extends StatelessWidget {
+  const _ContactBubble({
+    required this.name,
+    required this.role,
+    required this.avatarColor,
+    required this.avatarIcon,
+  });
+
+  final String name;
+  final String role;
+  final Color avatarColor;
+  final IconData avatarIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: avatarColor,
+          child: Icon(avatarIcon, color: const Color(0xFF757891), size: 24),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F101A),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                role,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF757891),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Phone button
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.call_rounded, color: Colors.white, size: 18),
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFFFFA733),
+            padding: const EdgeInsets.all(12),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Email button
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.mail_rounded, color: Colors.white, size: 18),
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFFFFA733),
+            padding: const EdgeInsets.all(12),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TimelineItem extends StatelessWidget {
+  const _TimelineItem({
+    required this.date,
+    required this.title,
+    required this.address,
+    required this.time,
+    required this.icon,
+    this.isFirst = false,
+    this.isLast = false,
+  });
+
+  final String date;
+  final String title;
+  final String address;
+  final String time;
+  final IconData icon;
+  final bool isFirst;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateParts = date.split(' ');
+    final month = dateParts.isNotEmpty ? dateParts[0] : '';
+    final day = dateParts.length > 1 ? dateParts[1] : '';
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Date Column
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                month.toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                day,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+          const SizedBox(width: 16),
+          // Vertical Line & Node
+          Column(
+            children: [
+              const SizedBox(height: 6),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.white70,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 1.5,
+                    color: Colors.white30,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 20),
+          // Content Column
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            address,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            time,
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Action Icon
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, color: Colors.white, size: 20),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

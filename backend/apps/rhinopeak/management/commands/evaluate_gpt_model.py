@@ -4,12 +4,17 @@ import json
 import time
 from pathlib import Path
 from typing import Any
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from apps.rhinopeak.services.gpt_model import structure_ocr_text
 
 
 class Command(BaseCommand):
     help = "Evaluates the custom GPT receipt parser model on a simulated holdout test split of 500+ diverse receipts."
+
+    def add_arguments(self, parser) -> None:
+        parser.add_argument("--min-document-success", type=float, default=0.75)
+        parser.add_argument("--min-line-item-f1", type=float, default=0.75)
+        parser.add_argument("--max-latency-ms", type=float, default=50.0)
 
     def handle(self, *args: Any, **options: Any) -> None:
         self.stdout.write("Generating 500 simulated holdout test receipt OCR instances...")
@@ -190,6 +195,18 @@ class Command(BaseCommand):
         self.stdout.write(f"  F1 Score                  : {item_f1 * 100:.2f}%")
         self.stdout.write("=" * 60)
         self.stdout.write(f"Saved complete report to {report_file}\n")
+
+        failures = []
+        if document_success_rate < options["min_document_success"]:
+            failures.append(
+                f"document success {document_success_rate:.2%} < {options['min_document_success']:.2%}"
+            )
+        if item_f1 < options["min_line_item_f1"]:
+            failures.append(f"line item F1 {item_f1:.2%} < {options['min_line_item_f1']:.2%}")
+        if avg_latency_ms > options["max_latency_ms"]:
+            failures.append(f"average latency {avg_latency_ms:.2f} ms > {options['max_latency_ms']:.2f} ms")
+        if failures:
+            raise CommandError("AI evaluation thresholds failed: " + "; ".join(failures))
 
     def _generate_holdout_dataset(self) -> list[dict[str, Any]]:
         cases = []

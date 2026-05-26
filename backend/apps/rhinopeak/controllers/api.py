@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import time
+import uuid
+import logging
 from collections import defaultdict
 from typing import Any
 from urllib.parse import quote, unquote
@@ -12,23 +15,196 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonRes
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.rhinopeak.domain.errors import AppError
+from apps.rhinopeak.domain.validation import (
+    KhaltiVerifyRequest,
+    LoginRequest,
+    LogoutRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
+    PaymentInitiateRequest,
+    RefreshRequest,
+    RegisterRequest,
+    validate_request,
+)
+
+logger = logging.getLogger(__name__)
+
+_request_counts: dict[tuple[str, str, str], int] = defaultdict(int)
+_request_duration_sum: dict[tuple[str, str, str], float] = defaultdict(float)
+_request_duration_count: dict[tuple[str, str, str], int] = defaultdict(int)
+_metrics_started_at = time.time()
 
 # ---------------------------------------------------------------------------
-# Simple in-memory rate limiter (resets on server restart, good enough for
-# low-traffic protection against brute-force on auth endpoints).
+# Correlation ID for distributed tracing
+# ---------------------------------------------------------------------------
+
+def get_correlation_id(request: HttpRequest) -> str:
+    """Get or generate a correlation ID for request tracing."""
+    return request.headers.get("X-Correlation-ID") or request.headers.get("X-Request-ID") or str(uuid.uuid4())
+
+
+def set_correlation_id(response: HttpResponse, correlation_id: str) -> HttpResponse:
+    """Set correlation ID in response headers."""
+    response["X-Correlation-ID"] = correlation_id
+    return response
+
+
+def get_trace_context(request: HttpRequest) -> dict[str, str]:
+    """Create or continue a W3C trace context for log correlation."""
+    traceparent = request.headers.get("traceparent", "")
+    parts = traceparent.split("-")
+    if (
+        len(parts) == 4
+        and parts[0] == "00"
+        and len(parts[1]) == 32
+        and len(parts[2]) == 16
+        and len(parts[3]) == 2
+    ):
+        return {
+            "trace_id": parts[1],
+            "parent_span_id": parts[2],
+            "span_id": secrets.token_hex(8),
+            "sampled": parts[3],
+        }
+    return {
+        "trace_id": secrets.token_hex(16),
+        "parent_span_id": "",
+        "span_id": secrets.token_hex(8),
+        "sampled": "01",
+    }
+
+
+def set_trace_headers(response: HttpResponse, trace: dict[str, str]) -> HttpResponse:
+    response["X-Trace-ID"] = trace["trace_id"]
+    response["traceparent"] = f"00-{trace['trace_id']}-{trace['span_id']}-{trace['sampled']}"
+    response["X-API-Version"] = str(getattr(settings, "API_VERSION", "v1"))
+    return response
+
+
+def _record_http_metric(method: str, route: str, status: int, duration_seconds: float) -> None:
+    if not getattr(settings, "ENABLE_METRICS", True):
+        return
+    route_label = "/" + route.strip("/") if route.strip("/") else "/"
+    if len(route_label) > 140:
+        route_label = route_label[:137] + "..."
+    key = (method.upper(), route_label, str(status))
+    _request_counts[key] += 1
+    _request_duration_sum[key] += duration_seconds
+    _request_duration_count[key] += 1
+
+
+def _metric_label(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
+# ---------------------------------------------------------------------------
+# Redis-backed rate limiter with in-memory fallback
 # ---------------------------------------------------------------------------
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
+_redis_client = None
+_CACHE_PREFIX = "rhinopeak:cache"
+
+
+def _get_redis_client():
+    """Lazily connect to Redis; falls back to in-memory store on failure."""
+    global _redis_client
+    if _redis_client is None:
+        import os
+        try:
+            import redis
+            if getattr(settings, 'REDIS_ENABLED', True):
+                redis_url = os.environ.get("RHINOPEAK_REDIS_URL", "redis://localhost:6379/0")
+                _redis_client = redis.from_url(redis_url, socket_connect_timeout=2)
+                _redis_client.ping()
+        except Exception:
+            _redis_client = None
+    return _redis_client
 
 
 def _check_rate_limit(key: str, max_attempts: int, window_seconds: int) -> None:
-    """Raise AppError 429 if key exceeds max_attempts within window_seconds."""
-    now = time.time()
+    """Raise AppError 429 if key exceeds max_attempts within window_seconds.
+
+    Uses Redis (via RHINOPEAK_REDIS_URL) when available; falls back to the
+    in-memory dict if Redis is unreachable so the app stays functional in dev.
+    """
+    import time as _time
+
+    redis = _get_redis_client()
+    now = _time.time()
+
+    if redis:
+        # Redis: atomic pipeline with window expiry
+        pipe = redis.pipeline()
+        pipe.zremrangebyscore(key, 0, now - window_seconds)
+        pipe.zcard(key)
+        pipe.zadd(key, {str(now): now})
+        pipe.expire(key, window_seconds)
+        results = pipe.execute()
+        current_count = int(results[1] or 0)
+        if current_count >= max_attempts:
+            logger.warning(f"Rate limit exceeded for key: {key}", extra={"key": key, "max_attempts": max_attempts})
+            raise AppError(429, "Too many attempts. Please try again later.")
+        return
+
+    # In-memory fallback for local dev without Redis
     window_start = now - window_seconds
-    # Prune stale entries
     _rate_limit_store[key] = [t for t in _rate_limit_store[key] if t > window_start]
     if len(_rate_limit_store[key]) >= max_attempts:
+        logger.warning(f"Rate limit exceeded (in-memory) for key: {key}", extra={"key": key, "max_attempts": max_attempts})
         raise AppError(429, "Too many attempts. Please try again later.")
     _rate_limit_store[key].append(now)
+
+
+def _cache_key(workspace_id: str, name: str, *parts: str) -> str:
+    safe_parts = [str(part).replace(":", "_") for part in (workspace_id, name, *parts)]
+    return f"{_CACHE_PREFIX}:" + ":".join(safe_parts)
+
+
+def _cached_json(key: str, loader, ttl_seconds: int | None = None) -> Any:
+    redis = _get_redis_client()
+    if not redis:
+        return loader()
+    try:
+        cached = redis.get(key)
+        if cached:
+            if isinstance(cached, bytes):
+                cached = cached.decode("utf-8")
+            return json.loads(cached)
+    except Exception as error:
+        logger.debug("Redis cache read skipped.", extra={"cache_key": key, "error_type": type(error).__name__})
+
+    value = loader()
+    try:
+        ttl = ttl_seconds or getattr(settings, "REDIS_CACHE_TTL_SECONDS", 300)
+        redis.setex(key, ttl, json.dumps(value, default=str))
+    except Exception as error:
+        logger.debug("Redis cache write skipped.", extra={"cache_key": key, "error_type": type(error).__name__})
+    return value
+
+
+def _invalidate_workspace_cache(workspace_id: str) -> None:
+    redis = _get_redis_client()
+    if not redis or not workspace_id:
+        return
+    pattern = _cache_key(workspace_id, "*")
+    try:
+        keys = list(redis.scan_iter(match=pattern, count=100))
+        if keys:
+            redis.delete(*keys)
+    except Exception as error:
+        logger.debug("Redis cache invalidation skipped.", extra={"workspace_id": workspace_id, "error_type": type(error).__name__})
+
+
+def _invalidate_cache_after_mutation(request: HttpRequest, route: str) -> None:
+    if request.method.upper() not in {"POST", "PATCH", "DELETE"}:
+        return
+    if route.startswith(("auth/", "platform/", "payments/esewa/callback")):
+        return
+    try:
+        user = authenticate_access_token(bearer_token(request, required=False))
+    except Exception:
+        return
+    _invalidate_workspace_cache(str(user.get("workspaceId", "")))
 from apps.rhinopeak.services.assistant_service import handle_assistant_command
 from apps.rhinopeak.services.bill_scan_service import (
     approve_bill_scan,
@@ -103,6 +279,7 @@ from apps.rhinopeak.services.mongo_service import (
     revoke_platform_session,
     schema_audit,
     setup_platform_owner,
+    register_device_token,
     update_billing_plan,
     update_generic_record,
     update_customer,
@@ -120,6 +297,7 @@ from apps.rhinopeak.services.mongo_service import (
     get_dashboard_kpis,
     get_invite,
     iso_now,
+    list_entity_records,
     list_records_since,
     workspace_for,
 )
@@ -127,46 +305,145 @@ from apps.rhinopeak.services.mongo_service import (
 
 @csrf_exempt
 def api_entry(request: HttpRequest, route: str = "") -> HttpResponse:
+    """Main API entry point with correlation ID tracking and security hardening."""
+    # Get or generate correlation ID
+    correlation_id = get_correlation_id(request)
+    trace = get_trace_context(request)
+    started_at = time.perf_counter()
+
     if request.method == "OPTIONS":
-        return with_cors(HttpResponse(status=204), request)
+        response = HttpResponse(status=204)
+        response = with_cors(set_trace_headers(set_correlation_id(response, correlation_id), trace), request)
+        _record_http_metric(request.method, route, response.status_code, time.perf_counter() - started_at)
+        return response
+
     try:
+        # Log request with correlation ID
+        logger.info(
+            f"API Request: {request.method} /{route}",
+            extra={
+                "correlation_id": correlation_id,
+                "trace_id": trace["trace_id"],
+                "span_id": trace["span_id"],
+                "method": request.method,
+                "path": f"/{route}",
+                "client_ip": request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR")),
+            }
+        )
+
         payload = dispatch(request, route)
         if isinstance(payload, HttpResponse):
-            return with_cors(payload, request)
-        return with_cors(JsonResponse(payload, safe=isinstance(payload, dict)), request)
+            response = with_cors(payload, request)
+            response = set_correlation_id(response, correlation_id)
+            response = set_trace_headers(response, trace)
+            _record_http_metric(request.method, route, response.status_code, time.perf_counter() - started_at)
+            return response
+
+        _invalidate_cache_after_mutation(request, route)
+        response = with_cors(JsonResponse(payload, safe=isinstance(payload, dict)), request)
+        response = set_correlation_id(response, correlation_id)
+        response = set_trace_headers(response, trace)
+        _record_http_metric(request.method, route, response.status_code, time.perf_counter() - started_at)
+        return response
+
     except AppError as error:
-        return with_cors(JsonResponse({"error": error.message}, status=error.status), request)
+        logger.warning(
+            f"AppError in API: {error.message}",
+            extra={"correlation_id": correlation_id, "trace_id": trace["trace_id"], "status": error.status}
+        )
+        response = with_cors(
+            set_trace_headers(
+                set_correlation_id(JsonResponse({"error": error.message}, status=error.status), correlation_id),
+                trace,
+            ),
+            request,
+        )
+        _record_http_metric(request.method, route, response.status_code, time.perf_counter() - started_at)
+        return response
     except json.JSONDecodeError:
-        return with_cors(JsonResponse({"error": "Invalid JSON body."}, status=400), request)
+        response = with_cors(
+            set_trace_headers(
+                set_correlation_id(JsonResponse({"error": "Invalid JSON body."}, status=400), correlation_id),
+                trace,
+            ),
+            request,
+        )
+        _record_http_metric(request.method, route, response.status_code, time.perf_counter() - started_at)
+        return response
     except Exception as error:
-        return with_cors(JsonResponse({"error": str(error) or "Internal server error."}, status=500), request)
+        # SECURITY FIX: Don't expose internal error messages to clients
+        logger.exception(
+            f"Unhandled error in API request",
+            extra={"correlation_id": correlation_id, "trace_id": trace["trace_id"], "error_type": type(error).__name__}
+        )
+        response = with_cors(
+            set_trace_headers(
+                set_correlation_id(JsonResponse({"error": "An unexpected error occurred."}, status=500), correlation_id),
+                trace,
+            ),
+            request,
+        )
+        _record_http_metric(request.method, route, response.status_code, time.perf_counter() - started_at)
+        return response
 
 
 def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
     method = request.method.upper()
     segments = [segment for segment in route.strip("/").split("/") if segment]
+    configured_version = str(getattr(settings, "API_VERSION", "v1")).strip("/")
+    if segments and configured_version and segments[0] == configured_version:
+        segments = segments[1:]
     body = read_json(request) if method in {"POST", "PATCH", "DELETE"} else {}
 
+    # ── Health Check Endpoints ────────────────────────────────────────────────
+    # Basic liveness check - is the server alive?
     if method == "GET" and segments == ["health"]:
         return health_payload()
+
+    # Kubernetes-style liveness probe - is the server ready to serve traffic?
+    if method == "GET" and segments == ["health", "live"]:
+        return {"status": "alive", "timestamp": __import__('datetime').datetime.now().isoformat()}
+
+    # Readiness probe - is the server ready to accept traffic?
+    if method == "GET" and segments == ["health", "ready"]:
+        return _health_check_readiness()
+
+    # Detailed health check for monitoring
+    if method == "GET" and segments == ["health", "details"]:
+        return _health_check_detailed()
+
+    if method == "GET" and segments == ["metrics"]:
+        return _metrics_response()
+
+    # ── API Version Endpoint ──────────────────────────────────────────────────
+    if method == "GET" and segments == ["version"]:
+        return _api_version_info()
     if method == "GET" and segments == ["schema", "audit"]:
         return schema_audit()
     if method == "POST" and segments == ["auth", "register"]:
-        return register_user(body)
+        return register_user(_validated_payload(RegisterRequest, body))
     if method == "POST" and segments == ["auth", "login"]:
         client_ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "unknown"))
-        _check_rate_limit(f"login:{client_ip}", max_attempts=10, window_seconds=60)
-        return login_user(body)
+        _check_rate_limit(
+            f"login:{client_ip}",
+            max_attempts=settings.RATE_LIMIT_AUTH_MAX_ATTEMPTS,
+            window_seconds=settings.RATE_LIMIT_AUTH_WINDOW_SECONDS,
+        )
+        return login_user(_validated_payload(LoginRequest, body))
     if method == "POST" and segments == ["auth", "refresh"]:
-        return refresh_session(body)
+        return refresh_session(_validated_payload(RefreshRequest, body))
     if method == "POST" and segments == ["auth", "logout"]:
-        return logout(bearer_token(request, required=False), body)
+        return logout(bearer_token(request, required=False), _validated_payload(LogoutRequest, body))
     if method == "POST" and segments == ["auth", "password", "request"]:
         client_ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "unknown"))
-        _check_rate_limit(f"pwreset:{client_ip}", max_attempts=3, window_seconds=3600)
-        return request_password_reset(body)
+        _check_rate_limit(
+            f"pwreset:{client_ip}",
+            max_attempts=settings.RATE_LIMIT_PASSWORD_RESET_MAX,
+            window_seconds=settings.RATE_LIMIT_PASSWORD_RESET_WINDOW,
+        )
+        return request_password_reset(_validated_payload(PasswordResetRequest, body))
     if method == "POST" and segments == ["auth", "password", "reset"]:
-        return reset_password(body)
+        return reset_password(_validated_payload(PasswordResetConfirmRequest, body))
 
     if method == "GET" and len(segments) == 2 and segments[0] == "invites":
         return get_invite(unquote(segments[1]))
@@ -174,22 +451,48 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
         return accept_invite(body)
 
     if method == "GET" and len(segments) == 3 and segments[:2] == ["payments", "esewa"] and segments[2] == "callback":
-        from apps.rhinopeak.services.payment_service import verify_esewa_callback
+        # eSewa redirects browser here after payment: ?oid=...&amt=...&refId=...&plan=...
+        from apps.rhinopeak.services.payment_service import verify_esewa_payment
 
-        data = request.GET.get("data", "")
-        result = verify_esewa_callback(data)
+        oid   = request.GET.get("oid", "")
+        amt   = request.GET.get("amt", "")
+        refId = request.GET.get("refId", "")
+        plan  = request.GET.get("plan", "")
+
+        result = verify_esewa_payment(oid, amt, refId)
         frontend_url = os.environ.get("RHINOPEAK_FRONTEND_URL", "http://localhost:3000")
+
+        if result.get("success"):
+            try:
+                complete_payment_session(oid, "eSewa", str(result.get("transaction_code", refId)))
+            except Exception as payment_error:
+                return HttpResponseRedirect(
+                    f"{frontend_url}/billing?payment=error&reason={quote(str(payment_error))}"
+                )
+            return HttpResponseRedirect(f"{frontend_url}/billing?payment=success&gateway=esewa")
+        return HttpResponseRedirect(
+            f"{frontend_url}/billing?payment=failed&reason={quote(str(result.get('error', 'verification_failed')))}"
+        )
+
+    if method == "POST" and segments == ["payments", "esewa", "verify"]:
+        # Server-side verification endpoint (called from frontend after eSewa redirect)
+        from apps.rhinopeak.services.payment_service import verify_esewa_payment
+
+        result = verify_esewa_payment(
+            oid=str(body.get("oid", "")),
+            amt=str(body.get("amt", "")),
+            refId=str(body.get("refId", "")),
+        )
         if result.get("success"):
             try:
                 complete_payment_session(
-                    str(result.get("transaction_uuid", "")),
+                    str(body.get("oid", "")),
                     "eSewa",
-                    str(result.get("transaction_code", "")),
+                    str(result.get("transaction_code", body.get("refId", ""))),
                 )
-            except Exception as payment_error:
-                return HttpResponseRedirect(f"{frontend_url}/billing?payment=error&reason={quote(str(payment_error))}")
-            return HttpResponseRedirect(f"{frontend_url}/billing?payment=success&gateway=esewa")
-        return HttpResponseRedirect(f"{frontend_url}/billing?payment=failed&reason={quote(str(result.get('error', 'verification_failed')))}")
+            except Exception:
+                pass
+        return result
 
     if method == "GET" and segments == ["platform", "auth", "state"]:
         return platform_state()
@@ -236,10 +539,12 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
     user = authenticate_access_token(token)
 
     if method == "GET" and segments == ["bootstrap"]:
-        return {"bootstrap": bootstrap_payload(user)}
+        key = _cache_key(user["workspaceId"], "bootstrap", user["id"])
+        return {"bootstrap": _cached_json(key, lambda: bootstrap_payload(user))}
     if method == "GET" and segments == ["mobile", "bootstrap"]:
+        key = _cache_key(user["workspaceId"], "bootstrap", user["id"])
         return {
-            "bootstrap": bootstrap_payload(user),
+            "bootstrap": _cached_json(key, lambda: bootstrap_payload(user)),
             "mobile": {
                 "apiVersion": "4.0-mongo",
                 "offlineCache": True,
@@ -267,6 +572,8 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
             "apiVersion": "4.1",
             "lastSyncAt": user.get("lastSyncAt", None),
         }
+    if method == "POST" and segments == ["mobile", "push-token"]:
+        return register_device_token(user, body)
     if method == "GET" and segments == ["mobile", "sync"]:
         since = request.GET.get("since", "")
         kinds = ["sales", "inventory", "customers", "expenses", "purchases"]
@@ -277,10 +584,24 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
                 result[kind] = records
         return {"delta": result, "syncedAt": iso_now()}
     if method == "GET" and segments == ["mobile", "dashboard"]:
-        return {"kpis": get_dashboard_kpis(user["workspaceId"])}
+        key = _cache_key(user["workspaceId"], "dashboard-kpis")
+        return {"kpis": _cached_json(key, lambda: get_dashboard_kpis(user["workspaceId"]), ttl_seconds=60)}
 
     if segments[:1] == ["mobile"]:
         segments = segments[1:]
+
+    if method == "GET" and len(segments) == 2 and segments[0] == "records":
+        page_size = _query_int(request, "page_size", 50, minimum=1, maximum=200)
+        page_size = _query_int(request, "pageSize", page_size, minimum=1, maximum=200)
+        return list_entity_records(
+            user,
+            segments[1],
+            page=_query_int(request, "page", 1, minimum=1),
+            page_size=page_size,
+            sort_by=str(request.GET.get("sortBy", "createdAt")),
+            sort_order=str(request.GET.get("sortOrder", "desc")),
+            include_deleted=request.GET.get("includeDeleted") in {"1", "true", "True"},
+        )
 
     if method == "GET" and len(segments) == 3 and segments[0] == "details":
         return {"detail": detail_payload(user, segments[1], unquote(segments[2]))}
@@ -450,6 +771,7 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
     if method == "POST" and segments == ["payments", "initiate"]:
         from apps.rhinopeak.services.payment_service import initiate_esewa_payment, initiate_khalti_payment
 
+        body = _validated_payload(PaymentInitiateRequest, body)
         payment_session = create_payment_session(user, body)
         gateway = str(payment_session["gateway"]).lower()
         amount = float(payment_session["amount"])
@@ -468,14 +790,138 @@ def dispatch(request: HttpRequest, route: str) -> dict[str, Any]:
     if method == "POST" and segments == ["payments", "khalti", "verify"]:
         from apps.rhinopeak.services.payment_service import verify_khalti_payment
 
-        pidx = str(body.get("pidx", ""))
-        result = verify_khalti_payment(pidx)
+        body = _validated_payload(KhaltiVerifyRequest, body)
+        pidx           = str(body.get("pidx", ""))
+        expected_amount = body.get("amount")  # in paisa, optional
+        result = verify_khalti_payment(pidx, expected_amount=int(expected_amount) if expected_amount else None)
         if result.get("success"):
             transaction_uuid = str(body.get("transactionUuid") or pidx.removeprefix("demo_"))
             complete_payment_session(transaction_uuid, "Khalti", str(result.get("transaction_id", "")))
         return result
 
     raise AppError(404, "Route not found.")
+
+
+def _validated_payload(schema_class: Any, body: dict[str, Any]) -> dict[str, Any]:
+    return validate_request(schema_class, body).model_dump(exclude_none=True)
+
+
+def _query_int(request: HttpRequest, name: str, default: int, minimum: int | None = None, maximum: int | None = None) -> int:
+    raw = request.GET.get(name)
+    if raw in {None, ""}:
+        return default
+    try:
+        value = int(str(raw))
+    except (TypeError, ValueError):
+        raise AppError(400, f"{name} must be an integer.")
+    if minimum is not None and value < minimum:
+        raise AppError(400, f"{name} must be at least {minimum}.")
+    if maximum is not None and value > maximum:
+        raise AppError(400, f"{name} must be at most {maximum}.")
+    return value
+
+
+def _health_check_readiness() -> dict[str, Any]:
+    from apps.rhinopeak.data.mongo import ping_mongo
+
+    checks: dict[str, Any] = {
+        "database": "unknown",
+        "redis": "disabled",
+    }
+    try:
+        ping_mongo()
+        checks["database"] = "ok"
+    except Exception as exc:
+        checks["database"] = "error"
+        checks["databaseError"] = type(exc).__name__
+
+    if getattr(settings, "REDIS_ENABLED", False):
+        try:
+            redis = _get_redis_client()
+            if redis:
+                redis.ping()
+                checks["redis"] = "ok"
+            else:
+                checks["redis"] = "unavailable"
+        except Exception as exc:
+            checks["redis"] = "error"
+            checks["redisError"] = type(exc).__name__
+
+    ready = checks["database"] == "ok"
+    if not ready:
+        raise AppError(503, "Service is not ready.")
+    return {"status": "ready", "checks": checks, "timestamp": iso_now()}
+
+
+def _health_check_detailed() -> dict[str, Any]:
+    from apps.rhinopeak.data.mongo import mongo_counts
+
+    details = health_payload()
+    try:
+        details["counts"] = mongo_counts()
+    except Exception as exc:
+        details["countsError"] = type(exc).__name__
+    details["environment"] = getattr(settings, "ENVIRONMENT", "development")
+    details["metricsEnabled"] = getattr(settings, "ENABLE_METRICS", True)
+    return details
+
+
+def _api_version_info() -> dict[str, Any]:
+    return {
+        "apiVersion": getattr(settings, "API_VERSION", "v1"),
+        "versionHeader": getattr(settings, "API_VERSION_HEADER", "X-API-Version"),
+        "environment": getattr(settings, "ENVIRONMENT", "development"),
+    }
+
+
+def _metrics_response() -> HttpResponse:
+    if not getattr(settings, "ENABLE_METRICS", True):
+        raise AppError(404, "Metrics are disabled.")
+
+    lines = [
+        "# HELP rhinopeak_http_requests_total Total API requests.",
+        "# TYPE rhinopeak_http_requests_total counter",
+    ]
+    for (method, route, status), value in sorted(_request_counts.items()):
+        lines.append(
+            'rhinopeak_http_requests_total{method="%s",route="%s",status="%s"} %d'
+            % (_metric_label(method), _metric_label(route), _metric_label(status), value)
+        )
+
+    lines.extend([
+        "# HELP rhinopeak_http_request_duration_seconds_sum Total API request duration.",
+        "# TYPE rhinopeak_http_request_duration_seconds_sum counter",
+    ])
+    for (method, route, status), value in sorted(_request_duration_sum.items()):
+        lines.append(
+            'rhinopeak_http_request_duration_seconds_sum{method="%s",route="%s",status="%s"} %.6f'
+            % (_metric_label(method), _metric_label(route), _metric_label(status), value)
+        )
+
+    lines.extend([
+        "# HELP rhinopeak_http_request_duration_seconds_count Count of timed API requests.",
+        "# TYPE rhinopeak_http_request_duration_seconds_count counter",
+    ])
+    for (method, route, status), value in sorted(_request_duration_count.items()):
+        lines.append(
+            'rhinopeak_http_request_duration_seconds_count{method="%s",route="%s",status="%s"} %d'
+            % (_metric_label(method), _metric_label(route), _metric_label(status), value)
+        )
+
+    uptime = max(0, time.time() - _metrics_started_at)
+    lines.extend([
+        "# HELP rhinopeak_process_uptime_seconds API process uptime in seconds.",
+        "# TYPE rhinopeak_process_uptime_seconds gauge",
+        f"rhinopeak_process_uptime_seconds {uptime:.0f}",
+        "# HELP rhinopeak_build_info Static application metadata.",
+        "# TYPE rhinopeak_build_info gauge",
+        'rhinopeak_build_info{api_version="%s",environment="%s"} 1'
+        % (
+            _metric_label(str(getattr(settings, "API_VERSION", "v1"))),
+            _metric_label(str(getattr(settings, "ENVIRONMENT", "development"))),
+        ),
+    ])
+    return HttpResponse("\n".join(lines) + "\n", content_type="text/plain; version=0.0.4; charset=utf-8")
 
 
 def read_json(request: HttpRequest) -> dict[str, Any]:
@@ -497,13 +943,24 @@ def bearer_token(request: HttpRequest, required: bool) -> str | None:
 
 
 def with_cors(response: HttpResponse, request: HttpRequest) -> HttpResponse:
+    """Add CORS headers with security hardening.
+
+    SECURITY FIX: Removed wildcard CORS in debug mode.
+    Debug mode no longer allows "*" - must use explicit allowed origins.
+    """
     origin = request.headers.get("Origin")
     if origin in settings.CORS_ORIGINS:
         response["Access-Control-Allow-Origin"] = origin
         response["Vary"] = "Origin"
-    elif settings.DEBUG:
-        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Credentials"] = "true"
+    # SECURITY FIX: No wildcard CORS even in DEBUG mode unless PRODUCTION is explicitly False
+    elif settings.DEBUG and not settings.PRODUCTION:
+        # Only allow for localhost development
+        if origin and ("localhost" in origin or "127.0.0.1" in origin):
+            response["Access-Control-Allow-Origin"] = origin
+            response["Vary"] = "Origin"
     response["Access-Control-Allow-Methods"] = "GET,POST,PATCH,DELETE,OPTIONS"
-    response["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    response["Access-Control-Allow-Headers"] = "Content-Type,Authorization,X-Request-ID,X-Correlation-ID"
+    response["Access-Control-Expose-Headers"] = "X-Request-ID,X-Correlation-ID,X-Trace-ID,traceparent,X-API-Version"
     response["Access-Control-Max-Age"] = "86400"
     return response

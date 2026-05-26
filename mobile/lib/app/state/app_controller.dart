@@ -6,6 +6,8 @@ import '../../core/storage/cache_store.dart';
 import '../../core/storage/token_store.dart';
 import '../../core/utils/background.dart';
 import '../../features/auth/data/auth_repository.dart';
+import '../../services/offline_service.dart';
+import '../../services/push_notification_service.dart';
 import '../../shared/models/rhino_models.dart';
 import '../../shared/repositories/mobile_repository.dart';
 import '../localization/app_strings.dart';
@@ -46,14 +48,14 @@ class AppState {
   });
 
   const AppState.initial()
-    : initializing = true,
-      loading = false,
-      authenticated = false,
-      language = AppLanguage.en,
-      user = null,
-      bootstrap = null,
-      error = null,
-      notice = null;
+      : initializing = true,
+        loading = false,
+        authenticated = false,
+        language = AppLanguage.en,
+        user = null,
+        bootstrap = null,
+        error = null,
+        notice = null;
 
   final bool initializing;
   final bool loading;
@@ -95,11 +97,11 @@ class AppController extends StateNotifier<AppState> {
     required MobileRepository mobileRepository,
     required TokenStore tokenStore,
     required CacheStore cacheStore,
-  }) : _authRepository = authRepository,
-       _mobileRepository = mobileRepository,
-       _tokenStore = tokenStore,
-       _cacheStore = cacheStore,
-       super(const AppState.initial());
+  })  : _authRepository = authRepository,
+        _mobileRepository = mobileRepository,
+        _tokenStore = tokenStore,
+        _cacheStore = cacheStore,
+        super(const AppState.initial());
 
   final AuthRepository _authRepository;
   final MobileRepository _mobileRepository;
@@ -121,6 +123,7 @@ class AppController extends StateNotifier<AppState> {
       state = state.copyWith(initializing: false);
       return;
     }
+    await syncPendingOperations();
     await refreshBootstrap();
     state = state.copyWith(initializing: false);
   }
@@ -159,6 +162,33 @@ class AppController extends StateNotifier<AppState> {
     });
   }
 
+  Future<bool> resetPassword({
+    required String email,
+    required String token,
+    required String password,
+  }) async {
+    state = state.copyWith(loading: true, clearError: true, clearNotice: true);
+    try {
+      await _authRepository.resetPassword(
+        email: email,
+        token: token,
+        password: password,
+      );
+      state = state.copyWith(
+        notice: AppStrings.tr(state.language, 'passwordResetSent'),
+        clearError: true,
+      );
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('RESET PASSWORD ERROR: $error');
+      debugPrint('STACK TRACE: $stackTrace');
+      state = state.copyWith(error: error.toString());
+      return false;
+    } finally {
+      state = state.copyWith(loading: false);
+    }
+  }
+
   Future<void> logout() async {
     final tokens = await _tokenStore.read();
     if (tokens != null) {
@@ -175,6 +205,7 @@ class AppController extends StateNotifier<AppState> {
 
   Future<void> refreshBootstrap() async {
     try {
+      await syncPendingOperations();
       final raw = await _mobileRepository.mobileBootstrapJson();
       final bootstrap = await compute(parseBootstrap, raw);
       await _saveBootstrap(bootstrap);
@@ -185,6 +216,7 @@ class AppController extends StateNotifier<AppState> {
         language: bootstrap.settings.language,
         clearError: true,
       );
+      await registerCurrentPushToken();
     } catch (error, stackTrace) {
       debugPrint('REFRESH BOOTSTRAP ERROR: $error');
       debugPrint('STACK TRACE: $stackTrace');
@@ -214,7 +246,12 @@ class AppController extends StateNotifier<AppState> {
 
   Future<void> createSale(Map<String, dynamic> sale) {
     return _withLoading(() async {
-      final next = await _mobileRepository.createSale(sale);
+      final next = await _onlineOrQueue(
+        entity: 'sales',
+        action: 'create',
+        record: sale,
+        online: () => _mobileRepository.createSale(sale),
+      );
       await _saveBootstrap(next);
       state = state.copyWith(
         bootstrap: next,
@@ -226,7 +263,12 @@ class AppController extends StateNotifier<AppState> {
 
   Future<void> createExpense(Map<String, dynamic> expense) {
     return _withLoading(() async {
-      final next = await _mobileRepository.createExpense(expense);
+      final next = await _onlineOrQueue(
+        entity: 'expenses',
+        action: 'create',
+        record: expense,
+        online: () => _mobileRepository.createExpense(expense),
+      );
       await _saveBootstrap(next);
       state = state.copyWith(
         bootstrap: next,
@@ -238,7 +280,12 @@ class AppController extends StateNotifier<AppState> {
 
   Future<void> createRecord(String entity, Map<String, dynamic> record) {
     return _withLoading(() async {
-      final next = await _mobileRepository.createRecord(entity, record);
+      final next = await _onlineOrQueue(
+        entity: entity,
+        action: 'create',
+        record: record,
+        online: () => _mobileRepository.createRecord(entity, record),
+      );
       await _saveBootstrap(next);
       state = state.copyWith(
         bootstrap: next,
@@ -254,7 +301,13 @@ class AppController extends StateNotifier<AppState> {
     Map<String, dynamic> patch,
   ) {
     return _withLoading(() async {
-      final next = await _mobileRepository.updateRecord(entity, id, patch);
+      final next = await _onlineOrQueue(
+        entity: entity,
+        entityId: id,
+        action: 'update',
+        record: patch,
+        online: () => _mobileRepository.updateRecord(entity, id, patch),
+      );
       await _saveBootstrap(next);
       state = state.copyWith(
         bootstrap: next,
@@ -266,7 +319,13 @@ class AppController extends StateNotifier<AppState> {
 
   Future<void> deleteRecord(String entity, String id) {
     return _withLoading(() async {
-      final next = await _mobileRepository.deleteRecord(entity, id);
+      final next = await _onlineOrQueue(
+        entity: entity,
+        entityId: id,
+        action: 'delete',
+        record: {'id': id},
+        online: () => _mobileRepository.deleteRecord(entity, id),
+      );
       await _saveBootstrap(next);
       state = state.copyWith(
         bootstrap: next,
@@ -278,7 +337,12 @@ class AppController extends StateNotifier<AppState> {
 
   Future<void> createProduct(Map<String, dynamic> product) {
     return _withLoading(() async {
-      final next = await _mobileRepository.createProduct(product);
+      final next = await _onlineOrQueue(
+        entity: 'inventory',
+        action: 'create',
+        record: product,
+        online: () => _mobileRepository.createProduct(product),
+      );
       await _saveBootstrap(next);
       state = state.copyWith(
         bootstrap: next,
@@ -329,7 +393,12 @@ class AppController extends StateNotifier<AppState> {
 
   Future<void> recordStockMovement(Map<String, dynamic> movement) {
     return _withLoading(() async {
-      final next = await _mobileRepository.recordStockMovement(movement);
+      final next = await _onlineOrQueue(
+        entity: 'inventory-movements',
+        action: 'create',
+        record: movement,
+        online: () => _mobileRepository.recordStockMovement(movement),
+      );
       await _saveBootstrap(next);
       state = state.copyWith(
         bootstrap: next,
@@ -402,6 +471,21 @@ class AppController extends StateNotifier<AppState> {
       authenticated: true,
       clearError: true,
     );
+    await registerCurrentPushToken();
+  }
+
+  Future<void> registerCurrentPushToken() async {
+    if (!state.authenticated) return;
+    final token = await pushNotificationService.token();
+    if (token == null || token.trim().isEmpty) return;
+    try {
+      await _mobileRepository.registerPushToken(
+        token.trim(),
+        platform: defaultTargetPlatform.name.toLowerCase(),
+      );
+    } catch (error) {
+      debugPrint('PUSH TOKEN REGISTRATION ERROR: $error');
+    }
   }
 
   Future<void> _saveBootstrap(BootstrapData bootstrap) async {
@@ -467,6 +551,58 @@ class AppController extends StateNotifier<AppState> {
       'featureFlags': bootstrap.featureFlags,
       'supportTickets': bootstrap.supportTickets,
     });
+  }
+
+  Future<void> syncPendingOperations() async {
+    final queue = await offlineService.pendingSyncOperations();
+    if (queue.isEmpty) return;
+    for (final operation in queue) {
+      final operationId = operation['id']?.toString() ?? '';
+      if (operationId.isEmpty) continue;
+      try {
+        await _mobileRepository.pushOfflineOperation({
+          'operationKey': operationId,
+          'entity': operation['entityType'],
+          'entityId': operation['entityId'],
+          'action': operation['operation'],
+          'payload': operation['data'],
+        });
+        await offlineService.completeSyncOperation(operationId);
+      } catch (error) {
+        await offlineService.markSyncFailed(operationId, error);
+      }
+    }
+  }
+
+  Future<BootstrapData> _onlineOrQueue({
+    required String entity,
+    required String action,
+    required Map<String, dynamic> record,
+    required Future<BootstrapData> Function() online,
+    String? entityId,
+  }) async {
+    try {
+      final next = await online();
+      await syncPendingOperations();
+      return next;
+    } catch (error) {
+      final bootstrap = state.bootstrap;
+      if (bootstrap == null) rethrow;
+      final id = entityId ??
+          record['id']?.toString() ??
+          DateTime.now().millisecondsSinceEpoch.toString();
+      await offlineService.queueSyncOperation(
+        entityType: entity,
+        entityId: id,
+        operation: action,
+        data: record,
+      );
+      state = state.copyWith(
+        notice: 'Saved offline. It will sync when the connection returns.',
+        clearError: true,
+      );
+      return bootstrap;
+    }
   }
 
   Future<void> _withLoading(Future<void> Function() action) async {

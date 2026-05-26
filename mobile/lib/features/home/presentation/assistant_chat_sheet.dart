@@ -86,25 +86,43 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
     });
   }
 
+  bool _isCollecting(Map<String, dynamic>? command) {
+    if (command == null) return false;
+    final missingSlots = command['missingSlots'];
+    return command['executionStatus'] == 'Collecting' ||
+        (missingSlots is List && missingSlots.isNotEmpty);
+  }
+
+  bool _canConfirm(Map<String, dynamic>? command) {
+    if (command == null) return false;
+    return command['requiresConfirmation'] == true &&
+        command['canExecute'] == true &&
+        command['executionStatus'] != 'Executed';
+  }
+
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
+    final activeDraft = _isCollecting(_pendingCommand) ? _pendingCommand : null;
     setState(() {
       _messages.add(_ChatMessage(text: text, isUser: true));
       _loading = true;
-      _pendingCommand = null;
+      if (activeDraft == null) {
+        _pendingCommand = null;
+      }
     });
     _controller.clear();
     _scrollToBottom();
 
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.post(
-        '/assistant/command',
-        data: {
-          'transcript': text,
-          'language': ref.read(appControllerProvider).language.code,
-        },
-      );
+      final payload = <String, dynamic>{
+        'transcript': text,
+        'language': ref.read(appControllerProvider).language.code,
+      };
+      if (activeDraft != null) {
+        payload['draft'] = activeDraft;
+      }
+      final response = await api.post('/assistant/command', data: payload);
 
       final assistantCommand =
           response['assistantCommand'] as Map<String, dynamic>?;
@@ -117,15 +135,12 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
         language,
         assistantCommand['reply']?.toString() ?? 'I could not understand that.',
       );
-      final requiresConfirmation =
-          assistantCommand['requiresConfirmation'] == true;
-      final canExecute = assistantCommand['canExecute'] == true;
+      final holdCommand =
+          _isCollecting(assistantCommand) || _canConfirm(assistantCommand);
 
       setState(() {
         _messages.add(_ChatMessage(text: reply, isUser: false));
-        if (requiresConfirmation && canExecute) {
-          _pendingCommand = assistantCommand;
-        }
+        _pendingCommand = holdCommand ? assistantCommand : null;
       });
       _handleRouteAction(assistantCommand);
     } catch (e) {
@@ -323,7 +338,7 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
               itemCount:
                   _messages.length +
                   (_loading ? 1 : 0) +
-                  (_pendingCommand != null ? 1 : 0),
+                  (_canConfirm(_pendingCommand) ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index < _messages.length) {
                   final msg = _messages[index];
@@ -337,9 +352,9 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
 
                 // Pending execution confirmation card
                 final cmd = _pendingCommand;
-                if (cmd != null) {
+                if (_canConfirm(cmd)) {
                   return _ConfirmationCard(
-                    command: cmd,
+                    command: cmd!,
                     onConfirm: _confirmCommand,
                     onCancel: () {
                       setState(() {
@@ -442,7 +457,7 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                             Expanded(
                               child: TextField(
                                 controller: _controller,
-                                enabled: !_loading && _pendingCommand == null,
+                                enabled: !_loading && !_canConfirm(_pendingCommand),
                                 decoration: InputDecoration(
                                   hintText: tr(ref, 'assistantInputHint'),
                                   border: InputBorder.none,
@@ -464,7 +479,7 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                               ),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
-                              onPressed: _loading || _pendingCommand != null
+                              onPressed: _loading || _canConfirm(_pendingCommand)
                                   ? null
                                   : () => _startVoiceAssistant(),
                             ),
@@ -498,9 +513,10 @@ class _AssistantChatSheetState extends ConsumerState<AssistantChatSheet> {
                           color: Colors.white,
                           size: 18,
                         ),
-                        onPressed: _loading || _pendingCommand != null
-                            ? null
-                            : () => _sendMessage(_controller.text),
+                        onPressed:
+                            _loading || _canConfirm(_pendingCommand)
+                                ? null
+                                : () => _sendMessage(_controller.text),
                       ),
                     ),
                   ],
@@ -697,6 +713,116 @@ class _ConfirmationCard extends ConsumerWidget {
           context,
           tr(ref, 'initialStock'),
           slots['stock']?.toString() ?? '0',
+        ),
+      ];
+    } else if (intent == 'record_sale') {
+      title = tr(ref, 'Sales bill');
+      details = [
+        _buildRow(
+          context,
+          tr(ref, 'customerName'),
+          slots['customerName']?.toString() ?? '-',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'product'),
+          slots['productName']?.toString() ?? '-',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'quantity'),
+          slots['quantity']?.toString() ?? '0',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'price'),
+          money(num.tryParse(slots['unitPrice']?.toString() ?? '') ?? 0),
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'payment'),
+          trValue(ref, slots['paymentMethod']?.toString() ?? 'Cash'),
+        ),
+      ];
+    } else if (intent == 'record_purchase') {
+      title = tr(ref, 'Purchase bill');
+      details = [
+        _buildRow(
+          context,
+          tr(ref, 'supplier'),
+          slots['supplierName']?.toString() ?? '-',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'product'),
+          slots['productName']?.toString() ?? '-',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'quantity'),
+          slots['quantity']?.toString() ?? '0',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'price'),
+          money(num.tryParse(slots['unitPrice']?.toString() ?? '') ?? 0),
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'payment'),
+          trValue(ref, slots['paymentMethod']?.toString() ?? 'Cash'),
+        ),
+      ];
+    } else if (intent == 'stock_movement') {
+      title = tr(ref, 'Stock movement');
+      details = [
+        _buildRow(
+          context,
+          tr(ref, 'product'),
+          slots['productName']?.toString() ?? '-',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'quantity'),
+          slots['quantity']?.toString() ?? '0',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'Type'),
+          slots['movementType']?.toString() ?? 'In',
+        ),
+      ];
+    } else if (intent == 'record_payment') {
+      title = tr(ref, 'Payment');
+      details = [
+        _buildRow(
+          context,
+          tr(ref, 'party'),
+          slots['partyName']?.toString() ?? '-',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'amount'),
+          money(num.tryParse(slots['amount']?.toString() ?? '') ?? 0),
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'payment'),
+          trValue(ref, slots['paymentMethod']?.toString() ?? 'Cash'),
+        ),
+      ];
+    } else if (intent == 'send_reminder') {
+      title = tr(ref, 'Reminder');
+      details = [
+        _buildRow(
+          context,
+          tr(ref, 'party'),
+          slots['partyName']?.toString() ?? '-',
+        ),
+        _buildRow(
+          context,
+          tr(ref, 'message'),
+          slots['message']?.toString() ?? '-',
         ),
       ];
     } else {

@@ -837,14 +837,14 @@ function RegisterFlow() {
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">{copy.register.businessType}</label>
-              <select value={form.businessType} onChange={(event) => set('businessType', event.target.value)} className="input-dark w-full rounded-xl px-3 py-3 text-sm">
+              <label htmlFor="register-business-type" className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">{copy.register.businessType}</label>
+              <select id="register-business-type" value={form.businessType} onChange={(event) => set('businessType', event.target.value)} className="input-dark w-full rounded-xl px-3 py-3 text-sm">
                 {businessTypeValues.map((type, index) => <option key={type} value={type}>{copy.register.types[index]}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">{copy.register.plan}</label>
-              <select value={form.plan} onChange={(event) => set('plan', event.target.value)} className="input-dark w-full rounded-xl px-3 py-3 text-sm">
+              <label htmlFor="register-plan" className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">{copy.register.plan}</label>
+              <select id="register-plan" value={form.plan} onChange={(event) => set('plan', event.target.value)} className="input-dark w-full rounded-xl px-3 py-3 text-sm">
                 <option value="free">{copy.register.free}</option>
                 <option value="pro">{copy.register.proTrial}</option>
               </select>

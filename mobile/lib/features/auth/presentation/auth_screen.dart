@@ -61,6 +61,156 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       return;
     }
     await ref.read(appControllerProvider.notifier).requestPasswordReset(email);
+    if (mounted) {
+      _showOtpResetBottomSheet(email);
+    }
+  }
+
+  void _showOtpResetBottomSheet(String email) {
+    final otpController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    bool hideNewPassword = true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'OTP Password Reset',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F101A),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Enter the 6-digit reset code sent to $email.',
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF757891)),
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: otpController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    decoration: const InputDecoration(
+                      labelText: '6-digit OTP Code',
+                      prefixIcon: Icon(Icons.pin_rounded),
+                      counterText: '',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: newPasswordController,
+                    obscureText: hideNewPassword,
+                    decoration: InputDecoration(
+                      labelText: 'New Password',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setModalState(() {
+                            hideNewPassword = !hideNewPassword;
+                          });
+                        },
+                        icon: Icon(
+                          hideNewPassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: () async {
+                      final otp = otpController.text.trim();
+                      final newPassword = newPasswordController.text;
+                      if (otp.length != 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Enter the 6-digit OTP code.'),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
+                      if (newPassword.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Password must be at least 6 characters.'),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
+
+                      final reset = await ref.read(appControllerProvider.notifier).resetPassword(
+                            email: email,
+                            token: otp,
+                            password: newPassword,
+                          );
+                      if (!mounted) return;
+                      if (!reset) return;
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Password reset successfully. Logging you in...'),
+                          backgroundColor: Color(0xFF0A6E46),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+
+                      await ref.read(appControllerProvider.notifier).login(email, newPassword);
+                    },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      backgroundColor: const Color(0xFF0A6E46),
+                    ),
+                    child: const Text('Reset Password & Login'),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _toggleLanguage() async {

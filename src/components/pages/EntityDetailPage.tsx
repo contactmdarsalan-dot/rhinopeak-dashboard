@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
-import { ArrowLeft, Building2, CreditCard, Download, FileText, Package, Printer, ReceiptText, ShoppingCart, Users, WalletCards } from 'lucide-react';
-import { Badge, Panel, PanelHeader, StatTile } from '@/components/ui/Primitives';
+import { useParams, useRouter } from 'next/navigation';
+import { useState, type FormEvent, type ReactNode } from 'react';
+import { ArrowLeft, Building2, CreditCard, Download, Edit3, FileText, Package, Printer, ReceiptText, ShoppingCart, Trash2, Users, WalletCards } from 'lucide-react';
+import { deleteBillScanInBackend } from '@/lib/api';
+import { Badge, Button, Field, Modal, Panel, PanelHeader, StatTile, controlStyle } from '@/components/ui/Primitives';
+import type { CashBankAccountType, CustomerSegment, MoneyMovementType, PartyType, PaymentMethod, PurchaseStatus, SaleStatus } from '@/lib/domain';
 import { uiProductList, uiRecordText, uiText } from '@/lib/i18n';
-import { getStockStatus, useAppStore } from '@/lib/store';
+import { getStockStatus, paymentMethods, saleStatuses, useAppStore } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
 
 type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'accent';
@@ -83,6 +85,36 @@ type DetailModel = {
   timeline?: TimelineItem[];
 };
 
+type EditOption = {
+  value: string;
+  label: string;
+};
+
+type EditField = {
+  name: string;
+  label: string;
+  value: string;
+  type?: 'text' | 'number' | 'date' | 'textarea' | 'select' | 'checkbox';
+  options?: EditOption[];
+  placeholder?: string;
+};
+
+type DetailEditor = {
+  title: string;
+  subtitle: string;
+  fields: EditField[];
+  onSave?: (values: Record<string, string>) => void;
+  onDelete?: () => boolean | Promise<boolean>;
+};
+
+const purchaseStatuses: PurchaseStatus[] = ['Received', 'Pending', 'Returned'];
+const partyTypes: PartyType[] = ['Customer', 'Supplier', 'Both'];
+const customerSegments: CustomerSegment[] = ['VIP', 'Regular', 'Occasional', 'At-Risk'];
+const accountTypes: CashBankAccountType[] = ['Cash', 'Bank', 'Wallet'];
+const moneyMovementTypes: MoneyMovementType[] = ['Receipt', 'Payment', 'Transfer', 'Deposit', 'Withdrawal', 'Adjustment'];
+const productUnits = ['pcs', 'ltr', 'kg', 'gm', 'packet', 'bottle', 'box', 'dozen'];
+const documentRecordTypes = ['Sale', 'Purchase', 'Expense', 'Party', 'Other'];
+
 const buttonLinkStyle = {
   minHeight: 36,
   padding: '8px 12px',
@@ -106,12 +138,29 @@ function detailValue(language: Parameters<typeof uiText>[0], value: ReactNode): 
 
 export function EntityDetailPage() {
   const params = useParams<{ entity: string; id: string }>();
+  const router = useRouter();
   const state = useAppStore();
   const tx = (value: string) => uiText(state.settings.language, value);
   const tv = (value: ReactNode) => detailValue(state.settings.language, value);
   const entity = normalizeEntity(slugParam(params.entity));
   const id = decodeURIComponent(slugParam(params.id));
   const detail = buildDetailModel(state, entity, id);
+  const editor = buildEditorConfig(state, entity, id);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const deleteRecord = async () => {
+    if (!detail || !editor?.onDelete || isDeleting) return;
+    const confirmed = window.confirm(tx('Delete this record? This action cannot be undone.'));
+    if (!confirmed) return;
+    setIsDeleting(true);
+    try {
+      const ok = await editor.onDelete();
+      if (ok !== false) router.push(detail.backHref);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (!detail) {
     return (
@@ -135,10 +184,22 @@ export function EntityDetailPage() {
         <Link href={detail.backHref} style={buttonLinkStyle}>
           <ArrowLeft size={15} /> {tx(detail.backLabel)}
         </Link>
-        {detail.badge && <Badge tone={detail.badge.tone ?? 'neutral'}>{tx(detail.badge.label)}</Badge>}
+        <div className="detail-action-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+          {detail.badge && <Badge tone={detail.badge.tone ?? 'neutral'}>{tx(detail.badge.label)}</Badge>}
+          {editor?.onSave && (
+            <Button variant="secondary" onClick={() => setIsEditOpen(true)}>
+              <Edit3 size={14} /> {tx('Edit')}
+            </Button>
+          )}
+          {editor?.onDelete && (
+            <Button variant="danger" onClick={deleteRecord} disabled={isDeleting}>
+              <Trash2 size={14} /> {isDeleting ? tx('Deleting...') : tx('Delete')}
+            </Button>
+          )}
+        </div>
       </div>
 
-      <Panel style={{ padding: 18 }}>
+      <Panel className="detail-hero" style={{ padding: 18 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
             <span
@@ -182,12 +243,12 @@ export function EntityDetailPage() {
           {detail.tables?.map((table) => (
             <Panel key={table.title}>
               <PanelHeader title={tx(table.title)} />
-              <div style={{ overflowX: 'auto' }}>
-                <table className="responsive-card-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div className="responsive-table-scroll">
+                <table className="responsive-card-table rp-data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border)' }}>
                       {table.headers.map((header) => (
-                        <th key={header} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                        <th key={header} data-align={columnAlign(header)} style={{ padding: '11px 14px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 750, textAlign: columnAlign(header), textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                           {tx(header)}
                         </th>
                       ))}
@@ -201,7 +262,8 @@ export function EntityDetailPage() {
                             key={`${table.title}-${rowIndex}-${cellIndex}`}
                             data-label={tx(table.headers[cellIndex] ?? '')}
                             data-card-primary={cellIndex === 0 ? 'true' : undefined}
-                            style={{ padding: '11px 14px', color: cellIndex === 0 ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: 13, fontWeight: cellIndex === 0 ? 750 : 500 }}
+                            data-align={columnAlign(table.headers[cellIndex] ?? '')}
+                            style={{ padding: '11px 14px', color: cellIndex === 0 ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: 13, fontWeight: cellIndex === 0 ? 750 : 500, textAlign: columnAlign(table.headers[cellIndex] ?? '') }}
                           >
                             {tv(cell)}
                           </td>
@@ -232,7 +294,85 @@ export function EntityDetailPage() {
           </div>
         </Panel>
       </div>
+
+      {isEditOpen && editor?.onSave && (
+        <DetailEditModal
+          editor={editor}
+          onClose={() => setIsEditOpen(false)}
+        />
+      )}
     </div>
+  );
+}
+
+function DetailEditModal({ editor, onClose }: { editor: DetailEditor; onClose: () => void }) {
+  const language = useAppStore((state) => state.settings.language);
+  const tx = (value: string) => uiText(language, value);
+  const [values, setValues] = useState<Record<string, string>>(() => (
+    Object.fromEntries(editor.fields.map((field) => [field.name, field.value ?? '']))
+  ));
+
+  const updateValue = (name: string, value: string) => setValues((current) => ({ ...current, [name]: value }));
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    editor.onSave?.(values);
+    onClose();
+  };
+
+  return (
+    <Modal title={editor.title} subtitle={editor.subtitle} onClose={onClose} width={680}>
+      <form onSubmit={submit} style={{ display: 'grid', gap: 14 }}>
+        <div className="detail-edit-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+          {editor.fields.map((field) => {
+            const fieldValue = values[field.name] ?? '';
+            const fullWidth = field.type === 'textarea';
+            return (
+              <div key={field.name} style={{ gridColumn: fullWidth ? '1 / -1' : undefined }}>
+                <Field label={field.label}>
+                  {field.type === 'textarea' ? (
+                    <textarea
+                      value={fieldValue}
+                      onChange={(event) => updateValue(field.name, event.target.value)}
+                      placeholder={field.placeholder ? tx(field.placeholder) : undefined}
+                      rows={4}
+                      style={{ ...controlStyle, minHeight: 96, resize: 'vertical', lineHeight: 1.5 }}
+                    />
+                  ) : field.type === 'select' ? (
+                    <select value={fieldValue} onChange={(event) => updateValue(field.name, event.target.value)} style={controlStyle}>
+                      {field.options?.map((option) => (
+                        <option key={option.value} value={option.value}>{tx(option.label)}</option>
+                      ))}
+                    </select>
+                  ) : field.type === 'checkbox' ? (
+                    <label style={{ ...controlStyle, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={fieldValue === 'true'}
+                        onChange={(event) => updateValue(field.name, event.target.checked ? 'true' : 'false')}
+                      />
+                      <span>{fieldValue === 'true' ? tx('Enabled') : tx('Disabled')}</span>
+                    </label>
+                  ) : (
+                    <input
+                      type={field.type ?? 'text'}
+                      value={fieldValue}
+                      onChange={(event) => updateValue(field.name, event.target.value)}
+                      placeholder={field.placeholder ? tx(field.placeholder) : undefined}
+                      style={controlStyle}
+                    />
+                  )}
+                </Field>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap', paddingTop: 4 }}>
+          <Button variant="secondary" onClick={onClose}>{tx('Cancel')}</Button>
+          <Button type="submit"><Edit3 size={14} /> {tx('Save changes')}</Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -843,6 +983,329 @@ function escapeHtml(value: string) {
     '"': '&quot;',
     "'": '&#39;',
   }[char] ?? char));
+}
+
+function buildEditorConfig(state: ReturnType<typeof useAppStore.getState>, entity: string, id: string): DetailEditor | null {
+  const moneyAccountOptions = state.cashBankAccounts.map((account) => ({ value: account.id, label: account.name }));
+
+  if (entity === 'sales') {
+    const sale = state.sales.find((item) => item.id === id || item.invoiceNo === id);
+    if (!sale) return null;
+    return {
+      title: 'Edit sale',
+      subtitle: sale.invoiceNo ?? sale.id,
+      fields: [
+        { name: 'invoiceNo', label: 'Invoice no.', value: sale.invoiceNo ?? '', placeholder: sale.id },
+        { name: 'customer', label: 'Customer', value: sale.customer },
+        { name: 'date', label: 'Date', value: sale.date, type: 'date' },
+        { name: 'payment', label: 'Payment', value: sale.payment, type: 'select', options: toOptions(paymentMethods) },
+        { name: 'status', label: 'Status', value: sale.status, type: 'select', options: toOptions(saleStatuses) },
+        { name: 'notes', label: 'Notes', value: sale.notes ?? '', type: 'textarea' },
+      ],
+      onSave: (values) => {
+        const nextStatus = values.status as SaleStatus;
+        state.updateSale(sale.id, {
+          invoiceNo: values.invoiceNo.trim() || sale.invoiceNo,
+          customer: values.customer.trim() || sale.customer,
+          date: values.date || sale.date,
+          payment: values.payment as PaymentMethod,
+          notes: values.notes.trim(),
+        });
+        if (nextStatus !== sale.status) state.updateSaleStatus(sale.id, nextStatus);
+      },
+      onDelete: () => state.softDeleteSale(sale.id),
+    };
+  }
+
+  if (entity === 'purchases') {
+    const purchase = state.purchases.find((item) => item.id === id || item.billNo === id);
+    if (!purchase) return null;
+    return {
+      title: 'Edit purchase',
+      subtitle: purchase.billNo,
+      fields: [
+        { name: 'billNo', label: 'Bill no.', value: purchase.billNo },
+        { name: 'supplierName', label: 'Supplier', value: purchase.supplierName },
+        { name: 'date', label: 'Date', value: purchase.date, type: 'date' },
+        { name: 'dueDate', label: 'Due date', value: purchase.dueDate, type: 'date' },
+        { name: 'payment', label: 'Payment', value: purchase.payment, type: 'select', options: toOptions(paymentMethods) },
+        { name: 'status', label: 'Status', value: purchase.status, type: 'select', options: toOptions(purchaseStatuses) },
+        { name: 'notes', label: 'Notes', value: purchase.notes, type: 'textarea' },
+      ],
+      onSave: (values) => state.updatePurchase(purchase.id, {
+        billNo: values.billNo.trim() || purchase.billNo,
+        supplierName: values.supplierName.trim() || purchase.supplierName,
+        date: values.date || purchase.date,
+        dueDate: values.dueDate,
+        payment: values.payment as PaymentMethod,
+        status: values.status as PurchaseStatus,
+        notes: values.notes.trim(),
+      }),
+      onDelete: () => state.deletePurchase(purchase.id),
+    };
+  }
+
+  if (entity === 'expenses') {
+    const expense = state.expenses.find((item) => item.id === id);
+    if (!expense) return null;
+    const categories = uniqueStrings([expense.category, ...state.expenseCategories]);
+    return {
+      title: 'Edit expense',
+      subtitle: `${expense.category} - ${expense.date}`,
+      fields: [
+        { name: 'category', label: 'Category', value: expense.category, type: 'select', options: toOptions(categories) },
+        { name: 'vendor', label: 'Vendor', value: expense.vendor },
+        { name: 'date', label: 'Date', value: expense.date, type: 'date' },
+        { name: 'paymentAccountId', label: 'Paid from', value: expense.paymentAccountId, type: 'select', options: moneyAccountOptions },
+        { name: 'paymentMethod', label: 'Payment', value: expense.paymentMethod, type: 'select', options: toOptions(paymentMethods) },
+        { name: 'amount', label: 'Amount', value: String(expense.amount), type: 'number' },
+        { name: 'taxAmount', label: 'VAT', value: String(expense.taxAmount), type: 'number' },
+        { name: 'recurring', label: 'Recurring', value: expense.recurring ? 'true' : 'false', type: 'checkbox' },
+        { name: 'note', label: 'Note', value: expense.note, type: 'textarea' },
+      ],
+      onSave: (values) => state.updateExpense(expense.id, {
+        category: values.category,
+        vendor: values.vendor.trim(),
+        date: values.date || expense.date,
+        paymentAccountId: values.paymentAccountId,
+        paymentMethod: values.paymentMethod as PaymentMethod,
+        amount: numberValue(values.amount, expense.amount),
+        taxAmount: numberValue(values.taxAmount, expense.taxAmount),
+        recurring: values.recurring === 'true',
+        note: values.note.trim(),
+      }),
+      onDelete: () => state.deleteExpense(expense.id),
+    };
+  }
+
+  if (entity === 'inventory') {
+    const product = state.inventory.find((item) => item.id === id || item.sku === id);
+    if (!product) return null;
+    const categories = uniqueStrings([product.category, ...state.inventoryCategories, ...state.inventory.map((item) => item.category)]);
+    return {
+      title: 'Edit product',
+      subtitle: product.sku,
+      fields: [
+        { name: 'name', label: 'Product', value: product.name },
+        { name: 'sku', label: 'SKU', value: product.sku },
+        { name: 'category', label: 'Category', value: product.category, type: 'select', options: toOptions(categories) },
+        { name: 'unit', label: 'Unit', value: product.unit ?? 'pcs', type: 'select', options: toOptions(productUnits) },
+        { name: 'stock', label: 'Stock', value: String(product.stock), type: 'number' },
+        { name: 'reorderLevel', label: 'Reorder level', value: String(product.reorderLevel), type: 'number' },
+        { name: 'price', label: 'Selling price', value: String(product.price), type: 'number' },
+        { name: 'costPrice', label: 'Cost price', value: String(product.costPrice), type: 'number' },
+        { name: 'supplier', label: 'Supplier', value: product.supplier ?? '' },
+        { name: 'location', label: 'Location', value: product.location ?? '' },
+        { name: 'barcode', label: 'Barcode', value: product.barcode ?? '' },
+        { name: 'taxRate', label: 'Tax rate', value: String(product.taxRate ?? 0), type: 'number' },
+        { name: 'description', label: 'Description', value: product.description ?? '', type: 'textarea' },
+      ],
+      onSave: (values) => state.updateInventoryProduct(product.id, {
+        name: values.name.trim() || product.name,
+        sku: values.sku.trim() || product.sku,
+        category: values.category || product.category,
+        unit: values.unit,
+        stock: numberValue(values.stock, product.stock),
+        reorderLevel: numberValue(values.reorderLevel, product.reorderLevel),
+        price: numberValue(values.price, product.price),
+        costPrice: numberValue(values.costPrice, product.costPrice),
+        supplier: values.supplier.trim(),
+        location: values.location.trim(),
+        barcode: values.barcode.trim(),
+        taxRate: numberValue(values.taxRate, product.taxRate ?? 0),
+        description: values.description.trim(),
+      }),
+      onDelete: () => state.deleteInventoryProduct(product.id),
+    };
+  }
+
+  if (entity === 'cash-bank') {
+    const account = state.cashBankAccounts.find((item) => item.id === id);
+    if (!account) return null;
+    return {
+      title: 'Edit account',
+      subtitle: account.name,
+      fields: [
+        { name: 'name', label: 'Account', value: account.name },
+        { name: 'type', label: 'Type', value: account.type, type: 'select', options: toOptions(accountTypes) },
+        { name: 'institution', label: 'Institution', value: account.institution },
+        { name: 'accountNumber', label: 'Account number', value: account.accountNumber },
+        { name: 'openingBalance', label: 'Opening balance', value: String(account.openingBalance), type: 'number' },
+        { name: 'balance', label: 'Current balance', value: String(account.balance), type: 'number' },
+        { name: 'active', label: 'Active', value: account.active === false ? 'false' : 'true', type: 'checkbox' },
+      ],
+      onSave: (values) => state.updateCashBankAccount(account.id, {
+        name: values.name.trim() || account.name,
+        type: values.type as CashBankAccountType,
+        institution: values.institution.trim(),
+        accountNumber: values.accountNumber.trim(),
+        openingBalance: numberValue(values.openingBalance, account.openingBalance),
+        balance: numberValue(values.balance, account.balance),
+        active: values.active === 'true',
+      }),
+      onDelete: () => state.deleteCashBankAccount(account.id),
+    };
+  }
+
+  if (entity === 'money-movements') {
+    const movement = state.moneyMovements.find((item) => item.id === id);
+    if (!movement) return null;
+    return {
+      title: 'Edit movement',
+      subtitle: movement.id,
+      fields: [
+        { name: 'accountId', label: 'Account', value: movement.accountId, type: 'select', options: moneyAccountOptions },
+        { name: 'type', label: 'Movement', value: movement.type, type: 'select', options: toOptions(moneyMovementTypes) },
+        { name: 'date', label: 'Date', value: movement.date, type: 'date' },
+        { name: 'amount', label: 'Amount', value: String(movement.amount), type: 'number' },
+        { name: 'partyName', label: 'Party', value: movement.partyName ?? '' },
+        { name: 'referenceId', label: 'Reference', value: movement.referenceId ?? '' },
+        { name: 'note', label: 'Note', value: movement.note, type: 'textarea' },
+      ],
+      onSave: (values) => {
+        const account = state.cashBankAccounts.find((item) => item.id === values.accountId);
+        state.updateMoneyMovement(movement.id, {
+          accountId: values.accountId,
+          accountName: account?.name ?? movement.accountName,
+          type: values.type as MoneyMovementType,
+          date: values.date || movement.date,
+          amount: numberValue(values.amount, movement.amount),
+          partyName: values.partyName.trim(),
+          referenceId: values.referenceId.trim(),
+          note: values.note.trim(),
+        });
+      },
+      onDelete: () => state.deleteMoneyMovement(movement.id),
+    };
+  }
+
+  if (entity === 'parties') {
+    const party = state.parties.find((item) => item.id === id);
+    if (!party) return null;
+    return {
+      title: 'Edit party',
+      subtitle: party.name,
+      fields: [
+        { name: 'name', label: 'Name', value: party.name },
+        { name: 'type', label: 'Party type', value: party.type, type: 'select', options: toOptions(partyTypes) },
+        { name: 'phone', label: 'Phone', value: party.phone },
+        { name: 'email', label: 'Email', value: party.email },
+        { name: 'address', label: 'Address', value: party.address },
+        { name: 'pan', label: 'PAN / VAT', value: party.pan },
+        { name: 'openingBalance', label: 'Opening balance', value: String(party.openingBalance), type: 'number' },
+        { name: 'creditLimit', label: 'Credit limit', value: String(party.creditLimit), type: 'number' },
+        { name: 'dueDays', label: 'Due days', value: String(party.dueDays), type: 'number' },
+        { name: 'notes', label: 'Notes', value: party.notes, type: 'textarea' },
+      ],
+      onSave: (values) => state.updateParty(party.id, {
+        name: values.name.trim() || party.name,
+        type: values.type as PartyType,
+        phone: values.phone.trim(),
+        email: values.email.trim(),
+        address: values.address.trim(),
+        pan: values.pan.trim(),
+        openingBalance: numberValue(values.openingBalance, party.openingBalance),
+        creditLimit: numberValue(values.creditLimit, party.creditLimit),
+        dueDays: numberValue(values.dueDays, party.dueDays),
+        notes: values.notes.trim(),
+      }),
+      onDelete: () => state.deleteParty(party.id),
+    };
+  }
+
+  if (entity === 'customers') {
+    const customer = state.customers.find((item) => item.id === id);
+    if (!customer) return null;
+    return {
+      title: 'Edit customer',
+      subtitle: customer.name,
+      fields: [
+        { name: 'name', label: 'Name', value: customer.name },
+        { name: 'email', label: 'Email', value: customer.email },
+        { name: 'phone', label: 'Phone', value: customer.phone },
+        { name: 'address', label: 'Address', value: customer.address },
+        { name: 'segment', label: 'Segment', value: customer.segment, type: 'select', options: toOptions(customerSegments) },
+        { name: 'creditLimit', label: 'Credit limit', value: String(customer.creditLimit ?? 0), type: 'number' },
+        { name: 'tags', label: 'Tags', value: customer.tags.join(', ') },
+        { name: 'notes', label: 'Notes', value: customer.notes, type: 'textarea' },
+      ],
+      onSave: (values) => state.updateCustomer(customer.id, {
+        name: values.name.trim() || customer.name,
+        email: values.email.trim(),
+        phone: values.phone.trim(),
+        address: values.address.trim(),
+        segment: values.segment as CustomerSegment,
+        creditLimit: numberValue(values.creditLimit, customer.creditLimit ?? 0),
+        tags: values.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+        notes: values.notes.trim(),
+      }),
+      onDelete: () => state.deleteCustomer(customer.id),
+    };
+  }
+
+  if (entity === 'documents') {
+    const document = state.documents.find((item) => item.id === id);
+    if (!document) return null;
+    return {
+      title: 'Edit document',
+      subtitle: document.fileName,
+      fields: [
+        { name: 'name', label: 'Name', value: document.name },
+        { name: 'recordType', label: 'Record type', value: document.recordType, type: 'select', options: toOptions(documentRecordTypes) },
+        { name: 'recordId', label: 'Linked record', value: document.recordId },
+      ],
+      onSave: (values) => state.updateDocument(document.id, {
+        name: values.name.trim() || document.name,
+        recordType: values.recordType as 'Sale' | 'Purchase' | 'Expense' | 'Party' | 'Other',
+        recordId: values.recordId.trim(),
+      }),
+      onDelete: () => state.deleteDocument(document.id),
+    };
+  }
+
+  if (entity === 'bill-scans') {
+    const scan = state.billScans.find((item) => item.id === id);
+    if (!scan) return null;
+    return {
+      title: 'Scan record',
+      subtitle: scan.fileName,
+      fields: [],
+      onDelete: async () => {
+        try {
+          const response = await deleteBillScanInBackend(scan.id);
+          state.hydrateFromBackend(response.bootstrap);
+          return true;
+        } catch {
+          state.markBackendOffline('Scan deletion is saved locally; backend sync failed.');
+          return false;
+        }
+      },
+    };
+  }
+
+  return null;
+}
+
+function toOptions(values: readonly string[]): EditOption[] {
+  return values.map((value) => ({ value, label: value }));
+}
+
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function numberValue(value: string, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function columnAlign(header: string): 'left' | 'center' | 'right' {
+  const clean = header.toLowerCase();
+  if (['amount', 'total', 'vat', 'tax', 'rate', 'qty', 'quantity', 'discount', 'unit cost', 'cost', 'price', 'balance'].some((term) => clean.includes(term))) {
+    return 'right';
+  }
+  if (clean.includes('status') || clean.includes('payment')) return 'center';
+  return 'left';
 }
 
 function buildDetailModel(state: ReturnType<typeof useAppStore.getState>, entity: string, id: string): DetailModel | null {

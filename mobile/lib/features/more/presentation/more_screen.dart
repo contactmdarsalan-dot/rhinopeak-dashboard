@@ -6,6 +6,10 @@ import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/api_detail_screen.dart';
 import '../../../shared/widgets/mobile_record_editor.dart';
 import '../../../shared/widgets/rp_widgets.dart';
+import 'analytics_screen.dart';
+import 'device_hub_screen.dart';
+import 'integrations_screen.dart';
+import 'subscription_screen.dart';
 
 class MoreScreen extends ConsumerWidget {
   const MoreScreen({required this.onOpenSettings, super.key});
@@ -107,16 +111,24 @@ class MoreScreen extends ConsumerWidget {
         module: 'reminders',
       ),
       createAction(
-        Icons.bar_chart_outlined,
-        'reports',
-        'reportsModuleHelp',
-        module: 'reports',
+        Icons.insights_rounded,
+        'biAnalytics',
+        'biAnalyticsHelp',
+        customOnTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AnalyticsScreen()),
+          );
+        },
       ),
       createAction(
-        Icons.workspace_premium_outlined,
-        'billing',
-        'billingModuleHelp',
-        module: 'billing',
+        Icons.workspace_premium_rounded,
+        'subscription',
+        'subscriptionModuleHelp',
+        customOnTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+          );
+        },
       ),
     ];
 
@@ -126,6 +138,26 @@ class MoreScreen extends ConsumerWidget {
         'teamRoles',
         'teamModuleHelp',
         module: 'team',
+      ),
+      createAction(
+        Icons.hub_outlined,
+        'integrations',
+        'integrationsModuleHelp',
+        customOnTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const IntegrationsScreen()),
+          );
+        },
+      ),
+      createAction(
+        Icons.sensors_rounded,
+        'deviceHub',
+        'deviceHubModuleHelp',
+        customOnTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const DeviceHubScreen()),
+          );
+        },
       ),
       createAction(
         Icons.fact_check_outlined,

@@ -7,6 +7,7 @@ from django.conf import settings
 from pymongo import ASCENDING, DESCENDING, MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
+from pymongo.errors import OperationFailure
 
 
 @lru_cache(maxsize=1)
@@ -32,6 +33,15 @@ def strip_mongo_id(document: dict[str, Any] | None) -> dict[str, Any] | None:
     cleaned = dict(document)
     cleaned.pop("_id", None)
     return cleaned
+
+
+def _create_index(collection_obj: Collection, keys: list[tuple[str, int]], **options: Any) -> None:
+    try:
+        collection_obj.create_index(keys, **options)
+    except OperationFailure as exc:
+        if exc.code == 85:
+            return
+        raise
 
 
 def ensure_indexes() -> None:
@@ -70,6 +80,16 @@ def ensure_indexes() -> None:
     db.payment_sessions.create_index([("transactionUuid", ASCENDING)], unique=True)
     db.payment_sessions.create_index([("workspaceId", ASCENDING), ("createdAt", DESCENDING)])
     db.payment_sessions.create_index([("status", ASCENDING)])
+    _create_index(
+        db.payment_sessions,
+        [("workspaceId", ASCENDING), ("status", ASCENDING), ("createdAt", DESCENDING)],
+        name="idx_payment_workspace_status_created",
+    )
+
+    _create_index(db.device_tokens, [("workspaceId", ASCENDING), ("userId", ASCENDING), ("tokenHash", ASCENDING)], unique=True, name="idx_device_token_unique")
+    _create_index(db.device_tokens, [("workspaceId", ASCENDING), ("userId", ASCENDING), ("updatedAt", DESCENDING)], name="idx_device_token_user_updated")
+    db.device_tokens.create_index([("tokenHash", ASCENDING)])
+    db.device_tokens.create_index([("enabled", ASCENDING), ("updatedAt", DESCENDING)])
 
     db.settings.create_index([("workspaceId", ASCENDING)], unique=True)
 
@@ -77,7 +97,24 @@ def ensure_indexes() -> None:
     db.records.create_index([("workspaceId", ASCENDING), ("kind", ASCENDING), ("updatedAt", DESCENDING)])
     db.records.create_index([("workspaceId", ASCENDING), ("kind", ASCENDING), ("payload.date", DESCENDING)])
     db.records.create_index([("workspaceId", ASCENDING), ("kind", ASCENDING), ("payload.customerId", ASCENDING)])
+    _create_index(
+        db.records,
+        [("workspaceId", ASCENDING), ("kind", ASCENDING), ("payload.supplierId", ASCENDING)],
+        name="idx_workspace_kind_supplier",
+    )
     db.records.create_index([("workspaceId", ASCENDING), ("kind", ASCENDING), ("payload.sku", ASCENDING)])
+    _create_index(
+        db.records,
+        [("workspaceId", ASCENDING), ("kind", ASCENDING), ("payload.status", ASCENDING)],
+        name="idx_workspace_kind_status",
+    )
+    _create_index(
+        db.records,
+        [("workspaceId", ASCENDING), ("kind", ASCENDING), ("payload.operationKey", ASCENDING)],
+        unique=True,
+        name="idx_sync_operation_key",
+        partialFilterExpression={"kind": "sync_operations", "payload.operationKey": {"$exists": True}},
+    )
     db.records.create_index([("kind", ASCENDING), ("id", ASCENDING)])
     db.records.create_index([("kind", ASCENDING), ("payload.status", ASCENDING)])
     db.records.create_index([("kind", ASCENDING), ("payload.priority", ASCENDING)])
@@ -97,6 +134,12 @@ def ensure_indexes() -> None:
     db.platform_sessions.create_index([("expiresAt", ASCENDING)])
     db.platform_sessions.create_index([("revokedAt", ASCENDING)])
 
+    _create_index(db.audit_logs, [("workspaceId", ASCENDING), ("timestamp", DESCENDING)], name="idx_audit_workspace_timestamp")
+    _create_index(db.audit_logs, [("actor.id", ASCENDING), ("timestamp", DESCENDING)], name="idx_audit_actor_timestamp")
+    _create_index(db.audit_logs, [("action", ASCENDING), ("timestamp", DESCENDING)], name="idx_audit_action_timestamp")
+    db.audit_logs.create_index([("module", ASCENDING), ("timestamp", DESCENDING)])
+    db.audit_logs.create_index([("success", ASCENDING), ("timestamp", DESCENDING)])
+
 
 def mongo_counts() -> dict[str, int]:
     db = mongo_db()
@@ -108,6 +151,7 @@ def mongo_counts() -> dict[str, int]:
         "records": db.records.count_documents({}),
         "sessions": db.sessions.count_documents({}),
         "password_reset_tokens": db.password_reset_tokens.count_documents({}),
+        "device_tokens": db.device_tokens.count_documents({}),
         "settings": db.settings.count_documents({}),
         "platform_admins": db.platform_admins.count_documents({}),
         "platform_feature_flags": db.platform_feature_flags.count_documents({}),

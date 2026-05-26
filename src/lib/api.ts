@@ -110,6 +110,8 @@ export interface AssistantCommandResult {
   route: string;
   slots: Record<string, unknown>;
   warnings: string[];
+  missingSlots?: string[];
+  nextSlot?: string;
   reply: string;
   safety: {
     autoExecute: boolean;
@@ -205,6 +207,69 @@ function apiUrl(path: string) {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function requireObject(value: unknown, label: string): Record<string, unknown> {
+  if (!isObject(value)) {
+    throw new Error(`${label} response was not an object.`);
+  }
+  return value;
+}
+
+function requireStringField(value: Record<string, unknown>, field: string, label: string) {
+  if (typeof value[field] !== 'string' || value[field].length === 0) {
+    throw new Error(`${label} response is missing ${field}.`);
+  }
+}
+
+function requireArrayField(value: Record<string, unknown>, field: string, label: string) {
+  if (!Array.isArray(value[field])) {
+    throw new Error(`${label} response is missing ${field}.`);
+  }
+}
+
+function validateBootstrap(value: unknown): BackendBootstrap {
+  const bootstrap = requireObject(value, 'Bootstrap');
+  for (const field of [
+    'businesses',
+    'teamMembers',
+    'roleDefinitions',
+    'sales',
+    'customers',
+    'inventory',
+    'inventoryMovements',
+    'reports',
+    'auditLogs',
+    'billingHistory',
+    'platformOrganizations',
+    'featureFlags',
+    'supportTickets',
+  ]) {
+    requireArrayField(bootstrap, field, 'Bootstrap');
+  }
+  requireObject(bootstrap.settings, 'Settings');
+  requireStringField(bootstrap, 'plan', 'Bootstrap');
+  requireStringField(bootstrap, 'billingCycle', 'Bootstrap');
+  return bootstrap as unknown as BackendBootstrap;
+}
+
+function validateAuthResponse(value: unknown): AuthResponse {
+  const response = requireObject(value, 'Authentication');
+  const user = requireObject(response.user, 'Authentication user');
+  const session = requireObject(response.session, 'Authentication session');
+  requireStringField(user, 'id', 'Authentication user');
+  requireStringField(user, 'email', 'Authentication user');
+  requireStringField(session, 'accessToken', 'Authentication session');
+  requireStringField(session, 'refreshToken', 'Authentication session');
+  requireStringField(session, 'expiresAt', 'Authentication session');
+  return {
+    ...(response as unknown as AuthResponse),
+    bootstrap: validateBootstrap(response.bootstrap),
+  };
+}
+
 function persistedAccessToken() {
   if (typeof window === 'undefined') return null;
   try {
@@ -286,28 +351,31 @@ export async function getBootstrap(accessToken?: string) {
   const response = await request<{ bootstrap: BackendBootstrap }>('/bootstrap', {
     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
   });
-  return response.bootstrap;
+  return validateBootstrap(response.bootstrap);
 }
 
 export async function loginWithBackend(email: string, password: string) {
-  return request<AuthResponse>('/auth/login', {
+  const response = await request<unknown>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
+  return validateAuthResponse(response);
 }
 
 export async function registerWithBackend(name: string, email: string, password: string, businessName: string) {
-  return request<AuthResponse>('/auth/register', {
+  const response = await request<unknown>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ name, email, password, businessName }),
   });
+  return validateAuthResponse(response);
 }
 
 export async function refreshSession(refreshToken: string) {
-  return request<AuthResponse>('/auth/refresh', {
+  const response = await request<unknown>('/auth/refresh', {
     method: 'POST',
     body: JSON.stringify({ refreshToken }),
   });
+  return validateAuthResponse(response);
 }
 
 export async function logoutFromBackend(refreshToken?: string) {
@@ -335,7 +403,7 @@ export async function getMobileBootstrap(accessToken?: string) {
   const response = await request<{ bootstrap: BackendBootstrap }>('/mobile/bootstrap', {
     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
   });
-  return response.bootstrap;
+  return validateBootstrap(response.bootstrap);
 }
 
 export async function getEntityDetail(entity: string, id: string) {
@@ -585,6 +653,9 @@ export async function runAssistantCommandInBackend(input: {
   language?: AppLanguage;
   confirm?: boolean;
   overrides?: Record<string, unknown>;
+  draft?: AssistantCommandResult | Record<string, unknown>;
+  conversation?: AssistantCommandResult | Record<string, unknown>;
+  activeCommand?: AssistantCommandResult | Record<string, unknown>;
 }) {
   return request<{ assistantCommand: AssistantCommandResult; bootstrap?: BackendBootstrap }>('/assistant/command', {
     method: 'POST',

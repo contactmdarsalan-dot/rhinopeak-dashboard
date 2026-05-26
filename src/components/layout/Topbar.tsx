@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Bell, Building2, Languages, LogOut, Moon, Search, Sun, User } from 'lucide-react';
 import { Badge } from '@/components/ui/Primitives';
 import { planLimits } from '@/lib/domain';
@@ -61,7 +61,7 @@ export function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
   const t = (key: Parameters<typeof translate>[1]) => translate(settings.language, key);
-  const tx = (value: string) => uiText(settings.language, value);
+  const tx = useCallback((value: string) => uiText(settings.language, value), [settings.language]);
 
   const notifications = useMemo(() => {
     const month = new Date().toISOString().slice(0, 7);
@@ -88,7 +88,7 @@ export function Topbar() {
         }]
       : [];
     return [...stock, ...planUsage];
-  }, [inventory, plan, sales, settings.language]);
+  }, [inventory, plan, sales, settings.language, tx]);
 
   const activeBusiness = businesses.find((business) => business.id === activeBusinessId) ?? businesses[0];
 

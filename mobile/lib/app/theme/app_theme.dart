@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primary = Color(0xFF8A4FFF); // oklch(0.60 0.22 285) approx
-  static const Color primaryDark = Color(
-    0xFF6B31DF,
-  ); // oklch(0.50 0.20 285) approx
-  static const Color accent = Color(0xFFE25CF5); // oklch(0.65 0.18 310) approx
-  static const Color warning = Color(0xFFDB8014); // oklch(0.65 0.18 70) approx
-  static const Color success = Color(0xFF0FA871); // oklch(0.55 0.15 160) approx
-  static const Color danger = Color(0xFFD43C42); // oklch(0.55 0.20 25) approx
-  static const Color ink = Color(0xFF0F101A); // oklch(0.12 0.01 280) approx
-  static const Color muted = Color(0xFF757891); // oklch(0.55 0.03 280) approx
-  static const Color surface = Color(
-    0xFFF7F7FA,
-  ); // oklch(0.98 0.005 280) approx
+  static const Color primary = Color(0xFF0A6E46); // Forest Green
+  static const Color primaryDark = Color(0xFF085435); // Darker Forest Green
+  static const Color accent = Color(0xFFFFA733); // Warm Orange
+  static const Color warning = Color(0xFFDB8014);
+  static const Color success = Color(0xFF0FA871);
+  static const Color danger = Color(0xFFD43C42);
+  static const Color ink = Color(0xFF0F101A);
+  static const Color muted = Color(0xFF757891);
+  static const Color surface = Color(0xFFF7F7FA);
 
   static ThemeData light() {
     final colorScheme = ColorScheme.fromSeed(

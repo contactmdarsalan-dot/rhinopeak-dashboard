@@ -407,6 +407,7 @@ interface AppState {
   canAccessPage: (page: ActivePage) => boolean;
 
   addSale: (input: NewSaleInput) => boolean;
+  updateSale: (saleId: string, patch: Partial<Sale>) => void;
   updateSaleStatus: (saleId: string, status: SaleStatus) => boolean;
   softDeleteSale: (saleId: string) => boolean;
   importSales: (sales: Sale[]) => void;
@@ -1167,6 +1168,39 @@ export const useAppStore = create<AppState>()(
             backendMessage: 'Sale is saved locally; backend sync failed.',
           }));
         return true;
+      },
+
+      updateSale: (saleId, patch) => {
+        const state = get();
+        if (!roleCan(state.roleDefinitions, state.currentUser.role, 'sales.update')) {
+          set({ lastNotice: 'You need Update sales permission to edit sales.' });
+          return;
+        }
+        const sale = state.sales.find((entry) => entry.id === saleId);
+        if (!sale) return;
+        const nextPatch = {
+          ...patch,
+          auditTrail: [`Edited by ${state.currentUser.name} on ${nowStamp()}`, ...sale.auditTrail],
+          updatedAt: nowStamp(),
+        };
+        const sales = state.sales.map((entry) => (
+          entry.id === saleId ? { ...entry, ...nextPatch } : entry
+        ));
+        set({
+          sales,
+          customers: recalculateCustomers(state.customers, sales),
+          auditLogs: addAudit(state, 'Updated sale', 'Sales', `${saleId} edited.`),
+          lastNotice: `${saleId} updated.`,
+        });
+        void patchSaleInBackend(saleId, nextPatch)
+          .then(() => set({
+            backendStatus: 'online',
+            backendMessage: 'Sale update synced to the backend database.',
+          }))
+          .catch(() => set({
+            backendStatus: 'offline',
+            backendMessage: 'Sale update is saved locally; backend sync failed.',
+          }));
       },
 
       addParty: (input) => {

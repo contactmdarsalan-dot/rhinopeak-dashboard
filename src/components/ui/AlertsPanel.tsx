@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { AlertTriangle, Info, X, XCircle } from 'lucide-react';
 import { Panel, PanelHeader } from '@/components/ui/Primitives';
 import { uiFormat, uiText } from '@/lib/i18n';
@@ -21,7 +21,7 @@ type AlertItem = {
 export function AlertsPanel() {
   const { inventory, sales, plan, settings } = useAppStore();
   const [dismissed, setDismissed] = useState<string[]>([]);
-  const tx = (value: string) => uiText(settings.language, value);
+  const tx = useCallback((value: string) => uiText(settings.language, value), [settings.language]);
 
   const alerts = useMemo<AlertItem[]>(() => {
     const stockAlerts = settings.lowStockAlerts
@@ -48,7 +48,7 @@ export function AlertsPanel() {
       : [];
 
     return [...stockAlerts, ...planAlert];
-  }, [inventory, plan, sales, settings.language, settings.lowStockAlerts]);
+  }, [inventory, plan, sales, settings.language, settings.lowStockAlerts, tx]);
 
   const visible = alerts.filter((alert) => !dismissed.includes(alert.id));
 

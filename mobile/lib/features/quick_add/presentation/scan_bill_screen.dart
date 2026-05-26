@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/state/app_controller.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../services/camera_capture_service.dart';
 import '../../../shared/widgets/rp_widgets.dart';
 
 class ScanBillScreen extends ConsumerStatefulWidget {
@@ -105,8 +106,11 @@ Payment Mode:                Bank''',
   Future<void> _runScanPipeline(
     String text,
     String fileName,
-    String sourceType,
-  ) async {
+    String sourceType, {
+    String? imageDataUrl,
+    String mimeType = 'text/plain',
+    int? size,
+  }) async {
     setState(() {
       _scanStep = 1; // Uploading
       _scanId = null;
@@ -122,13 +126,18 @@ Payment Mode:                Bank''',
       final scan = await controller.uploadBillScan({
         'sourceType': sourceType,
         'fileName': fileName,
-        'mimeType': 'text/plain',
+        'mimeType': mimeType,
         'rawText': text,
-        'size': text.length,
+        'imageDataUrl': imageDataUrl ?? '',
+        'size': size ?? text.length,
       });
       final scanId = scan?['id']?.toString();
       if (scanId == null || scanId.isEmpty) {
         throw Exception("Upload failed");
+      }
+      final uploadedRawText = scan?['rawText']?.toString() ?? text;
+      if (uploadedRawText.isNotEmpty) {
+        _rawText.text = uploadedRawText;
       }
 
       // Step 2: OCR Extraction delay
@@ -137,7 +146,8 @@ Payment Mode:                Bank''',
 
       // Step 3: LLM Structuring (Custom PyTorch GPT / Gemini)
       setState(() => _scanStep = 3);
-      final parsedResult = await controller.parseBillScan(scanId, text);
+      final parsedResult =
+          await controller.parseBillScan(scanId, uploadedRawText);
       final parsed = Map<String, dynamic>.from(
         parsedResult?['parsed'] as Map? ?? {},
       );
@@ -240,6 +250,31 @@ Payment Mode:                Bank''',
       _selectedTemplateText = text;
     });
     await _runScanPipeline(text, 'mobile-bill-text.txt', 'manual');
+  }
+
+  Future<void> _captureBillImage(String source) async {
+    final image = await cameraCaptureService.captureBillImage(source: source);
+    if (image == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open camera or gallery.')),
+      );
+      return;
+    }
+    setState(() {
+      _selectedTemplateName =
+          source == 'camera' ? 'CAMERA CAPTURE' : 'GALLERY IMAGE';
+      _selectedTemplateText = null;
+      _rawText.clear();
+    });
+    await _runScanPipeline(
+      '',
+      image.fileName,
+      source,
+      imageDataUrl: image.dataUrl,
+      mimeType: image.mimeType,
+      size: image.size,
+    );
   }
 
   void _showGallerySheet(BuildContext context) {
@@ -394,27 +429,25 @@ Payment Mode:                Bank''',
   Future<void> _save() async {
     final scanId = _scanId;
     if (scanId == null) return;
-    await ref
-        .read(appControllerProvider.notifier)
-        .approveBillScan(
-          scanId: scanId,
-          targetRecordType: _target,
-          approved: {
-            'vendorName': _vendor.text.trim(),
-            'billNumber': _billNumber.text.trim(),
-            'billDate': _billDate.text.trim(),
-            'paymentMethod': _payment,
-            'vatAmount': _num(_vat.text),
-            'totalAmount': _num(_total.text),
-            'subtotal': _items.fold<num>(
-              0,
-              (sum, item) => sum + _mapNum(item, 'lineTotal'),
-            ),
-            'discountAmount': 0,
-            'items': _items,
-            'rawText': _rawText.text.trim(),
-          },
-        );
+    await ref.read(appControllerProvider.notifier).approveBillScan(
+      scanId: scanId,
+      targetRecordType: _target,
+      approved: {
+        'vendorName': _vendor.text.trim(),
+        'billNumber': _billNumber.text.trim(),
+        'billDate': _billDate.text.trim(),
+        'paymentMethod': _payment,
+        'vatAmount': _num(_vat.text),
+        'totalAmount': _num(_total.text),
+        'subtotal': _items.fold<num>(
+          0,
+          (sum, item) => sum + _mapNum(item, 'lineTotal'),
+        ),
+        'discountAmount': 0,
+        'items': _items,
+        'rawText': _rawText.text.trim(),
+      },
+    );
     setState(() {
       _scanStep = 0;
       _scanId = null;
@@ -481,8 +514,8 @@ Payment Mode:                Bank''',
               color: isDone
                   ? Colors.green.withOpacity(0.15)
                   : (isActive
-                        ? theme.colorScheme.primary.withOpacity(0.1)
-                        : Colors.transparent),
+                      ? theme.colorScheme.primary.withOpacity(0.1)
+                      : Colors.transparent),
               shape: BoxShape.circle,
               border: Border.all(color: color, width: 1.5),
             ),
@@ -498,8 +531,8 @@ Payment Mode:                Bank''',
                 color: isActive
                     ? theme.colorScheme.primary
                     : (isDone
-                          ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurfaceVariant),
+                        ? theme.colorScheme.onSurface
+                        : theme.colorScheme.onSurfaceVariant),
               ),
             ),
           ),
@@ -526,6 +559,216 @@ Payment Mode:                Bank''',
     final isMathMismatch =
         _scanId != null && (subtotal + vat - total).abs() > 0.02;
 
+    if (_scanStep > 0 && _scanStep < 5) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 40),
+              const Text(
+                'Scan QR code',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F101A),
+                ),
+              ),
+              const SizedBox(height: 50),
+              Center(
+                child: Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Top Left Corner
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                              left: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Top Right Corner
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                              right: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Bottom Left Corner
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                              left: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Bottom Right Corner
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                              right: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // QR Code icon in center
+                      const Center(
+                        child: Icon(
+                          Icons.qr_code_2_rounded,
+                          size: 150,
+                          color: Color(0xFF0FA871),
+                        ),
+                      ),
+                      // Laser animation line
+                      AnimatedBuilder(
+                        animation: _scanController,
+                        builder: (context, child) {
+                          return Positioned(
+                            top: _scanController.value * 230 + 5,
+                            left: 10,
+                            right: 10,
+                            child: Container(
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0FA871),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF0FA871)
+                                        .withOpacity(0.8),
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+              const Text(
+                'Scanning code..',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF757891),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Sliding dot timeline progress indicator
+              Center(
+                child: SizedBox(
+                  width: 180,
+                  height: 8,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        top: 3,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: 2,
+                          color: const Color(0xFF0FA871).withOpacity(0.2),
+                        ),
+                      ),
+                      AnimatedBuilder(
+                        animation: _scanController,
+                        builder: (context, child) {
+                          return Positioned(
+                            left: _scanController.value * 172,
+                            top: 0,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF0FA871),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                child: FilledButton(
+                  onPressed: () {
+                    setState(() {
+                      _scanStep = 0;
+                      _scanController.stop();
+                      _scanController.reset();
+                    });
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFA733),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(tr(ref, 'scanBill'))),
       body: SingleChildScrollView(
@@ -547,7 +790,7 @@ Payment Mode:                Bank''',
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          tr(ref, 'simulatedView'),
+                          tr(ref, 'cameraView'),
                           style: const TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 16,
@@ -557,13 +800,41 @@ Payment Mode:                Bank''',
                       TextButton.icon(
                         onPressed: state.loading
                             ? null
-                            : () => _showGallerySheet(context),
+                            : () => _captureBillImage('camera'),
+                        icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                        label: const Text(
+                          'Camera',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: colorScheme.primary,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: state.loading
+                            ? null
+                            : () => _captureBillImage('gallery'),
                         icon: const Icon(
                           Icons.photo_library_outlined,
                           size: 16,
                         ),
                         label: const Text(
                           'Gallery',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: colorScheme.primary,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: state.loading
+                            ? null
+                            : () => _showGallerySheet(context),
+                        icon: const Icon(Icons.receipt_long_outlined, size: 16),
+                        label: const Text(
+                          'Samples',
                           style: TextStyle(fontSize: 12),
                         ),
                         style: TextButton.styleFrom(
@@ -914,8 +1185,8 @@ Payment Mode:                Bank''',
                         child: OutlinedButton.icon(
                           onPressed:
                               state.loading || _rawText.text.trim().isEmpty
-                              ? null
-                              : _parseManual,
+                                  ? null
+                                  : _parseManual,
                           icon: const Icon(Icons.auto_awesome_outlined),
                           label: Text(tr(ref, 'parseBill')),
                         ),
@@ -1453,9 +1724,8 @@ class _TextField extends ConsumerWidget {
     return TextFormField(
       controller: controller,
       validator: requiredField
-          ? (value) => value == null || value.trim().isEmpty
-                ? tr(ref, 'required')
-                : null
+          ? (value) =>
+              value == null || value.trim().isEmpty ? tr(ref, 'required') : null
           : null,
       decoration: InputDecoration(
         labelText: label,

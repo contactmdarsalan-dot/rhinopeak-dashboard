@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
     ".next-translation-check/**",
     "out/**",
     "build/**",
+    "scratch/**",
     "next-env.d.ts",
   ]),
 ]);

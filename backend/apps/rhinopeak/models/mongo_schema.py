@@ -348,6 +348,11 @@ ENTITY_SCHEMAS: dict[str, EntitySchema] = {
         "required": ["id", "orgId", "orgName", "subject", "priority", "status", "assignedTo", "channel", "createdAt", "lastUpdatedAt"],
         "optional": [],
     },
+    "learningMemory": {
+        "collection": "records",
+        "required": ["id", "sourceType", "inputHash", "inputData", "intent", "slots", "confidence", "createdBy", "createdAt"],
+        "optional": ["rawResult"],
+    },
 }
 
 RECORD_SCHEMA_BY_KIND = {
@@ -376,4 +381,5 @@ RECORD_SCHEMA_BY_KIND = {
     "billing_history": "billingRecord",
     "feature_flags": "featureFlag",
     "support_tickets": "supportTicket",
+    "learning_memory": "learningMemory",
 }

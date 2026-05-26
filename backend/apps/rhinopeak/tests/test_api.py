@@ -94,10 +94,23 @@ class RhinoPeakApiTestCase(SimpleTestCase):
 
 class AuthAndCoreApiTests(RhinoPeakApiTestCase):
     def test_auth_lifecycle_health_schema_mobile_and_logout(self) -> None:
-        health = self.assert_status(self.api("GET", "/health"), 200)
+        health_response = self.api("GET", "/health")
+        self.assertIn("X-Trace-ID", health_response.headers)
+        self.assertIn("traceparent", health_response.headers)
+        self.assertEqual(health_response.headers.get("X-API-Version"), "v1")
+        health = self.assert_status(health_response, 200)
         self.assertTrue(health["ok"])
         self.assertEqual(health["database"], "mongodb")
         self.assertEqual(health["databaseName"], self.mongo_database_name)
+        versioned_health = self.assert_status(self.client.get("/api/v1/health"), 200)
+        self.assertTrue(versioned_health["ok"])
+        ready = self.assert_status(self.api("GET", "/health/ready"), 200)
+        self.assertEqual(ready["status"], "ready")
+        details = self.assert_status(self.api("GET", "/health/details"), 200)
+        self.assertIn("counts", details)
+        metrics = self.api("GET", "/metrics")
+        self.assertEqual(metrics.status_code, 200)
+        self.assertIn("rhinopeak_http_requests_total", metrics.content.decode("utf-8"))
 
         schema = self.assert_status(self.api("GET", "/schema/audit"), 200)
         self.assertEqual(schema["missingCollectionCount"], 0)
@@ -167,12 +180,24 @@ class AuthAndCoreApiTests(RhinoPeakApiTestCase):
         self.assertTrue(mobile["mobile"]["offlineCache"])
         self.assertEqual(mobile["mobile"]["recommendedSyncSeconds"], 30)
 
+        push_token = f"ios-push-token-{self.suffix}"
+        registered_push = self.assert_status(
+            self.api("POST", "/mobile/push-token", {"token": push_token, "platform": "iOS"}, token=access_token),
+            200,
+        )
+        self.assertTrue(registered_push["ok"])
+        self.assertEqual(registered_push["platform"], "ios")
+        token_doc = collection("device_tokens").find_one({"tokenHash": hash_token(push_token)})
+        self.assertIsNotNone(token_doc)
+        self.assertEqual(token_doc["userId"], registered["user"]["id"])
+        self.assertEqual(token_doc["tokenHash"], hash_token(push_token))
+
         reset_request = self.assert_status(
             self.api("POST", "/auth/password/request", {"email": email}),
             200,
         )
         self.assertTrue(reset_request["ok"])
-        self.assertRegex(reset_request["resetToken"], r"^\d{6}$")
+        self.assertRegex(reset_request["resetToken"], r"^[A-Za-z0-9_-]{32,}$")
 
         reset = self.assert_status(
             self.api(
@@ -189,7 +214,7 @@ class AuthAndCoreApiTests(RhinoPeakApiTestCase):
         self.assertTrue(reset["ok"])
 
         revoked = self.assert_status(self.api("GET", "/bootstrap", token=access_token), 401)
-        self.assertIn("Invalid", revoked["error"])
+        self.assertTrue("Invalid" in revoked["error"] or "Session revoked" in revoked["error"])
 
         logged_in_after_reset = self.assert_status(
             self.api("POST", "/auth/login", {"email": email, "password": "QaPass54321!"}),
@@ -383,6 +408,11 @@ class TenantWorkflowApiTests(RhinoPeakApiTestCase):
         self.assertEqual(sale_detail["record"]["id"], sale_id)
         self.assertIn("journalEntries", sale_detail["related"])
         self.assertIn("inventoryMovements", sale_detail["related"])
+
+        sale_page = self.assert_status(self.api("GET", "/records/sales?page=1&pageSize=1", token=token), 200)
+        self.assertEqual(sale_page["pagination"]["pageSize"], 1)
+        self.assertGreaterEqual(sale_page["pagination"]["total"], 1)
+        self.assertEqual(sale_page["data"][0]["id"], sale_id)
 
         product_detail = self.assert_status(self.api("GET", f"/details/inventory/{product_id}", token=token), 200)["detail"]
         self.assertEqual(product_detail["record"]["id"], product_id)
@@ -944,7 +974,7 @@ class TenantWorkflowApiTests(RhinoPeakApiTestCase):
                     "template": "Executive",
                     "range": "Today",
                     "status": "Ready",
-                    "format": "HTML",
+                    "format": "PDF",
                     "downloadUrl": "",
                     "scheduledAt": "",
                 },
@@ -952,7 +982,9 @@ class TenantWorkflowApiTests(RhinoPeakApiTestCase):
             ),
             200,
         )
-        self.assertEqual(report["report"]["format"], "HTML")
+        self.assertEqual(report["report"]["format"], "PDF")
+        self.assertTrue(report["report"]["downloadUrl"].startswith("data:application/pdf;base64,"))
+        self.assertTrue(report["report"]["pdfDocumentId"])
         self.assertEqual(
             self.assert_status(self.api("PATCH", f"/reports/rpt-{suffix}", {"status": "Scheduled"}, token=token), 200)["record"]["status"],
             "Scheduled",

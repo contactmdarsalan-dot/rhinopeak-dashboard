@@ -12,6 +12,14 @@
 
 # testing
 /coverage
+playwright-report/
+test-results/
+/scratch/
+/backups/
+.coverage
+backend/.coverage
+coverage.xml
+backend/coverage.xml
 
 # next.js
 /.next/
@@ -33,10 +41,19 @@
 .plyrium-forge/
 *.auth
 *.iml
-mobile/AGENTS.md
-mobile/CLAUDE.md
-mobile/GEMINI.md
-mobile/opencode.json
+
+# local AI agent instructions and tool configs
+AGENTS.md
+agents.md
+CLAUDE.md
+claude.md
+GEMINI.md
+gemini.md
+opencode.json
+.agents/
+.agent/
+.codex/
+.gemini/
 
 # debug
 *.log
@@ -59,6 +76,12 @@ venv/
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!*.env.example
+!**/.env.example
+/backend/scratch/
+/mobile/screenshot.png
+/mobile/test_bootstrap_payload.json
 
 # vercel
 .vercel

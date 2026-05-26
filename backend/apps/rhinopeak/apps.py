@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import logging
+
 from django.apps import AppConfig
+
+logger = logging.getLogger(__name__)
 
 
 class RhinoPeakConfig(AppConfig):
@@ -20,6 +24,4 @@ class RhinoPeakConfig(AppConfig):
             ensure_indexes()
         except Exception as exc:
             # Don't crash startup if MongoDB is not yet reachable
-            import sys
-            print(f"[RhinoPeak] Could not ensure indexes on startup: {exc}", file=sys.stderr)
-
+            logger.warning("Could not ensure MongoDB indexes on startup.", extra={"error": str(exc)})
