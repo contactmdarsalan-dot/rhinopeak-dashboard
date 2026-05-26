@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../features/auth/presentation/auth_screen.dart';
 import '../features/auth/presentation/onboarding_screen.dart';
 import '../features/home/presentation/app_shell.dart';
+import '../services/deep_link_service.dart';
+import '../services/push_notification_service.dart';
 import 'localization/app_strings.dart';
 import 'state/app_controller.dart';
 import 'theme/app_theme.dart';
@@ -21,7 +22,11 @@ class _RhinoPeakMobileAppState extends ConsumerState<RhinoPeakMobileApp> {
   void initState() {
     super.initState();
     Future.microtask(
-      () => ref.read(appControllerProvider.notifier).initialize(),
+      () async {
+        await deepLinkService.initialize();
+        await pushNotificationService.initialize();
+        await ref.read(appControllerProvider.notifier).initialize();
+      },
     );
   }
 
@@ -48,8 +53,8 @@ class _RhinoPeakMobileAppState extends ConsumerState<RhinoPeakMobileApp> {
       home: state.initializing
           ? const _BootScreen()
           : state.authenticated
-          ? const AppShell()
-          : const OnboardingScreen(),
+              ? const AppShell()
+              : const OnboardingScreen(),
     );
   }
 }
@@ -184,7 +189,8 @@ class _BootScreenState extends State<_BootScreen>
                   dimension: 28,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFA733)),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Color(0xFFFFA733)),
                   ),
                 ),
               ],

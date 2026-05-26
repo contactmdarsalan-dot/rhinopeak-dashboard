@@ -52,6 +52,13 @@ export default defineConfig({
       url: 'http://127.0.0.1:8000/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
+      env: {
+        RHINOPEAK_SECRET_KEY: 'playwright-secret-key-for-local-e2e-1234567890',
+        RHINOPEAK_DEBUG: '1',
+        RHINOPEAK_PRODUCTION: '0',
+        RHINOPEAK_LOG_LEVEL: 'WARNING',
+        RHINOPEAK_LOG_FORMAT: 'text',
+      },
     },
     {
       command: 'npm run dev',

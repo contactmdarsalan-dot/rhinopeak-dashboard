@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import '../../../app/state/app_controller.dart';
 import '../../../shared/widgets/rp_widgets.dart';
 
 class SubscriptionScreen extends ConsumerStatefulWidget {
@@ -62,7 +66,60 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     },
   ];
 
-  void _simulatePayment(String gateway, String tierName, double amount) {
+  bool _checkingOut = false;
+
+  Future<void> _startPayment(String gateway, String gatewayLabel) async {
+    if (_checkingOut) return;
+    final tier = _tiers[_selectedTierIndex];
+    final price = _isAnnual ? tier['annualPrice'] : tier['monthlyPrice'];
+    final amount = (price * (_isAnnual ? 12 : 1)).toDouble();
+    final tierName = tier['name'].toString();
+    setState(() => _checkingOut = true);
+    try {
+      final checkout = await ref.read(mobileRepositoryProvider).initiatePayment(
+            gateway: gateway,
+            amount: amount,
+            plan: 'pro',
+            billingCycle: _isAnnual ? 'annual' : 'monthly',
+          );
+      if (!mounted) return;
+      _showCheckoutSheet(
+        gatewayLabel: gatewayLabel,
+        tierName: tierName,
+        amount: amount,
+        checkout: checkout,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _checkingOut = false);
+    }
+  }
+
+  void _showCheckoutSheet({
+    required String gatewayLabel,
+    required String tierName,
+    required double amount,
+    required Map<String, dynamic> checkout,
+  }) {
+    final payment =
+        Map<String, dynamic>.from((checkout['payment'] as Map?) ?? const {});
+    final session =
+        Map<String, dynamic>.from((checkout['session'] as Map?) ?? const {});
+    final paymentUrl =
+        (payment['payment_url'] ?? payment['form_url'] ?? '').toString();
+    final transactionUuid =
+        (checkout['transactionUuid'] ?? session['transactionUuid'] ?? '')
+            .toString();
+    final fields =
+        Map<String, dynamic>.from((payment['fields'] as Map?) ?? const {});
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -96,7 +153,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Checkout via $gateway',
+                    'Checkout via $gatewayLabel',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
@@ -104,7 +161,8 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0A6E46).withOpacity(0.08),
                       borderRadius: BorderRadius.circular(8),
@@ -123,16 +181,32 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 16),
+              if (transactionUuid.isNotEmpty) ...[
+                const Text(
+                  'Transaction',
+                  style: TextStyle(
+                      color: Color(0xFF757891), fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                SelectableText(
+                  transactionUuid,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: Color(0xFF0F101A)),
+                ),
+                const SizedBox(height: 16),
+              ],
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
                     'Billing Term',
-                    style: TextStyle(color: Color(0xFF757891), fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        color: Color(0xFF757891), fontWeight: FontWeight.w600),
                   ),
                   Text(
                     _isAnnual ? 'Annual (20% Off)' : 'Monthly',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F101A)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Color(0xFF0F101A)),
                   ),
                 ],
               ),
@@ -142,7 +216,8 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                 children: [
                   const Text(
                     'Amount Due',
-                    style: TextStyle(color: Color(0xFF757891), fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        color: Color(0xFF757891), fontWeight: FontWeight.w600),
                   ),
                   Text(
                     'Rs ${amount.toStringAsFixed(2)}',
@@ -155,24 +230,67 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                 ],
               ),
               const SizedBox(height: 28),
-              // Simulating transaction processing state
-              _PaymentProcessingButton(
-                gateway: gateway,
-                onSuccess: () {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Successfully upgraded to $tierName!'),
-                      backgroundColor: const Color(0xFF0A6E46),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),
+              if (paymentUrl.isNotEmpty) ...[
+                SelectableText(
+                  paymentUrl,
+                  style: const TextStyle(
+                    color: Color(0xFF0A6E46),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: paymentUrl));
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Checkout link copied.')),
+                    );
+                  },
+                  icon: const Icon(Icons.copy_rounded),
+                  label: const Text('Copy Checkout Link'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    backgroundColor: const Color(0xFF0A6E46),
+                  ),
+                ),
+              ],
+              if (fields.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F7FA),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SelectableText(
+                    fields.entries
+                        .map((entry) => '${entry.key}: ${entry.value}')
+                        .join('\n'),
+                    style:
+                        const TextStyle(fontSize: 12, color: Color(0xFF0F101A)),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               TextButton(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: transactionUuid));
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Transaction reference copied.')),
+                  );
+                },
+                child: const Text('Copy Transaction Ref',
+                    style: TextStyle(color: Color(0xFF0A6E46))),
+              ),
+              TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel Payment', style: TextStyle(color: Color(0xFF757891))),
+                child: const Text('Close',
+                    style: TextStyle(color: Color(0xFF757891))),
               ),
               const SizedBox(height: 12),
             ],
@@ -184,9 +302,6 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FA),
       appBar: AppBar(
@@ -220,17 +335,26 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       children: [
                         const Text(
                           'Current Subscription Plan',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF757891), fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF757891),
+                              fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 2),
                         const Text(
                           'Free Trial Standard',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F101A)),
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F101A)),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Expires in 8 days. Upgrade to unlock all limits.',
-                          style: TextStyle(fontSize: 11.5, color: Colors.red.shade600, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              color: Colors.red.shade600,
+                              fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -275,7 +399,8 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
               itemBuilder: (context, index) {
                 final tier = _tiers[index];
                 final isSelected = _selectedTierIndex == index;
-                final price = _isAnnual ? tier['annualPrice'] : tier['monthlyPrice'];
+                final price =
+                    _isAnnual ? tier['annualPrice'] : tier['monthlyPrice'];
 
                 return GestureDetector(
                   onTap: () => setState(() => _selectedTierIndex = index),
@@ -316,10 +441,12 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                             ),
                             if (tier['isPopular'])
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
                                 decoration: const BoxDecoration(
                                   color: Color(0xFFFFA733),
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(12)),
                                 ),
                                 child: const Text(
                                   'POPULAR',
@@ -336,7 +463,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                         const SizedBox(height: 6),
                         Text(
                           tier['description'],
-                          style: const TextStyle(fontSize: 12.5, color: Color(0xFF757891), height: 1.35),
+                          style: const TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFF757891),
+                              height: 1.35),
                         ),
                         const SizedBox(height: 16),
                         Row(
@@ -345,15 +475,22 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                           children: [
                             const Text(
                               'Rs ',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F101A)),
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F101A)),
                             ),
                             Text(
                               '$price',
-                              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF0F101A)),
+                              style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F101A)),
                             ),
                             const Text(
                               ' / month',
-                              style: TextStyle(fontSize: 13, color: Color(0xFF757891)),
+                              style: TextStyle(
+                                  fontSize: 13, color: Color(0xFF757891)),
                             ),
                           ],
                         ),
@@ -362,7 +499,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
                               'Billed annually (Rs ${price * 12}/yr)',
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF0FA871), fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF0FA871),
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                         const SizedBox(height: 16),
@@ -373,12 +513,15 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 4),
                             child: Row(
                               children: [
-                                Icon(Icons.check_circle_outline_rounded, color: tier['color'], size: 16),
+                                Icon(Icons.check_circle_outline_rounded,
+                                    color: tier['color'], size: 16),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     feature,
-                                    style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F101A)),
+                                    style: const TextStyle(
+                                        fontSize: 12.5,
+                                        color: Color(0xFF0F101A)),
                                   ),
                                 ),
                               ],
@@ -393,13 +536,14 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
             ),
             const SizedBox(height: 8),
 
-            // Checkout Card if selected tier is paid
-            if (_selectedTierIndex > 0) ...[
+            // Checkout Card for online Pro upgrades
+            if (_selectedTierIndex == 1) ...[
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'Select Payment Gateway to Upgrade',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF757891)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Color(0xFF757891)),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -411,9 +555,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       logoText: 'eSewa',
                       color: const Color(0xFF60BB46),
                       onTap: () {
-                        final tier = _tiers[_selectedTierIndex];
-                        final price = _isAnnual ? tier['annualPrice'] : tier['monthlyPrice'];
-                        _simulatePayment('eSewa Pay', tier['name'], (price * (_isAnnual ? 12 : 1)).toDouble());
+                        unawaited(_startPayment('esewa', 'eSewa'));
                       },
                     ),
                   ),
@@ -423,25 +565,35 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                       logoText: 'Khalti',
                       color: const Color(0xFF5C2D91),
                       onTap: () {
-                        final tier = _tiers[_selectedTierIndex];
-                        final price = _isAnnual ? tier['annualPrice'] : tier['monthlyPrice'];
-                        _simulatePayment('Khalti SDK', tier['name'], (price * (_isAnnual ? 12 : 1)).toDouble());
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _GatewayButton(
-                      logoText: 'Stripe',
-                      color: const Color(0xFF0A6E46), // Himalayan green styled Stripe
-                      onTap: () {
-                        final tier = _tiers[_selectedTierIndex];
-                        final price = _isAnnual ? tier['annualPrice'] : tier['monthlyPrice'];
-                        _simulatePayment('Stripe Link', tier['name'], (price * (_isAnnual ? 12 : 1)).toDouble());
+                        unawaited(_startPayment('khalti', 'Khalti'));
                       },
                     ),
                   ),
                 ],
+              ),
+              if (_checkingOut) ...[
+                const SizedBox(height: 12),
+                const LinearProgressIndicator(minHeight: 3),
+              ],
+            ] else if (_selectedTierIndex == 2) ...[
+              FilledButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          'Enterprise requests are routed through support.'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.support_agent_rounded),
+                label: const Text('Contact Sales'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: const Color(0xFF0A6E46),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
               ),
             ],
             const SizedBox(height: 40),
@@ -529,54 +681,6 @@ class _GatewayButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _PaymentProcessingButton extends StatefulWidget {
-  const _PaymentProcessingButton({
-    required this.gateway,
-    required this.onSuccess,
-  });
-
-  final String gateway;
-  final VoidCallback onSuccess;
-
-  @override
-  State<_PaymentProcessingButton> createState() => _PaymentProcessingButtonState();
-}
-
-class _PaymentProcessingButtonState extends State<_PaymentProcessingButton> {
-  bool _loading = false;
-
-  void _runSimulation() {
-    setState(() => _loading = true);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => _loading = false);
-        widget.onSuccess();
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: _loading ? null : _runSimulation,
-      style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: const Color(0xFF0A6E46),
-      ),
-      child: _loading
-          ? const SizedBox.square(
-              dimension: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: Colors.white,
-              ),
-            )
-          : Text('Confirm & Pay with ${widget.gateway}'),
     );
   }
 }

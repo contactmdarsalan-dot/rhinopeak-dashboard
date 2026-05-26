@@ -783,8 +783,8 @@ List<_FieldSpec> _recordFields(
           'Format',
           Icons.file_download_outlined,
           kind: _FieldKind.select,
-          options: ['HTML', 'PDF'],
-          defaultValue: 'HTML',
+          options: ['PDF'],
+          defaultValue: 'PDF',
         ),
         _FieldSpec(
           'status',

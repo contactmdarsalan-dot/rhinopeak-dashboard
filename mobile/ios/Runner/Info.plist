@@ -24,6 +24,25 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.rhinopeak.mobile</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>rhinopeak</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>RhinoPeak sends business alerts such as low stock, payment reminders, and sync updates.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>RhinoPeak uses the camera to scan bills and receipts.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RhinoPeak imports receipt images from your photo library.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>RhinoPeak uses Face ID to protect access to sensitive business data.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

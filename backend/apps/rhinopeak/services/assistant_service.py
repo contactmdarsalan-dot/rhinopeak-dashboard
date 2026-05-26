@@ -1086,7 +1086,7 @@ def execute_assistant_command(user: dict[str, Any], command: dict[str, Any], ove
                 "template": "Executive",
                 "range": slots.get("range", "This month"),
                 "status": "Ready",
-                "format": "HTML",
+                "format": "PDF",
                 "downloadUrl": "",
                 "scheduledAt": "",
             },

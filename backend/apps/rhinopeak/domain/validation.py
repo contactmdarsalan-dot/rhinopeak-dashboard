@@ -7,23 +7,41 @@ preventing malformed data from reaching the application logic.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
+
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _validate_email(value: str) -> str:
+    email = value.strip().lower()
+    if not EMAIL_RE.match(email):
+        raise ValueError("Enter a valid email address")
+    return email
+
+
+class EmailValidatedModel(BaseModel):
+    @field_validator("email", check_fields=False)
+    @classmethod
+    def email_format(cls, value: str) -> str:
+        return _validate_email(value)
 
 
 # ── Authentication Schemas ───────────────────────────────────────────────────
 
-class LoginRequest(BaseModel):
+class LoginRequest(EmailValidatedModel):
     """Schema for user login request."""
-    email: EmailStr
+    email: str = Field(..., min_length=3, max_length=254)
     password: str = Field(..., min_length=1, max_length=128)
 
 
-class RegisterRequest(BaseModel):
+class RegisterRequest(EmailValidatedModel):
     """Schema for user registration request."""
     name: str = Field(..., min_length=1, max_length=100)
-    email: EmailStr
+    email: str = Field(..., min_length=3, max_length=254)
     password: str = Field(..., min_length=8, max_length=128)
     businessName: str = Field(..., min_length=1, max_length=200)
 
@@ -45,14 +63,14 @@ class RefreshRequest(BaseModel):
     refreshToken: str = Field(..., min_length=1)
 
 
-class PasswordResetRequest(BaseModel):
+class PasswordResetRequest(EmailValidatedModel):
     """Schema for password reset request."""
-    email: EmailStr
+    email: str = Field(..., min_length=3, max_length=254)
 
 
-class PasswordResetConfirmRequest(BaseModel):
+class PasswordResetConfirmRequest(EmailValidatedModel):
     """Schema for password reset confirmation."""
-    email: EmailStr
+    email: str = Field(..., min_length=3, max_length=254)
     token: str = Field(..., min_length=1)
     password: str = Field(..., min_length=8, max_length=128)
 
@@ -258,5 +276,10 @@ def validate_request(schema_class: type[BaseModel], data: dict[str, Any]) -> Bas
         return schema_class(**data)
     except Exception as e:
         errors = e.errors() if hasattr(e, 'errors') else [{"msg": str(e)}]
-        error_messages = [err.get('msg', str(err)) for err in errors]
+        error_messages = []
+        for err in errors:
+            loc = err.get('loc') if isinstance(err, dict) else None
+            field = str(loc[-1]) if loc else "Payload"
+            label = field[:1].upper() + field[1:]
+            error_messages.append(f"{label}: {err.get('msg', str(err))}")
         raise AppError(400, f"Validation error: {'; '.join(error_messages)}")

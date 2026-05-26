@@ -1,27 +1,31 @@
-# SMS Delivery Service — placeholder stubs for Nepal carriers
-# TODO: implement real SMS sending for production use.
-#
-# Recommended providers for Nepal:
-#   • Twilio (international, supports Nepal numbers)
-#     Docs: https://www.twilio.com/docs/sms
-#     Env:  TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
-#   • NTC Nepal Telecom SMS Gateway
-#     Contact Nepal Telecom for API access credentials
-#   • Sparrow SMS
-#     Docs: https://sparrowsms.com/developers
+from __future__ import annotations
 
+import logging
 import os
-from typing import Optional
+
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER", "")
+SMS_PROVIDER = os.environ.get("RHINOPEAK_SMS_PROVIDER", "twilio").strip().lower()
+
+
+def sms_configured() -> bool:
+    """Return True when a production SMS provider is ready."""
+    if SMS_PROVIDER != "twilio":
+        return False
+    return bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER)
 
 
 def _send_sms_via_twilio(to_phone: str, message: str) -> bool:
-    """Send SMS via Twilio. Returns True on success, False on failure."""
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
-        print(f"[SMS] Twilio not configured. Would send to {to_phone}: {message[:80]}")
+    if not sms_configured():
+        logger.warning(
+            "SMS provider is not configured.",
+            extra={"provider": SMS_PROVIDER, "production": getattr(settings, "PRODUCTION", False)},
+        )
         return False
 
     try:
@@ -33,35 +37,39 @@ def _send_sms_via_twilio(to_phone: str, message: str) -> bool:
             from_=TWILIO_FROM_NUMBER,
             to=to_phone,
         )
-        print(f"[SMS] Sent to {to_phone}: {message[:80]}")
+        logger.info("SMS sent.", extra={"provider": "twilio", "to_phone": to_phone[-4:]})
         return True
-    except Exception as e:
-        print(f"[SMS] Failed to send to {to_phone}: {e}")
+    except Exception as error:
+        logger.exception(
+            "SMS delivery failed.",
+            extra={"provider": "twilio", "to_phone": to_phone[-4:], "error_type": type(error).__name__},
+        )
         return False
 
 
 def send_sms(to_phone: str, message: str) -> bool:
     """
     Dispatch SMS to the configured provider.
-    Currently supports Twilio only; add more providers as needed.
 
-    Args:
-        to_phone: E.164 format (e.g., +97798xxxxxxxx)
-        message: SMS body text (max 160 chars for single SMS)
-
-    Returns:
-        True if sent successfully, False otherwise.
+    The service returns False when credentials are missing so product flows can
+    fall back to email or in-app notifications without crashing user actions.
     """
-    return _send_sms_via_twilio(to_phone, message)
+    clean_phone = str(to_phone or "").strip()
+    clean_message = str(message or "").strip()
+    if not clean_phone or not clean_message:
+        logger.warning("SMS skipped because phone or message was empty.")
+        return False
+    if SMS_PROVIDER == "twilio":
+        return _send_sms_via_twilio(clean_phone, clean_message[:1600])
+    logger.error("Unsupported SMS provider configured.", extra={"provider": SMS_PROVIDER})
+    return False
 
 
 def send_payment_receipt_sms(to_phone: str, workspace_name: str, plan: str, amount: str) -> bool:
-    """Send payment confirmation SMS after successful plan upgrade."""
     msg = f"RhinoPeak: Payment of NPR {amount} received for {workspace_name} ({plan} plan). Thank you!"
     return send_sms(to_phone, msg)
 
 
 def send_team_invite_sms(to_phone: str, workspace_name: str, inviter_name: str) -> bool:
-    """Send team invite via SMS as alternative to email."""
     msg = f"RhinoPeak: {inviter_name} invited you to join {workspace_name}. Log in to accept: https://app.rhinopeak.com/invite"
     return send_sms(to_phone, msg)

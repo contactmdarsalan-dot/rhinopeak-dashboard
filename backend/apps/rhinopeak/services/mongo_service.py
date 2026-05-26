@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import secrets
 import re
+import logging
+import base64
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -12,10 +14,11 @@ from pymongo.errors import DuplicateKeyError, OperationFailure
 from apps.rhinopeak.data.mongo import collection, mongo_counts, ping_mongo, strip_mongo_id
 from apps.rhinopeak.domain.constants import EMPTY_SETTINGS, SYSTEM_ROLES
 from apps.rhinopeak.domain.errors import AppError
-from apps.rhinopeak.domain.security import hash_password, hash_token, make_id, new_token, verify_password
+from apps.rhinopeak.domain.security import hash_password, hash_token, make_id, new_reset_token, new_token, verify_password
 from apps.rhinopeak.models.mongo_schema import ENTITY_SCHEMAS, RECORD_SCHEMA_BY_KIND
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+logger = logging.getLogger(__name__)
 
 PLATFORM_FEATURE_FLAG_DEFAULTS = [
     {
@@ -489,7 +492,7 @@ def normalize_record_payload(kind: str, payload: dict[str, Any], existing_payloa
         record.setdefault("template", "Executive")
         record.setdefault("range", "Custom")
         record.setdefault("status", "Ready")
-        record.setdefault("format", "HTML")
+        record.setdefault("format", "PDF")
         record.setdefault("createdBy", "")
         record.setdefault("downloadUrl", "")
         record.setdefault("scheduledAt", "")
@@ -797,6 +800,39 @@ def list_records(workspace_id: str, kind: str) -> list[dict[str, Any]]:
     ]
 
 
+def list_records_page(
+    workspace_id: str,
+    kind: str,
+    page: int = 1,
+    page_size: int = 50,
+    sort_by: str = "createdAt",
+    sort_order: str = "desc",
+    include_deleted: bool = False,
+) -> dict[str, Any]:
+    page = max(1, int(page or 1))
+    page_size = min(200, max(1, int(page_size or 50)))
+    sort_field = sort_by if sort_by in {"createdAt", "updatedAt", "id"} else "createdAt"
+    sort_direction = 1 if sort_order == "asc" else -1
+    query: dict[str, Any] = {"workspaceId": workspace_id, "kind": kind}
+    if not include_deleted:
+        query["deletedAt"] = None
+
+    offset = (page - 1) * page_size
+    total = collection("records").count_documents(query)
+    rows = collection("records").find(query).sort(sort_field, sort_direction).skip(offset).limit(page_size)
+    return {
+        "data": [dict(row.get("payload", {})) for row in rows],
+        "pagination": {
+            "page": page,
+            "pageSize": page_size,
+            "total": total,
+            "totalPages": (total + page_size - 1) // page_size if total else 0,
+            "hasNext": offset + page_size < total,
+            "hasPrevious": page > 1,
+        },
+    }
+
+
 def list_records_recent(workspace_id: str, kind: str, days: int = 90) -> list[dict[str, Any]]:
     """
     Fetch only records created within the last `days` days for a given kind.
@@ -849,9 +885,66 @@ def ensure_indexes() -> None:
             )
         except Exception:
             pass
-        print("[MongoDB] Indexes ensured.")
+        create_index_if_missing(
+            "records",
+            [("workspaceId", 1), ("kind", 1), ("payload.operationKey", 1)],
+            name="idx_sync_operation_key",
+            unique=True,
+            partialFilterExpression={"kind": "sync_operations", "payload.operationKey": {"$exists": True}},
+            background=True,
+        )
+        create_index_if_missing(
+            "records",
+            [("workspaceId", 1), ("kind", 1), ("payload.status", 1)],
+            name="idx_workspace_kind_status",
+            background=True,
+        )
+        create_index_if_missing(
+            "records",
+            [("workspaceId", 1), ("kind", 1), ("payload.supplierId", 1)],
+            name="idx_workspace_kind_supplier",
+            background=True,
+        )
+        create_index_if_missing(
+            "audit_logs",
+            [("workspaceId", 1), ("timestamp", -1)],
+            name="idx_audit_workspace_timestamp",
+            background=True,
+        )
+        create_index_if_missing(
+            "audit_logs",
+            [("actor.id", 1), ("timestamp", -1)],
+            name="idx_audit_actor_timestamp",
+            background=True,
+        )
+        create_index_if_missing(
+            "audit_logs",
+            [("action", 1), ("timestamp", -1)],
+            name="idx_audit_action_timestamp",
+            background=True,
+        )
+        create_index_if_missing(
+            "payment_sessions",
+            [("workspaceId", 1), ("status", 1), ("createdAt", -1)],
+            name="idx_payment_workspace_status_created",
+            background=True,
+        )
+        create_index_if_missing(
+            "device_tokens",
+            [("workspaceId", 1), ("userId", 1), ("tokenHash", 1)],
+            name="idx_device_token_unique",
+            unique=True,
+            background=True,
+        )
+        create_index_if_missing(
+            "device_tokens",
+            [("workspaceId", 1), ("userId", 1), ("updatedAt", -1)],
+            name="idx_device_token_user_updated",
+            background=True,
+        )
+        logger.info("MongoDB indexes ensured.")
     except Exception as exc:
-        print(f"[MongoDB] Could not create indexes: {exc}")
+        logger.warning("Could not create MongoDB indexes.", extra={"error": str(exc)})
 
 
 DETAIL_ROUTE_KINDS = {
@@ -879,6 +972,59 @@ DETAIL_ROUTE_KINDS = {
     "feature-flags": "feature_flags",
     "support-tickets": "support_tickets",
 }
+
+
+LIST_ROUTE_PERMISSIONS = {
+    "sales": "sales.view",
+    "customers": "customers.view",
+    "suppliers": "customers.view",
+    "credit-ledger": "customers.view",
+    "parties": "parties.view",
+    "party-ledger": "parties.view",
+    "purchases": "purchases.view",
+    "expenses": "expenses.view",
+    "cash-bank-accounts": "cashbank.view",
+    "money-movements": "cashbank.view",
+    "journal-entries": "accounting.view",
+    "documents": "documents.view",
+    "bill-scans": "documents.view",
+    "reminder-templates": "documents.view",
+    "reminders": "documents.view",
+    "sync-operations": "sync.manage",
+    "inventory": "inventory.view",
+    "inventory-movements": "inventory.view",
+    "reports": "reports.view",
+    "audit-logs": "team.view",
+    "billing-history": "reports.view",
+    "feature-flags": "team.view",
+    "support-tickets": "team.view",
+}
+
+
+def list_entity_records(
+    user: dict[str, Any],
+    entity: str,
+    page: int = 1,
+    page_size: int = 50,
+    sort_by: str = "createdAt",
+    sort_order: str = "desc",
+    include_deleted: bool = False,
+) -> dict[str, Any]:
+    kind = DETAIL_ROUTE_KINDS.get(entity)
+    if not kind:
+        raise AppError(404, "Record list route not found.")
+    permission = LIST_ROUTE_PERMISSIONS.get(entity)
+    if permission:
+        require_permission(user, permission)
+    return list_records_page(
+        user["workspaceId"],
+        kind,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        include_deleted=include_deleted,
+    )
 
 
 def detail_payload(user: dict[str, Any], entity: str, record_id: str) -> dict[str, Any]:
@@ -1037,18 +1183,25 @@ def crud_kind_for(entity: str) -> tuple[str, str, str]:
 
 
 def create_audit(workspace_id: str, user_name: str, action: str, module: str, detail: str) -> None:
+    audit_record = {
+        "id": make_id("AUD"),
+        "user": user_name,
+        "action": action,
+        "module": module,
+        "detail": detail,
+        "createdAt": iso_now(),
+    }
     put_record(
         workspace_id,
         "audit_logs",
-        {
-            "id": make_id("AUD"),
-            "user": user_name,
-            "action": action,
-            "module": module,
-            "detail": detail,
-            "createdAt": iso_now(),
-        },
+        audit_record,
     )
+    try:
+        from apps.rhinopeak.services.audit_service import create_structured_audit
+
+        create_structured_audit(workspace_id, user_name, action, module, detail)
+    except Exception as exc:
+        logger.debug("Structured audit write skipped: %s", exc)
 
 
 def platform_organizations() -> list[dict[str, Any]]:
@@ -1453,7 +1606,7 @@ def request_password_reset(data: dict[str, Any]) -> dict[str, Any]:
     user = collection("users").find_one({"emailNormalized": normalize_email(email)})
     if user is None:
         return response
-    token = f"{secrets.randbelow(1_000_000):06d}"
+    token = new_reset_token()
     collection("password_reset_tokens").insert_one(
         {
             "id": make_id("rst"),
@@ -1472,7 +1625,7 @@ def request_password_reset(data: dict[str, Any]) -> dict[str, Any]:
         from apps.rhinopeak.services.email_service import send_password_reset
         send_password_reset(email, token, user.get('name', ''))
     except Exception as email_err:
-        print(f'[Email] Error sending reset email: {email_err}')
+        logger.warning("Password reset email failed.", extra={"email": email, "error": str(email_err)})
     return response
 
 
@@ -2113,6 +2266,32 @@ def create_reminder_log(user: dict[str, Any], payload: dict[str, Any]) -> dict[s
     return {"log": log, "bootstrap": bootstrap_payload(user)}
 
 
+def register_device_token(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    token = require_text(payload, "token", "Device token")
+    platform = str(payload.get("platform") or "mobile").strip().lower()[:32]
+    now = iso_now()
+    token_hash = hash_token(token)
+    collection("device_tokens").update_one(
+        {"workspaceId": user["workspaceId"], "userId": user["id"], "tokenHash": token_hash},
+        {
+            "$set": {
+                "workspaceId": user["workspaceId"],
+                "userId": user["id"],
+                "tokenHash": token_hash,
+                "token": token,
+                "platform": platform,
+                "enabled": bool(payload.get("enabled", True)),
+                "lastSeenAt": now,
+                "updatedAt": now,
+            },
+            "$setOnInsert": {"id": make_id("DVT"), "createdAt": now},
+        },
+        upsert=True,
+    )
+    create_audit(user["workspaceId"], user["name"], "Registered device token", "Notifications", platform)
+    return {"ok": True, "platform": platform}
+
+
 def push_sync_operation(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     require_permission(user, "sync.manage")
     operation = dict(payload)
@@ -2121,10 +2300,66 @@ def push_sync_operation(user: dict[str, Any], payload: dict[str, Any]) -> dict[s
     existing = collection("records").find_one({"workspaceId": user["workspaceId"], "kind": "sync_operations", "payload.operationKey": operation["operationKey"]})
     if existing:
         return {"operation": strip_mongo_id(existing).get("payload", {}), "bootstrap": bootstrap_payload(user)}
-    operation["status"] = "Synced"
+    replay_result = _replay_sync_operation(user, operation)
+    operation["status"] = str(operation.get("status") or "Synced")
     operation["syncedAt"] = iso_now()
     operation = put_record(user["workspaceId"], "sync_operations", operation)
+    if replay_result:
+        operation["result"] = replay_result
     return {"operation": operation, "bootstrap": bootstrap_payload(user)}
+
+
+def _replay_sync_operation(user: dict[str, Any], operation: dict[str, Any]) -> dict[str, Any] | None:
+    entity = str(operation.get("entity") or operation.get("entityType") or "").strip()
+    entity_id = str(operation.get("entityId") or "").strip()
+    action = str(operation.get("action") or operation.get("operation") or "").strip().lower()
+    data = operation.get("payload", operation.get("data", {}))
+    if not entity or action not in {"create", "update", "delete"} or not isinstance(data, dict):
+        return None
+
+    if not entity_id:
+        entity_id = str(data.get("id", "")).strip()
+    if entity_id:
+        data = {**data, "id": entity_id}
+
+    entity = entity.replace("_", "-")
+    try:
+        if entity == "sales":
+            if action == "create":
+                return {"entity": entity, "record": create_sale(user, data).get("sale")}
+            if action == "update":
+                return {"entity": entity, "record": patch_sale(user, entity_id, data).get("sale")}
+            return {"entity": entity, "deleted": delete_sale(user, entity_id).get("ok", False)}
+        if entity == "customers":
+            if action == "create":
+                return {"entity": entity, "record": create_customer(user, data).get("customer")}
+            if action == "update":
+                return {"entity": entity, "record": update_customer(user, entity_id, data).get("customer")}
+            return {"entity": entity, "deleted": delete_generic_record(user, entity, entity_id).get("ok", False)}
+        if entity == "inventory":
+            if action == "create":
+                return {"entity": entity, "record": create_product(user, data).get("product")}
+            if action == "update":
+                return {"entity": entity, "record": update_generic_record(user, entity, entity_id, data).get("record")}
+            return {"entity": entity, "deleted": delete_generic_record(user, entity, entity_id).get("ok", False)}
+        if entity == "expenses":
+            if action == "create":
+                return {"entity": entity, "record": create_expense(user, data).get("expense")}
+            if action == "update":
+                return {"entity": entity, "record": update_expense(user, entity_id, data).get("expense")}
+            return {"entity": entity, "deleted": delete_expense(user, entity_id).get("ok", False)}
+        if entity == "purchases":
+            if action == "create":
+                return {"entity": entity, "record": create_purchase(user, data).get("purchase")}
+            if action == "update":
+                return {"entity": entity, "record": update_purchase(user, entity_id, data).get("purchase")}
+            return {"entity": entity, "deleted": delete_purchase(user, entity_id).get("ok", False)}
+    except AppError as error:
+        operation["status"] = "Failed"
+        operation["lastError"] = error.message
+        return {"entity": entity, "error": error.message}
+
+    return None
 
 
 def create_product(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
@@ -2401,14 +2636,98 @@ def create_report(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, An
     report.setdefault("template", "Executive")
     report.setdefault("range", "Custom")
     report.setdefault("status", "Ready")
-    report.setdefault("format", "HTML")
+    report.setdefault("format", "PDF")
     report.setdefault("createdBy", user["name"])
     report.setdefault("downloadUrl", "")
     report.setdefault("scheduledAt", "")
     report.setdefault("createdAt", iso_now())
+    if not report.get("downloadUrl"):
+        document = _create_report_pdf_document(user, report)
+        report["pdfDocumentId"] = document["id"]
+        report["downloadUrl"] = document["dataUrl"]
+        report["format"] = "PDF"
     report = put_record(user["workspaceId"], "reports", report)
     create_audit(user["workspaceId"], user["name"], "Generated report", "Reports", report.get("title", report["id"]))
     return {"report": report}
+
+
+def _create_report_pdf_document(user: dict[str, Any], report: dict[str, Any]) -> dict[str, Any]:
+    workspace = workspace_for(user)
+    kpis = get_dashboard_kpis(user["workspaceId"])
+    lines = [
+        str(report.get("title") or "RhinoPeak Report"),
+        f"Workspace: {workspace.get('name', user.get('workspaceId'))}",
+        f"Type: {report.get('type', 'Executive')}",
+        f"Range: {report.get('range', 'Custom')}",
+        f"Generated by: {user.get('name', '')}",
+        f"Generated at: {iso_now()}",
+        "",
+        f"Today revenue: NPR {float(kpis.get('todayRevenue', 0)):,.2f}",
+        f"Month revenue: NPR {float(kpis.get('monthRevenue', 0)):,.2f}",
+        f"Total sales: {kpis.get('totalSales', 0)}",
+        f"Low stock count: {kpis.get('lowStockCount', 0)}",
+        f"Customer count: {kpis.get('customerCount', 0)}",
+    ]
+    pdf = _simple_pdf_bytes(lines)
+    data_url = "data:application/pdf;base64," + base64.b64encode(pdf).decode("ascii")
+    return put_record(
+        user["workspaceId"],
+        "documents",
+        {
+            "id": f"{report['id']}-pdf",
+            "recordType": "Report",
+            "recordId": report["id"],
+            "name": str(report.get("title") or "RhinoPeak Report"),
+            "fileName": f"{report['id']}.pdf",
+            "mimeType": "application/pdf",
+            "size": len(pdf),
+            "dataUrl": data_url,
+            "uploadedBy": user.get("name", ""),
+            "createdAt": iso_now(),
+        },
+    )
+
+
+def _simple_pdf_bytes(lines: list[str]) -> bytes:
+    escaped_lines = [_pdf_escape(line[:100]) for line in lines]
+    text_commands = ["BT", "/F1 12 Tf", "72 760 Td", "16 TL"]
+    for index, line in enumerate(escaped_lines):
+        if index:
+            text_commands.append("T*")
+        text_commands.append(f"({line}) Tj")
+    text_commands.append("ET")
+    stream = "\n".join(text_commands).encode("latin-1", errors="replace")
+
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream",
+    ]
+    parts = [b"%PDF-1.4\n"]
+    offsets = [0]
+    for idx, obj in enumerate(objects, start=1):
+        offsets.append(sum(len(part) for part in parts))
+        parts.append(f"{idx} 0 obj\n".encode("ascii") + obj + b"\nendobj\n")
+    xref_offset = sum(len(part) for part in parts)
+    xref = [b"xref\n", f"0 {len(objects) + 1}\n".encode("ascii"), b"0000000000 65535 f \n"]
+    for offset in offsets[1:]:
+        xref.append(f"{offset:010d} 00000 n \n".encode("ascii"))
+    parts.extend(
+        xref
+        + [
+            b"trailer\n",
+            f"<< /Size {len(objects) + 1} /Root 1 0 R >>\n".encode("ascii"),
+            b"startxref\n",
+            str(xref_offset).encode("ascii") + b"\n%%EOF\n",
+        ]
+    )
+    return b"".join(parts)
+
+
+def _pdf_escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
 def update_settings(user: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
@@ -2638,7 +2957,7 @@ def invite_user(user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]
             invite_token,
         )
     except Exception as email_err:
-        print(f'[Email] Error sending invite email: {email_err}')
+        logger.warning("Team invite email failed.", extra={"email": email, "error": str(email_err)})
     return {"user": user_payload(invited)}
 
 

@@ -1,35 +1,45 @@
 from __future__ import annotations
-import os
-import json
+
+import base64
 import hashlib
 import hmac
-import base64
-from typing import Any
+import json
+import os
 from hmac import compare_digest
+from typing import Any
 from urllib.parse import urlencode
 
-# eSewa config — sandbox/test mode
-# Register at https://developer.esewa.com.np/ for live credentials.
-# EPAYTEST / 8gBm/:&EnhH.1/q are eSewa's official sandbox merchant+key.
-ESEWA_MERCHANT_CODE = os.environ.get("ESEWA_MERCHANT_CODE", "EPAYTEST")
-ESEWA_SECRET_KEY    = os.environ.get("ESEWA_SECRET_KEY", "")          # eSewa sandbox shared secret
-ESEWA_BASE_URL      = os.environ.get("ESEWA_BASE_URL", "https://rc-epay.esewa.com.np")  # sandbox
-ESEWA_VERIFY_URL    = os.environ.get("ESEWA_VERIFY_URL", f"{ESEWA_BASE_URL}/api/epay/main/v2/form")
+from django.conf import settings
 
-# Khalti config — sandbox/test mode
-# Get test keys from https://dashboard.khalti.com/merchant/
-# test_public_key / test_secret_key are Khalti's official sandbox keys.
+from apps.rhinopeak.domain.errors import AppError
+
+# eSewa sandbox defaults. Live deployments must provide real credentials.
+ESEWA_MERCHANT_CODE = os.environ.get("ESEWA_MERCHANT_CODE", "EPAYTEST")
+ESEWA_SECRET_KEY = os.environ.get("ESEWA_SECRET_KEY", "")
+ESEWA_BASE_URL = os.environ.get("ESEWA_BASE_URL", "https://rc-epay.esewa.com.np")
+
+# Khalti sandbox defaults. Live deployments must provide real credentials.
 KHALTI_PUBLIC_KEY = os.environ.get("KHALTI_PUBLIC_KEY", "")
 KHALTI_SECRET_KEY = os.environ.get("KHALTI_SECRET_KEY", "")
-KHALTI_BASE_URL   = os.environ.get("KHALTI_BASE_URL", "https://a.khalti.com")  # sandbox
+KHALTI_BASE_URL = os.environ.get("KHALTI_BASE_URL", "https://a.khalti.com")
 
 FRONTEND_URL = os.environ.get("RHINOPEAK_FRONTEND_URL", "http://localhost:3000")
-BACKEND_URL  = os.environ.get("RHINOPEAK_BACKEND_URL",  "http://localhost:8000")
+BACKEND_URL = os.environ.get("RHINOPEAK_BACKEND_URL", "http://localhost:8000")
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# eSewa
-# ─────────────────────────────────────────────────────────────────────────
+def _demo_payments_allowed() -> bool:
+    """Allow demo gateways in local/test only unless explicitly enabled."""
+    explicit = os.environ.get("RHINOPEAK_ALLOW_DEMO_PAYMENTS")
+    if explicit is not None:
+        return explicit == "1"
+    return not getattr(settings, "PRODUCTION", False)
+
+
+def _require_gateway_secret(gateway: str, secret: str) -> None:
+    if secret or _demo_payments_allowed():
+        return
+    raise AppError(503, f"{gateway} live payment credentials are not configured.")
+
 
 def generate_esewa_signature(message: str, secret: str) -> str:
     """HMAC-SHA256 signature for eSewa v2 form submission."""
@@ -39,87 +49,61 @@ def generate_esewa_signature(message: str, secret: str) -> str:
 
 
 def initiate_esewa_payment(transaction_uuid: str, amount: float, plan: str) -> dict[str, Any]:
-    """
-    Build eSewa v2 payment form payload for frontend auto-submit.
-
-    The frontend posts this to eSewa's form URL and eSewa redirects the
-    browser to success_url / failure_url after the user completes payment.
-    """
+    """Build an eSewa v2 payment form payload."""
+    _require_gateway_secret("eSewa", ESEWA_SECRET_KEY)
     if not ESEWA_SECRET_KEY:
         return {
-            "gateway":    "esewa",
-            "mode":       "demo",
+            "gateway": "esewa",
+            "mode": "demo",
             "payment_url": f"{FRONTEND_URL}/billing?payment=esewa_demo&transaction={transaction_uuid}",
-            "note":       "No ESEWA_SECRET_KEY set - demo mode. Set it before enabling live payments.",
+            "note": "No ESEWA_SECRET_KEY set - demo mode. Set it before enabling live payments.",
         }
 
     total_amount = str(int(round(amount)))
-    product_code = ESEWA_MERCHANT_CODE
-
-    # eSewa v2: sign "total_amount,transaction_uuid,product_code"
-    signed_message = f"total_amount={total_amount},transaction_uuid={transaction_uuid},product_code={product_code}"
+    signed_message = (
+        f"total_amount={total_amount},"
+        f"transaction_uuid={transaction_uuid},"
+        f"product_code={ESEWA_MERCHANT_CODE}"
+    )
     signature = generate_esewa_signature(signed_message, ESEWA_SECRET_KEY)
 
     return {
-        "gateway":     "esewa",
-        "mode":       "live",
-        "form_url":   f"{ESEWA_BASE_URL}/api/epay/main/v2/form",
+        "gateway": "esewa",
+        "mode": "live",
+        "form_url": f"{ESEWA_BASE_URL}/api/epay/main/v2/form",
         "fields": {
-            "amount":              total_amount,
-            "tax_amount":          "0",
-            "total_amount":        total_amount,
-            "transaction_uuid":    transaction_uuid,
-            "product_code":        product_code,
-            "product_service_charge":  "0",
+            "amount": total_amount,
+            "tax_amount": "0",
+            "total_amount": total_amount,
+            "transaction_uuid": transaction_uuid,
+            "product_code": ESEWA_MERCHANT_CODE,
+            "product_service_charge": "0",
             "product_delivery_charge": "0",
-            "success_url":  f"{BACKEND_URL}/api/payments/esewa/callback?plan={plan}",
-            "failure_url":  f"{FRONTEND_URL}/billing?error=payment_failed",
+            "success_url": f"{BACKEND_URL}/api/payments/esewa/callback?plan={plan}",
+            "failure_url": f"{FRONTEND_URL}/billing?error=payment_failed",
             "signed_field_names": "total_amount,transaction_uuid,product_code",
-            "signature":         signature,
+            "signature": signature,
         },
     }
 
 
 def verify_esewa_payment(oid: str, amt: str, refId: str) -> dict[str, Any]:
-    """
-    Verify a completed eSewa payment via server-to-server API call.
-
-    eSewa redirects the browser to success_url?oid=...&amt=...&refId=...
-    We then call eSewa's verification endpoint to confirm the transaction
-    is genuinely completed on their end before activating the plan.
-
-    Args:
-        oid:    Original transaction UUID (our payment session ID)
-        amt:    Amount string as received in callback
-        refId:  eSewa's transaction reference code
-
-    Returns:
-        {"success": True/False, "transaction_uuid": ..., "transaction_code": ..., "amount": ...}
-    """
-    if not ESEWA_SECRET_KEY or ESEWA_SECRET_KEY == "":
-        # Demo mode — trust the callback params
+    """Verify a completed eSewa payment via server-to-server API call."""
+    _require_gateway_secret("eSewa", ESEWA_SECRET_KEY)
+    if not ESEWA_SECRET_KEY:
         return {
-            "success":          True,
-            "mode":             "demo",
+            "success": True,
+            "mode": "demo",
             "transaction_uuid": oid,
-            "amount":           amt,
+            "amount": amt,
             "transaction_code": refId,
-            "note":             "Demo mode — ESEWA_SECRET_KEY not set.",
+            "note": "Demo mode - ESEWA_SECRET_KEY not set.",
         }
 
-    # Build verification request per eSewa v2 API
-    # The backend receives ?oid=...&amt=...&refId=... on success
-    # We need to POST to eSewa's verify endpoint with: q=su, oid, amt, refId
-    import urllib.request
     import urllib.error
+    import urllib.request
 
-    params = {
-        "q":     "su",
-        "oid":   oid,
-        "amt":   amt,
-        "refId": refId,
-    }
-    query = urlencode(params)
+    query = urlencode({"q": "su", "oid": oid, "amt": amt, "refId": refId})
     verify_url = f"{ESEWA_BASE_URL}/api/epay/main/v2/form?{query}"
 
     try:
@@ -131,37 +115,23 @@ def verify_esewa_payment(oid: str, amt: str, refId: str) -> dict[str, Any]:
         with urllib.request.urlopen(req, timeout=15) as resp:
             result_text = resp.read().decode("utf-8")
 
-        # eSewa returns XML: <response><response_code>Success</response_code>...</response>
         if "Success" in result_text:
             return {
-                "success":          True,
+                "success": True,
                 "transaction_uuid": oid,
-                "amount":           amt,
+                "amount": amt,
                 "transaction_code": refId,
             }
-        else:
-            return {
-                "success": False,
-                "error":   f"eSewa verify rejected: {result_text.strip()[:200]}",
-            }
-    except urllib.error.HTTPError as e:
-        return {
-            "success": False,
-            "error":   f"HTTP {e.code}: {e.reason}",
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "error":   str(e),
-        }
+        return {"success": False, "error": f"eSewa verify rejected: {result_text.strip()[:200]}"}
+    except urllib.error.HTTPError as error:
+        return {"success": False, "error": f"HTTP {error.code}: {error.reason}"}
+    except Exception as error:
+        return {"success": False, "error": str(error)}
 
 
 def verify_esewa_callback(encoded_data: str) -> dict[str, Any]:
-    """Verify the base64 JSON callback payload used by eSewa v2 redirects.
-
-    Kept for compatibility with older call sites and tests while the newer
-    server-to-server verification flow uses verify_esewa_payment().
-    """
+    """Verify the base64 JSON callback payload used by eSewa v2 redirects."""
+    _require_gateway_secret("eSewa", ESEWA_SECRET_KEY)
     if not ESEWA_SECRET_KEY:
         return {
             "success": False,
@@ -175,9 +145,7 @@ def verify_esewa_callback(encoded_data: str) -> dict[str, Any]:
         return {"success": False, "error": "Invalid eSewa callback payload."}
 
     signature = str(payload.get("signature", ""))
-    signed_field_names = str(
-        payload.get("signed_field_names", "total_amount,transaction_uuid,product_code")
-    )
+    signed_field_names = str(payload.get("signed_field_names", "total_amount,transaction_uuid,product_code"))
     signed_fields = [field.strip() for field in signed_field_names.split(",") if field.strip()]
     signed_message = ",".join(f"{field}={payload.get(field, '')}" for field in signed_fields)
     expected_signature = generate_esewa_signature(signed_message, ESEWA_SECRET_KEY)
@@ -198,10 +166,6 @@ def verify_esewa_callback(encoded_data: str) -> dict[str, Any]:
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# Khalti
-# ─────────────────────────────────────────────────────────────────────────
-
 def initiate_khalti_payment(
     transaction_uuid: str,
     amount: float,
@@ -209,42 +173,40 @@ def initiate_khalti_payment(
     customer_name: str = "",
     customer_email: str = "",
 ) -> dict[str, Any]:
-    """
-    Initiate Khalti payment session via their API.
-
-    Returns {"payment_url": ..., "pidx": ...} on success.
-    The frontend should redirect the user to payment_url.
-    """
+    """Initiate Khalti payment session via their API."""
+    _require_gateway_secret("Khalti", KHALTI_SECRET_KEY)
     if not KHALTI_SECRET_KEY:
         return {
-            "gateway":    "khalti",
-            "mode":       "demo",
+            "gateway": "khalti",
+            "mode": "demo",
             "payment_url": f"https://test-pay.khalti.com/?pidx=demo_{transaction_uuid}",
-            "pidx":        f"demo_{transaction_uuid}",
-            "note":        "No KHALTI_SECRET_KEY set — demo mode.",
+            "pidx": f"demo_{transaction_uuid}",
+            "note": "No KHALTI_SECRET_KEY set - demo mode.",
         }
 
-    import urllib.request
     import urllib.error
+    import urllib.request
 
-    payload = json.dumps({
-        "return_url":        f"{FRONTEND_URL}/billing?payment=khalti_success",
-        "website_url":       FRONTEND_URL,
-        "amount":            int(amount * 100),   # Khalti: in paisa (1 NPR = 100 paisa)
-        "purchase_order_id": transaction_uuid,
-        "purchase_order_name": f"RhinoPeak {plan.title()} Plan",
-        "customer_info": {
-            "name":  customer_name or "RhinoPeak User",
-            "email": customer_email or "user@rhinopeak.com",
-        },
-    }).encode("utf-8")
+    payload = json.dumps(
+        {
+            "return_url": f"{FRONTEND_URL}/billing?payment=khalti_success",
+            "website_url": FRONTEND_URL,
+            "amount": int(amount * 100),
+            "purchase_order_id": transaction_uuid,
+            "purchase_order_name": f"RhinoPeak {plan.title()} Plan",
+            "customer_info": {
+                "name": customer_name or "RhinoPeak User",
+                "email": customer_email or "user@rhinopeak.com",
+            },
+        }
+    ).encode("utf-8")
 
     req = urllib.request.Request(
         f"{KHALTI_BASE_URL}/api/v2/epayment/initiate/",
         data=payload,
         headers={
             "Authorization": f"Key {KHALTI_SECRET_KEY}",
-            "Content-Type":  "application/json",
+            "Content-Type": "application/json",
         },
         method="POST",
     )
@@ -252,40 +214,33 @@ def initiate_khalti_payment(
         with urllib.request.urlopen(req, timeout=10) as resp:
             result = json.loads(resp.read().decode())
         return {
-            "gateway":    "khalti",
-            "mode":       "live",
+            "gateway": "khalti",
+            "mode": "live",
             "payment_url": result.get("payment_url", ""),
-            "pidx":        result.get("pidx", ""),
+            "pidx": result.get("pidx", ""),
         }
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")[:300]
-        return {"gateway": "khalti", "mode": "error", "error": f"HTTP {e.code}: {body}"}
-    except Exception as e:
-        return {"gateway": "khalti", "mode": "error", "error": str(e), "payment_url": ""}
+    except urllib.error.HTTPError as error:
+        body = error.read().decode("utf-8", errors="replace")[:300]
+        return {"gateway": "khalti", "mode": "error", "error": f"HTTP {error.code}: {body}"}
+    except Exception as error:
+        return {"gateway": "khalti", "mode": "error", "error": str(error), "payment_url": ""}
 
 
 def verify_khalti_payment(pidx: str, expected_amount: int | None = None) -> dict[str, Any]:
-    """
-    Verify a Khalti payment by pidx.
-
-    Args:
-        pidx:            Khalti's payment idx returned after user completes payment
-        expected_amount: Optional paisa amount to cross-check (prevents verification
-                         of tampered amounts if passed from the callback)
-
-    Returns:
-        {"success": True/False, "status": ..., "transaction_id": ..., "amount": ...}
-    """
+    """Verify a Khalti payment by pidx."""
+    _require_gateway_secret("Khalti", KHALTI_SECRET_KEY)
+    if pidx.startswith("demo_") and not _demo_payments_allowed():
+        raise AppError(400, "Demo Khalti payment IDs are not accepted in production.")
     if not KHALTI_SECRET_KEY or pidx.startswith("demo_"):
         return {
-            "success":          True,
-            "mode":             "demo",
+            "success": True,
+            "mode": "demo",
             "transaction_uuid": pidx.removeprefix("demo_"),
-            "note":             "Demo mode — KHALTI_SECRET_KEY not set.",
+            "note": "Demo mode - KHALTI_SECRET_KEY not set.",
         }
 
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     payload = json.dumps({"pidx": pidx}).encode("utf-8")
     req = urllib.request.Request(
@@ -293,7 +248,7 @@ def verify_khalti_payment(pidx: str, expected_amount: int | None = None) -> dict
         data=payload,
         headers={
             "Authorization": f"Key {KHALTI_SECRET_KEY}",
-            "Content-Type":  "application/json",
+            "Content-Type": "application/json",
         },
         method="POST",
     )
@@ -303,27 +258,25 @@ def verify_khalti_payment(pidx: str, expected_amount: int | None = None) -> dict
 
         status = result.get("status", "")
         tx_amount = result.get("total_amount", 0)
-
-        # Cross-check amount if provided
         if expected_amount is not None and int(tx_amount) != expected_amount:
             return {
-                "success":  False,
-                "error":    f"Amount mismatch: expected {expected_amount}, got {tx_amount}",
-                "status":   status,
-                "amount":   tx_amount,
+                "success": False,
+                "error": f"Amount mismatch: expected {expected_amount}, got {tx_amount}",
+                "status": status,
+                "amount": tx_amount,
             }
 
         return {
-            "success":        status == "Completed",
-            "status":         status,
+            "success": status == "Completed",
+            "status": status,
             "transaction_id": result.get("transaction_id", ""),
-            "amount":         tx_amount,
-            "ref_id":         result.get("ref_id", ""),
-            "mobile":        result.get("mobile", ""),
-            "txn_uuid":       result.get("txn_uuid", ""),
+            "amount": tx_amount,
+            "ref_id": result.get("ref_id", ""),
+            "mobile": result.get("mobile", ""),
+            "txn_uuid": result.get("txn_uuid", ""),
         }
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")[:300]
-        return {"success": False, "error": f"HTTP {e.code}: {body}"}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except urllib.error.HTTPError as error:
+        body = error.read().decode("utf-8", errors="replace")[:300]
+        return {"success": False, "error": f"HTTP {error.code}: {body}"}
+    except Exception as error:
+        return {"success": False, "error": str(error)}

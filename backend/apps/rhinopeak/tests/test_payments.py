@@ -1,7 +1,11 @@
 """
 Payment gateway tests - verify signatures and callback handling.
 """
-from django.test import TestCase
+from unittest.mock import patch
+
+from django.test import TestCase, override_settings
+
+from apps.rhinopeak.domain.errors import AppError
 
 
 class ESewaPaymentTests(TestCase):
@@ -36,3 +40,15 @@ class ESewaPaymentTests(TestCase):
         result = initiate_khalti_payment('TEST-123', 1499.0, 'pro')
         self.assertEqual(result['gateway'], 'khalti')
         self.assertIn('payment_url', result)
+
+    @override_settings(PRODUCTION=True)
+    def test_live_payment_credentials_required_in_production(self):
+        """Production payment flows should not silently fall back to demo mode."""
+        from apps.rhinopeak.services.payment_service import initiate_khalti_payment
+
+        with patch("apps.rhinopeak.services.payment_service.KHALTI_SECRET_KEY", ""):
+            with self.assertRaises(AppError) as error:
+                initiate_khalti_payment('TEST-123', 1499.0, 'pro')
+
+        self.assertEqual(error.exception.status, 503)
+        self.assertIn('credentials', error.exception.message)

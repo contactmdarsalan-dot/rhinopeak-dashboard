@@ -146,6 +146,34 @@ class MobileRepository {
     return createRecord('sync-operations', operation);
   }
 
+  Future<void> registerPushToken(
+    String token, {
+    required String platform,
+  }) async {
+    await _api.post(
+      '/mobile/push-token',
+      data: {'token': token, 'platform': platform},
+    );
+  }
+
+  Future<Map<String, dynamic>> initiatePayment({
+    required String gateway,
+    required double amount,
+    required String plan,
+    required String billingCycle,
+  }) async {
+    final data = await _api.post(
+      '/payments/initiate',
+      data: {
+        'gateway': gateway,
+        'amount': amount,
+        'plan': plan,
+        'billingCycle': billingCycle,
+      },
+    );
+    return Map<String, dynamic>.from(data);
+  }
+
   Future<BootstrapData> _bootstrapOrRefresh(Map<String, dynamic> data) {
     if (data['bootstrap'] is Map) return _bootstrapFromResponse(data);
     return mobileBootstrap();

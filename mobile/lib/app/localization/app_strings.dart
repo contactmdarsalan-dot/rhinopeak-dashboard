@@ -118,6 +118,7 @@ class AppStrings {
       'selectTemplateToSimulate':
           'Select a receipt template to simulate mobile capture',
       'simulatedView': 'Simulated Camera Viewfinder',
+      'cameraView': 'Camera Viewfinder',
       'customGptNotes':
           'Parsed & structured by custom character-level GPT model.',
       'addProduct': 'Add product',
@@ -476,6 +477,7 @@ class AppStrings {
       'selectTemplateToSimulate':
           'मोबाइल स्क्यान सिमुलेट गर्न रसिद नमुना छान्नुहोस्',
       'simulatedView': 'सिमुलेटेड क्यामेरा भ्युफाइन्डर',
+      'cameraView': 'Camera Viewfinder',
       'customGptNotes': 'कस्टम क्यारेक्टर-स्तर GPT मोडेल द्वारा संरचित।',
       'addProduct': 'सामान थप्नुहोस्',
       'addCategory': 'वर्ग थप्नुहोस्',

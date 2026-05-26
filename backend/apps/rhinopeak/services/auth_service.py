@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import secrets
 from datetime import timedelta
 from typing import Any
 
@@ -10,7 +9,16 @@ from django.utils import timezone
 
 from apps.rhinopeak.data.repositories import create_audit, current_user_payload
 from apps.rhinopeak.domain.errors import AppError
-from apps.rhinopeak.domain.security import hash_password, hash_token, make_id, new_token, verify_password, generate_jwt_access_token, decode_jwt_access_token
+from apps.rhinopeak.domain.security import (
+    decode_jwt_access_token,
+    generate_jwt_access_token,
+    hash_password,
+    hash_token,
+    make_id,
+    new_reset_token,
+    new_token,
+    verify_password,
+)
 from apps.rhinopeak.models import PasswordResetToken, SessionToken, UserAccount
 from apps.rhinopeak.services.common import normalize_email, require_email, require_text
 from apps.rhinopeak.services.workspace_service import bootstrap_for_user, create_workspace_with_owner
@@ -145,7 +153,7 @@ def request_password_reset(data: dict[str, Any]) -> dict[str, Any]:
     user = UserAccount.objects.filter(email_normalized=normalize_email(email)).first()
     if user is None:
         return response
-    token = f"{secrets.randbelow(1_000_000):06d}"
+    token = new_reset_token()
     PasswordResetToken.objects.create(
         id=make_id("rst"),
         user=user,

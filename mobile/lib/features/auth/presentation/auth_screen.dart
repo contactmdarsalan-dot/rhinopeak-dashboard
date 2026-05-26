@@ -108,7 +108,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'Simulated OTP Password Reset',
+                    'OTP Password Reset',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
@@ -117,17 +117,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'We simulated sending a 6-digit OTP to $email.',
+                    'Enter the 6-digit reset code sent to $email.',
                     style: const TextStyle(fontSize: 13, color: Color(0xFF757891)),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Demo simulation OTP code: 123456',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFFFA733),
-                    ),
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
@@ -166,10 +157,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     onPressed: () async {
                       final otp = otpController.text.trim();
                       final newPassword = newPasswordController.text;
-                      if (otp != '123456') {
+                      if (otp.length != 6) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Invalid OTP code. Please enter 123456.'),
+                            content: Text('Enter the 6-digit OTP code.'),
                             backgroundColor: Colors.red,
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -187,17 +178,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         return;
                       }
 
-                      // Simulate successful password reset
+                      final reset = await ref.read(appControllerProvider.notifier).resetPassword(
+                            email: email,
+                            token: otp,
+                            password: newPassword,
+                          );
+                      if (!mounted) return;
+                      if (!reset) return;
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Password reset successfully! Logging you in...'),
+                          content: Text('Password reset successfully. Logging you in...'),
                           backgroundColor: Color(0xFF0A6E46),
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
 
-                      // Auto-login after successful reset
                       await ref.read(appControllerProvider.notifier).login(email, newPassword);
                     },
                     style: FilledButton.styleFrom(

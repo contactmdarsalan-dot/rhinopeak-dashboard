@@ -1,0 +1,49 @@
+groups:
+  - name: rhinopeak-api
+    rules:
+      - alert: RhinoPeakApiDown
+        expr: up{job="rhinopeak-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: RhinoPeak backend is down
+          description: Prometheus has not been able to scrape the backend metrics endpoint for two minutes.
+
+      - alert: RhinoPeakHighErrorRate
+        expr: sum(rate(rhinopeak_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(rhinopeak_http_requests_total[5m])), 1) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: RhinoPeak API 5xx rate is above 5%
+          description: Backend requests are returning server errors above the configured threshold.
+
+      - alert: RhinoPeakSlowAverageResponse
+        expr: sum(rate(rhinopeak_http_request_duration_seconds_sum[5m])) / clamp_min(sum(rate(rhinopeak_http_request_duration_seconds_count[5m])), 1) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: RhinoPeak API average latency is high
+          description: Average backend response latency has exceeded two seconds for ten minutes.
+
+  - name: rhinopeak-infrastructure
+    rules:
+      - alert: RhinoPeakMongoExporterDown
+        expr: up{job="mongodb"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: MongoDB exporter is down
+          description: MongoDB metrics are unavailable.
+
+      - alert: RhinoPeakRedisExporterDown
+        expr: up{job="redis"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Redis exporter is down
+          description: Redis metrics are unavailable.

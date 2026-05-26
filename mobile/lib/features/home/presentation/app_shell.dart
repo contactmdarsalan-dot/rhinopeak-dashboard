@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/state/app_controller.dart';
+import '../../../services/deep_link_service.dart';
+import '../../../services/push_notification_service.dart';
 import '../../../shared/widgets/rp_widgets.dart';
 import '../../dashboard/presentation/dashboard_screen.dart';
 import '../../inventory/presentation/inventory_screen.dart';
@@ -19,6 +23,73 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    deepLinkService.addHandler(_handleDeepLink);
+    pushNotificationService.addHandler(_handleNotification);
+    pushNotificationService.addTokenHandler(_handlePushToken);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_initializeNotifications());
+    });
+  }
+
+  @override
+  void dispose() {
+    deepLinkService.removeHandler(_handleDeepLink);
+    pushNotificationService.removeHandler(_handleNotification);
+    pushNotificationService.removeTokenHandler(_handlePushToken);
+    super.dispose();
+  }
+
+  Future<void> _initializeNotifications() async {
+    await pushNotificationService.requestPermission();
+    if (!mounted) return;
+    await ref.read(appControllerProvider.notifier).registerCurrentPushToken();
+  }
+
+  void _handlePushToken(String _) {
+    ref.read(appControllerProvider.notifier).registerCurrentPushToken();
+  }
+
+  void _handleNotification(Map<String, dynamic> payload) {
+    final link = payload['link']?.toString() ?? payload['deepLink']?.toString();
+    if (link == null || link.isEmpty) return;
+    final uri = Uri.tryParse(link);
+    if (uri != null) _handleDeepLink(uri);
+  }
+
+  void _handleDeepLink(Uri uri) {
+    final target = _tabFromUri(uri);
+    if (target == null || !mounted) return;
+    setState(() => _index = target);
+  }
+
+  int? _tabFromUri(Uri uri) {
+    final segments =
+        uri.pathSegments.map((part) => part.toLowerCase()).toList();
+    final target = segments.isEmpty ? uri.host.toLowerCase() : segments.first;
+    switch (target) {
+      case 'dashboard':
+      case 'home':
+        return 0;
+      case 'parties':
+      case 'customers':
+      case 'suppliers':
+        return 1;
+      case 'inventory':
+      case 'stock':
+        return 2;
+      case 'more':
+      case 'settings':
+      case 'billing':
+      case 'reports':
+        return 3;
+      default:
+        return null;
+    }
+  }
 
   void _showQuickAddSheet() {
     showModalBottomSheet(
@@ -119,7 +190,7 @@ class _MobileBottomNav extends ConsumerWidget {
       _NavItem(icon: Icons.people_outline_rounded, label: tr(ref, 'parties')),
       _NavItem(
         icon: Icons.add_rounded,
-        label: tr(ref, 'add') ?? 'Add',
+        label: tr(ref, 'add'),
         primary: true,
       ),
       _NavItem(icon: Icons.inventory_2_outlined, label: tr(ref, 'stock')),
@@ -218,8 +289,8 @@ class _NavButtonState extends State<_NavButton>
     final color = widget.item.primary
         ? Colors.white
         : widget.selected
-        ? activeColor
-        : inactiveColor;
+            ? activeColor
+            : inactiveColor;
 
     Widget navItemContent;
 
@@ -270,11 +341,12 @@ class _NavButtonState extends State<_NavButton>
             widget.item.label,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: widget.selected ? FontWeight.w900 : FontWeight.w700,
-              fontSize: 10.5,
-              letterSpacing: 0.1,
-            ),
+                  color: color,
+                  fontWeight:
+                      widget.selected ? FontWeight.w900 : FontWeight.w700,
+                  fontSize: 10.5,
+                  letterSpacing: 0.1,
+                ),
           ),
         ],
       );

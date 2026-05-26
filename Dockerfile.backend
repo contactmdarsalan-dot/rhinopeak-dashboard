@@ -1,0 +1,43 @@
+# RhinoPeak backend production image.
+
+FROM python:3.11-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl gcc libffi-dev libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+FROM base AS deps
+
+COPY backend/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+FROM deps AS development
+
+COPY backend/ /app/
+EXPOSE 8000
+CMD ["python", "server.py", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+FROM deps AS production
+
+RUN groupadd --system --gid 1001 appgroup \
+    && useradd --system --uid 1001 --gid appgroup --home-dir /app appuser
+
+COPY --chown=appuser:appgroup backend/ /app/
+
+ENV RHINOPEAK_HOST=0.0.0.0 \
+    RHINOPEAK_PORT=8000
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8000/api/health/ready || exit 1
+
+USER appuser
+CMD ["gunicorn", "--config", "gunicorn.conf.py"]

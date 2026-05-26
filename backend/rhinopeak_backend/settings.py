@@ -43,6 +43,9 @@ API_VERSION_HEADER = os.environ.get("RHINOPEAK_API_VERSION_HEADER", "X-API-Versi
 SENTRY_DSN = os.environ.get("RHINOPEAK_SENTRY_DSN", "")
 LOG_LEVEL = os.environ.get("RHINOPEAK_LOG_LEVEL", "INFO" if not DEBUG else "DEBUG")
 LOG_FORMAT = os.environ.get("RHINOPEAK_LOG_FORMAT", "json")  # json or text
+ENVIRONMENT = os.environ.get("RHINOPEAK_ENVIRONMENT", "development" if DEBUG else "production")
+ENABLE_METRICS = os.environ.get("RHINOPEAK_ENABLE_METRICS", os.environ.get("ENABLE_METRICS", "1")) == "1"
+ENABLE_AUDIT_LOGGING = os.environ.get("RHINOPEAK_ENABLE_AUDIT_LOGGING", "1") == "1"
 
 # Hard-block startup if critical env vars are missing in non-debug mode
 if not DEBUG:

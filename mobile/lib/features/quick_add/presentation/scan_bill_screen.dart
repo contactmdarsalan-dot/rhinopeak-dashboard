@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/state/app_controller.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../services/camera_capture_service.dart';
 import '../../../shared/widgets/rp_widgets.dart';
 
 class ScanBillScreen extends ConsumerStatefulWidget {
@@ -105,8 +106,11 @@ Payment Mode:                Bank''',
   Future<void> _runScanPipeline(
     String text,
     String fileName,
-    String sourceType,
-  ) async {
+    String sourceType, {
+    String? imageDataUrl,
+    String mimeType = 'text/plain',
+    int? size,
+  }) async {
     setState(() {
       _scanStep = 1; // Uploading
       _scanId = null;
@@ -122,13 +126,18 @@ Payment Mode:                Bank''',
       final scan = await controller.uploadBillScan({
         'sourceType': sourceType,
         'fileName': fileName,
-        'mimeType': 'text/plain',
+        'mimeType': mimeType,
         'rawText': text,
-        'size': text.length,
+        'imageDataUrl': imageDataUrl ?? '',
+        'size': size ?? text.length,
       });
       final scanId = scan?['id']?.toString();
       if (scanId == null || scanId.isEmpty) {
         throw Exception("Upload failed");
+      }
+      final uploadedRawText = scan?['rawText']?.toString() ?? text;
+      if (uploadedRawText.isNotEmpty) {
+        _rawText.text = uploadedRawText;
       }
 
       // Step 2: OCR Extraction delay
@@ -137,7 +146,8 @@ Payment Mode:                Bank''',
 
       // Step 3: LLM Structuring (Custom PyTorch GPT / Gemini)
       setState(() => _scanStep = 3);
-      final parsedResult = await controller.parseBillScan(scanId, text);
+      final parsedResult =
+          await controller.parseBillScan(scanId, uploadedRawText);
       final parsed = Map<String, dynamic>.from(
         parsedResult?['parsed'] as Map? ?? {},
       );
@@ -240,6 +250,31 @@ Payment Mode:                Bank''',
       _selectedTemplateText = text;
     });
     await _runScanPipeline(text, 'mobile-bill-text.txt', 'manual');
+  }
+
+  Future<void> _captureBillImage(String source) async {
+    final image = await cameraCaptureService.captureBillImage(source: source);
+    if (image == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open camera or gallery.')),
+      );
+      return;
+    }
+    setState(() {
+      _selectedTemplateName =
+          source == 'camera' ? 'CAMERA CAPTURE' : 'GALLERY IMAGE';
+      _selectedTemplateText = null;
+      _rawText.clear();
+    });
+    await _runScanPipeline(
+      '',
+      image.fileName,
+      source,
+      imageDataUrl: image.dataUrl,
+      mimeType: image.mimeType,
+      size: image.size,
+    );
   }
 
   void _showGallerySheet(BuildContext context) {
@@ -394,27 +429,25 @@ Payment Mode:                Bank''',
   Future<void> _save() async {
     final scanId = _scanId;
     if (scanId == null) return;
-    await ref
-        .read(appControllerProvider.notifier)
-        .approveBillScan(
-          scanId: scanId,
-          targetRecordType: _target,
-          approved: {
-            'vendorName': _vendor.text.trim(),
-            'billNumber': _billNumber.text.trim(),
-            'billDate': _billDate.text.trim(),
-            'paymentMethod': _payment,
-            'vatAmount': _num(_vat.text),
-            'totalAmount': _num(_total.text),
-            'subtotal': _items.fold<num>(
-              0,
-              (sum, item) => sum + _mapNum(item, 'lineTotal'),
-            ),
-            'discountAmount': 0,
-            'items': _items,
-            'rawText': _rawText.text.trim(),
-          },
-        );
+    await ref.read(appControllerProvider.notifier).approveBillScan(
+      scanId: scanId,
+      targetRecordType: _target,
+      approved: {
+        'vendorName': _vendor.text.trim(),
+        'billNumber': _billNumber.text.trim(),
+        'billDate': _billDate.text.trim(),
+        'paymentMethod': _payment,
+        'vatAmount': _num(_vat.text),
+        'totalAmount': _num(_total.text),
+        'subtotal': _items.fold<num>(
+          0,
+          (sum, item) => sum + _mapNum(item, 'lineTotal'),
+        ),
+        'discountAmount': 0,
+        'items': _items,
+        'rawText': _rawText.text.trim(),
+      },
+    );
     setState(() {
       _scanStep = 0;
       _scanId = null;
@@ -481,8 +514,8 @@ Payment Mode:                Bank''',
               color: isDone
                   ? Colors.green.withOpacity(0.15)
                   : (isActive
-                        ? theme.colorScheme.primary.withOpacity(0.1)
-                        : Colors.transparent),
+                      ? theme.colorScheme.primary.withOpacity(0.1)
+                      : Colors.transparent),
               shape: BoxShape.circle,
               border: Border.all(color: color, width: 1.5),
             ),
@@ -498,8 +531,8 @@ Payment Mode:                Bank''',
                 color: isActive
                     ? theme.colorScheme.primary
                     : (isDone
-                          ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurfaceVariant),
+                        ? theme.colorScheme.onSurface
+                        : theme.colorScheme.onSurfaceVariant),
               ),
             ),
           ),
@@ -563,8 +596,10 @@ Payment Mode:                Bank''',
                           height: 20,
                           decoration: const BoxDecoration(
                             border: Border(
-                              top: BorderSide(color: Color(0xFF0FA871), width: 3),
-                              left: BorderSide(color: Color(0xFF0FA871), width: 3),
+                              top: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                              left: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
                             ),
                           ),
                         ),
@@ -578,8 +613,10 @@ Payment Mode:                Bank''',
                           height: 20,
                           decoration: const BoxDecoration(
                             border: Border(
-                              top: BorderSide(color: Color(0xFF0FA871), width: 3),
-                              right: BorderSide(color: Color(0xFF0FA871), width: 3),
+                              top: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                              right: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
                             ),
                           ),
                         ),
@@ -593,8 +630,10 @@ Payment Mode:                Bank''',
                           height: 20,
                           decoration: const BoxDecoration(
                             border: Border(
-                              bottom: BorderSide(color: Color(0xFF0FA871), width: 3),
-                              left: BorderSide(color: Color(0xFF0FA871), width: 3),
+                              bottom: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                              left: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
                             ),
                           ),
                         ),
@@ -608,8 +647,10 @@ Payment Mode:                Bank''',
                           height: 20,
                           decoration: const BoxDecoration(
                             border: Border(
-                              bottom: BorderSide(color: Color(0xFF0FA871), width: 3),
-                              right: BorderSide(color: Color(0xFF0FA871), width: 3),
+                              bottom: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
+                              right: BorderSide(
+                                  color: Color(0xFF0FA871), width: 3),
                             ),
                           ),
                         ),
@@ -636,7 +677,8 @@ Payment Mode:                Bank''',
                                 color: const Color(0xFF0FA871),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF0FA871).withOpacity(0.8),
+                                    color: const Color(0xFF0FA871)
+                                        .withOpacity(0.8),
                                     blurRadius: 8,
                                     spreadRadius: 2,
                                   ),
@@ -700,7 +742,8 @@ Payment Mode:                Bank''',
               ),
               const Spacer(),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                 child: FilledButton(
                   onPressed: () {
                     setState(() {
@@ -747,7 +790,7 @@ Payment Mode:                Bank''',
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          tr(ref, 'simulatedView'),
+                          tr(ref, 'cameraView'),
                           style: const TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 16,
@@ -757,13 +800,41 @@ Payment Mode:                Bank''',
                       TextButton.icon(
                         onPressed: state.loading
                             ? null
-                            : () => _showGallerySheet(context),
+                            : () => _captureBillImage('camera'),
+                        icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                        label: const Text(
+                          'Camera',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: colorScheme.primary,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: state.loading
+                            ? null
+                            : () => _captureBillImage('gallery'),
                         icon: const Icon(
                           Icons.photo_library_outlined,
                           size: 16,
                         ),
                         label: const Text(
                           'Gallery',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: colorScheme.primary,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: state.loading
+                            ? null
+                            : () => _showGallerySheet(context),
+                        icon: const Icon(Icons.receipt_long_outlined, size: 16),
+                        label: const Text(
+                          'Samples',
                           style: TextStyle(fontSize: 12),
                         ),
                         style: TextButton.styleFrom(
@@ -1114,8 +1185,8 @@ Payment Mode:                Bank''',
                         child: OutlinedButton.icon(
                           onPressed:
                               state.loading || _rawText.text.trim().isEmpty
-                              ? null
-                              : _parseManual,
+                                  ? null
+                                  : _parseManual,
                           icon: const Icon(Icons.auto_awesome_outlined),
                           label: Text(tr(ref, 'parseBill')),
                         ),
@@ -1653,9 +1724,8 @@ class _TextField extends ConsumerWidget {
     return TextFormField(
       controller: controller,
       validator: requiredField
-          ? (value) => value == null || value.trim().isEmpty
-                ? tr(ref, 'required')
-                : null
+          ? (value) =>
+              value == null || value.trim().isEmpty ? tr(ref, 'required') : null
           : null,
       decoration: InputDecoration(
         labelText: label,

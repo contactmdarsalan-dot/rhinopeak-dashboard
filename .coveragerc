@@ -1,0 +1,18 @@
+[run]
+source =
+    apps.rhinopeak.controllers
+    apps.rhinopeak.domain
+    apps.rhinopeak.services
+omit =
+    */tests/*
+    */scratch/*
+    */management/commands/seed_demo_data.py
+
+[report]
+skip_empty = True
+show_missing = True
+fail_under = 80
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    raise NotImplementedError
